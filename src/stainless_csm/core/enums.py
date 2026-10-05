@@ -20,3 +20,14 @@ class CorrosionClass(Enum):
     III = "III"
     IV = "IV"
     V = "V"
+
+
+class SectionType(Enum):
+    """Section families Annex B applies to (B.2)."""
+
+    I_SECTION = "I-section"
+    CHANNEL = "channel"
+    T_SECTION = "T-section"
+    ANGLE = "angle"
+    RHS = "rectangular hollow section"
+    CHS = "circular hollow section"
