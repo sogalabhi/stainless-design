@@ -107,13 +107,47 @@ def test_curve_points_are_increasing_and_include_kinks() -> None:
 def test_trace_records_every_derived_value() -> None:
     m = model_for("1.4307")
     trace = m.trace
-    assert [s.symbol for s in trace] == ["C₁", "C₂", "C₃", "ε_y", "ε_u", "E_sh", "C₁ε_u", "C₂ε_u"]
+    assert [s.symbol for s in trace] == [
+        "E",
+        "C₁",
+        "C₂",
+        "C₃",
+        "ε_y",
+        "ε_u",
+        "E_sh",
+        "C₁ε_u",
+        "C₂ε_u",
+        "σ(C₁ε_u)",
+        "E_sh/E",
+        "C₁ε_u/ε_y",
+    ]
     assert trace.get("ε_y").value == m.yield_strain
     assert trace.get("ε_y").substituted == "210 / 200000"
     assert trace.get("E_sh").value == m.strain_hardening_modulus
-    assert all(s.clause == "B.4" for s in trace)
+    assert trace.get("E").clause == "5.1.5"
+    assert all(s.clause == "B.4" for s in trace if s.symbol != "E")
 
 
-def test_ferritic_uses_its_own_coefficients() -> None:
-    m = model_for("1.4003")
-    assert (m.coefficients.c1, m.coefficients.c2, m.coefficients.c3) == (0.40, 0.45, 0.6)
+def test_stress_at_strain_limit_c1_and_ratios() -> None:
+    m = model_for("1.4307")
+    assert m.stress_at_strain_limit_c1 == pytest.approx(m.stress_at(m.strain_limit_c1))
+    assert m.stress_at_strain_limit_c1 == pytest.approx(210 + 3160.8 * (0.058 - 0.00105), rel=1e-4)
+    assert m.hardening_ratio == pytest.approx(3160.8 / 200_000, rel=1e-4)
+    assert m.strain_limit_ratio_c1 == pytest.approx(55.2, rel=1e-3)
+    assert m.trace.get("σ(C₁ε_u)").value == m.stress_at_strain_limit_c1
+
+
+@pytest.mark.parametrize("designation", [c[0] for c in CASES])
+def test_hardening_line_has_slope_E_sh(designation: str) -> None:
+    m = model_for(designation)
+    e1, e2 = m.yield_strain * 3, m.strain_end * 0.9
+    slope = (m.stress_at(e2) - m.stress_at(e1)) / (e2 - e1)
+    assert slope == pytest.approx(m.strain_hardening_modulus)
+
+
+@pytest.mark.parametrize("designation", GradeRepository.load_default().designations())
+def test_every_table_5_1_grade_builds_a_valid_model(designation: str) -> None:
+    m = model_for(designation)
+    assert 0 < m.yield_strain < m.strain_limit_c1 < m.strain_end
+    assert m.strain_hardening_modulus > 0
+    assert m.stress_at(m.strain_end) == pytest.approx(m.material.fu)

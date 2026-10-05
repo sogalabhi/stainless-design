@@ -37,6 +37,11 @@ class CSMBilinearModel(MaterialModel):
                 f"f_y/f_u = {fy / fu:.4f} is too close to 1 for the CSM hardening line."
             )
         self._strain_hardening_modulus = (fu - fy) / hardening_span
+        self._stress_at_strain_limit_c1 = fy + self._strain_hardening_modulus * (
+            self._strain_limit_c1 - self._yield_strain
+        )
+        self._hardening_ratio = self._strain_hardening_modulus / e
+        self._strain_limit_ratio_c1 = self._strain_limit_c1 / self._yield_strain
         self._trace = self._build_trace()
 
     # --- inputs ---------------------------------------------------------------------
@@ -76,6 +81,21 @@ class CSMBilinearModel(MaterialModel):
         """C₂ε_u, last point of the curve"""
         return self._strain_end
 
+    @property
+    def stress_at_strain_limit_c1(self) -> float:
+        """σ at C₁ε_u on the hardening line, in N/mm²; the stress B.6.1 uses when C₁ε_u governs"""
+        return self._stress_at_strain_limit_c1
+
+    @property
+    def hardening_ratio(self) -> float:
+        """E_sh / E"""
+        return self._hardening_ratio
+
+    @property
+    def strain_limit_ratio_c1(self) -> float:
+        """C₁ε_u / ε_y; compared with 15 (B.14) to see which governs in B.6.1"""
+        return self._strain_limit_ratio_c1
+
     # --- MaterialModel --------------------------------------------------------------
 
     @property
@@ -104,7 +124,7 @@ class CSMBilinearModel(MaterialModel):
         return [
             (0.0, 0.0),
             (self._yield_strain, self._material.fy),
-            (self._strain_limit_c1, self.stress_at(self._strain_limit_c1)),
+            (self._strain_limit_c1, self._stress_at_strain_limit_c1),
             (self._strain_end, self.stress_at(self._strain_end)),
         ]
 
@@ -115,12 +135,27 @@ class CSMBilinearModel(MaterialModel):
         dimless = units.DIMENSIONLESS
 
         def step(
-            symbol: str, description: str, formula: str, substituted: str, value: float, unit: str
+            symbol: str,
+            description: str,
+            formula: str,
+            substituted: str,
+            value: float,
+            unit: str,
+            clause: str = _CLAUSE,
         ) -> CalcStep:
-            return CalcStep(symbol, description, _CLAUSE, formula, substituted, value, unit)
+            return CalcStep(symbol, description, clause, formula, substituted, value, unit)
 
         return CalcTrace(
             [
+                step(
+                    "E",
+                    "modulus of elasticity",
+                    "5.1.5",
+                    f"{m.elastic_modulus:g}",
+                    m.elastic_modulus,
+                    units.STRESS,
+                    clause="5.1.5",
+                ),
                 step("C₁", "CSM coefficient C₁", "Table B.1", m.family.value, c.c1, dimless),
                 step("C₂", "CSM coefficient C₂", "Table B.1", m.family.value, c.c2, dimless),
                 step("C₃", "CSM coefficient C₃", "Table B.1", m.family.value, c.c3, dimless),
@@ -163,6 +198,31 @@ class CSMBilinearModel(MaterialModel):
                     "C₂ × ε_u",
                     f"{c.c2:g} × {self._ultimate_strain:.6g}",
                     self._strain_end,
+                    dimless,
+                ),
+                step(
+                    "σ(C₁ε_u)",
+                    "stress at C₁ε_u on the hardening line",
+                    "f_y + E_sh (C₁ε_u − ε_y)",
+                    f"{m.fy:g} + {self._strain_hardening_modulus:.6g}"
+                    f" × ({self._strain_limit_c1:.6g} − {self._yield_strain:.6g})",
+                    self._stress_at_strain_limit_c1,
+                    units.STRESS,
+                ),
+                step(
+                    "E_sh/E",
+                    "hardening modulus relative to the elastic modulus",
+                    "E_sh / E",
+                    f"{self._strain_hardening_modulus:.6g} / {m.elastic_modulus:g}",
+                    self._hardening_ratio,
+                    dimless,
+                ),
+                step(
+                    "C₁ε_u/ε_y",
+                    "strain limit marker relative to yield strain (compare with 15 in B.14)",
+                    "C₁ε_u / ε_y",
+                    f"{self._strain_limit_c1:.6g} / {self._yield_strain:.6g}",
+                    self._strain_limit_ratio_c1,
                     dimless,
                 ),
             ]

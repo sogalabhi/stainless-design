@@ -1,32 +1,35 @@
 {
-  "_comment": "Table 5.1, sheet/plate values. Transcribed from working notes: check against the printed table before relying on it, and add the remaining grades.",
+  "_comment": "EN 1993-1-4:2025 Table 5.1 (p.14), strength class values for sheet/plate in the annealed condition; corrosion resistance class (CRC) from the table rows and Table A.3.",
   "grades": [
-    {
-      "designation": "1.4307",
-      "family": "austenitic",
-      "strength_class": "SC210",
-      "corrosion_class": null,
-      "fy": 210,
-      "fu": 500,
-      "note": "Table 5.1 footnote a: fy = 180 N/mm² for bars, hot-rolled sections and seamless tubes in SC210."
-    },
-    {
-      "designation": "1.4003",
-      "family": "ferritic",
-      "strength_class": null,
-      "corrosion_class": null,
-      "fy": 250,
-      "fu": 450,
-      "note": "fy = 250–280 N/mm² depending on product form; 250 used."
-    },
-    {
-      "designation": "1.4462",
-      "family": "duplex",
-      "strength_class": "SC450",
-      "corrosion_class": null,
-      "fy": 450,
-      "fu": 650,
-      "note": null
-    }
+    {"designation": "1.4003", "family": "ferritic", "strength_class": "SC210", "corrosion_class": "I", "fy": 250, "fu": 450,
+     "note": "Table 5.1 footnote b: fy = 250 N/mm² to 280 N/mm² depending on the product form, fu = 450 N/mm²; 250 used."},
+    {"designation": "1.4301", "family": "austenitic", "strength_class": "SC210", "corrosion_class": "II", "fy": 210, "fu": 500,
+     "note": "Table 5.1 footnote a: fy = 180 N/mm² for bars, hot rolled open sections and seamless tubes."},
+    {"designation": "1.4307", "family": "austenitic", "strength_class": "SC210", "corrosion_class": "II", "fy": 210, "fu": 500,
+     "note": "Table 5.1 footnote a: fy = 180 N/mm² for bars, hot rolled open sections and seamless tubes."},
+    {"designation": "1.4401", "family": "austenitic", "strength_class": "SC210", "corrosion_class": "III", "fy": 210, "fu": 500,
+     "note": "Table 5.1 footnote a: fy = 180 N/mm² for bars, hot rolled open sections and seamless tubes."},
+    {"designation": "1.4404", "family": "austenitic", "strength_class": "SC210", "corrosion_class": "III", "fy": 210, "fu": 500,
+     "note": "Table 5.1 footnote a: fy = 180 N/mm² for bars, hot rolled open sections and seamless tubes."},
+    {"designation": "1.4435", "family": "austenitic", "strength_class": "SC210", "corrosion_class": "III", "fy": 210, "fu": 500,
+     "note": "Table 5.1 footnote a: fy = 180 N/mm² for bars, hot rolled open sections and seamless tubes."},
+    {"designation": "1.4571", "family": "austenitic", "strength_class": "SC210", "corrosion_class": "III", "fy": 210, "fu": 500,
+     "note": "Table 5.1 footnote a: fy = 180 N/mm² for bars, hot rolled open sections and seamless tubes."},
+    {"designation": "1.4482", "family": "duplex", "strength_class": "SC450", "corrosion_class": "II", "fy": 450, "fu": 650,
+     "note": "Table 5.1 footnote a: for bars, hot rolled open sections and seamless tubes see EN 10088-3 or EN 10088-5."},
+    {"designation": "1.4162", "family": "duplex", "strength_class": "SC450", "corrosion_class": "III", "fy": 450, "fu": 650,
+     "note": "Table 5.1 footnote a: for bars, hot rolled open sections and seamless tubes see EN 10088-3 or EN 10088-5."},
+    {"designation": "1.4362", "family": "duplex", "strength_class": "SC450", "corrosion_class": "III", "fy": 400, "fu": 650,
+     "note": "Table 5.1 footnote c: fy = 400 N/mm²."},
+    {"designation": "1.4062", "family": "duplex", "strength_class": "SC450", "corrosion_class": "III", "fy": 450, "fu": 650,
+     "note": "Table 5.1 footnote a: for bars, hot rolled open sections and seamless tubes see EN 10088-3 or EN 10088-5."},
+    {"designation": "1.4462", "family": "duplex", "strength_class": "SC450", "corrosion_class": "IV", "fy": 450, "fu": 650,
+     "note": "Table 5.1 footnote a: for bars, hot rolled open sections and seamless tubes see EN 10088-3 or EN 10088-5."},
+    {"designation": "1.4662", "family": "duplex", "strength_class": "SC450", "corrosion_class": "IV", "fy": 450, "fu": 650,
+     "note": "Table 5.1 footnote a: for bars, hot rolled open sections and seamless tubes see EN 10088-3 or EN 10088-5."},
+    {"designation": "1.4410", "family": "duplex", "strength_class": "SC450", "corrosion_class": "V", "fy": 450, "fu": 650,
+     "note": "Table 5.1 footnote a: for bars, hot rolled open sections and seamless tubes see EN 10088-3 or EN 10088-5."},
+    {"designation": "1.4501", "family": "duplex", "strength_class": "SC450", "corrosion_class": "V", "fy": 450, "fu": 650,
+     "note": "Table 5.1 footnote a: for bars, hot rolled open sections and seamless tubes see EN 10088-3 or EN 10088-5."}
   ]
 }

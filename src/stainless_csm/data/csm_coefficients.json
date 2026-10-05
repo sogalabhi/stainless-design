@@ -1,5 +1,5 @@
 {
-  "_comment": "Table B.1. Check against the printed table. Reproduces the hand-checked eps_u and E_sh values for 1.4307, 1.4003 and 1.4462.",
+  "_comment": "EN 1993-1-4:2025 Table B.1 (p.60).",
   "austenitic": {"c1": 0.10, "c2": 0.16, "c3": 1.0},
   "duplex": {"c1": 0.10, "c2": 0.16, "c3": 1.0},
   "ferritic": {"c1": 0.40, "c2": 0.45, "c3": 0.6}

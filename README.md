@@ -31,5 +31,5 @@ python -m venv .venv
   formula, substituted numbers and result. The UI "show working" and the report read it.
 - Strain sign: compression (negative strain) mirrors the tension curve (odd symmetry).
 - Nothing is extrapolated: `stress_at` outside the defined strain range raises `OutOfRangeError`.
-- Table data in `data/*.json` was transcribed from working notes and must be checked
-  against the printed Table 5.1 / Table B.1 before results are relied on.
+- Table data in `data/*.json` is transcribed from EN 1993-1-4:2025: Table 5.1 (p.14),
+  Table A.3 for corrosion classes (p.57) and Table B.1 (p.60). Footnotes are kept in `note`.
