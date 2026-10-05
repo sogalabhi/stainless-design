@@ -1,0 +1,32 @@
+{
+  "_comment": "Table 5.1, sheet/plate values. Transcribed from working notes: check against the printed table before relying on it, and add the remaining grades.",
+  "grades": [
+    {
+      "designation": "1.4307",
+      "family": "austenitic",
+      "strength_class": "SC210",
+      "corrosion_class": null,
+      "fy": 210,
+      "fu": 500,
+      "note": "Table 5.1 footnote a: fy = 180 N/mm² for bars, hot-rolled sections and seamless tubes in SC210."
+    },
+    {
+      "designation": "1.4003",
+      "family": "ferritic",
+      "strength_class": null,
+      "corrosion_class": null,
+      "fy": 250,
+      "fu": 450,
+      "note": "fy = 250–280 N/mm² depending on product form; 250 used."
+    },
+    {
+      "designation": "1.4462",
+      "family": "duplex",
+      "strength_class": "SC450",
+      "corrosion_class": null,
+      "fy": 450,
+      "fu": 650,
+      "note": null
+    }
+  ]
+}
