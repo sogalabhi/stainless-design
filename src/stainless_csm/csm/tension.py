@@ -7,10 +7,11 @@ import math
 from dataclasses import dataclass
 from enum import Enum
 
-from stainless_csm.config.national_annex import GAMMA_M0, TENSION_STRAIN_RATIO_CAP
+from stainless_csm.config.national_annex import TENSION_STRAIN_RATIO_CAP
 from stainless_csm.core import units
 from stainless_csm.core.enums import SectionType
 from stainless_csm.core.errors import InvalidMaterialError, NotApplicableError
+from stainless_csm.core.latex import tex
 from stainless_csm.core.trace import CalcStep, CalcTrace
 from stainless_csm.material_models.csm_bilinear import CSMBilinearModel
 
@@ -33,22 +34,15 @@ class GoverningStrainLimit(Enum):
 class TensionInput:
     model: CSMBilinearModel
     area: float  # mm²
-    section_type: SectionType
+    section_type: SectionType | None  # only a label (B.2); no formula uses it
+    gamma_m0: float
     has_holes: bool = False
-    design_force: float | None = None  # N_Ed in N, optional
-    gamma_m0: float = GAMMA_M0
 
     def __post_init__(self) -> None:
         if not math.isfinite(self.area) or self.area <= 0:
             raise InvalidMaterialError(f"Area must be a positive number, got {self.area!r}.")
         if not math.isfinite(self.gamma_m0) or self.gamma_m0 <= 0:
             raise InvalidMaterialError(f"γM0 must be a positive number, got {self.gamma_m0!r}.")
-        if self.design_force is not None and (
-            not math.isfinite(self.design_force) or self.design_force < 0
-        ):
-            raise InvalidMaterialError(
-                f"Design tension force must be zero or positive, got {self.design_force!r}."
-            )
 
 
 @dataclass(frozen=True, slots=True)
@@ -58,10 +52,6 @@ class TensionResult:
     strain: float  # ε_csm,t
     design_stress: float  # f_csm,t, N/mm²
     resistance: float  # N_csm,t,Rd, N
-    classic_resistance: float  # N_pl,Rd = A f_y / γM0, N
-    gain: float  # N_csm,t,Rd / N_pl,Rd − 1
-    utilisation: float | None  # N_Ed / N_csm,t,Rd
-    passes: bool | None
     notes: tuple[str, ...]
     trace: CalcTrace
 
@@ -103,10 +93,6 @@ class CSMTension:
         strain = ratio * model.yield_strain
         f_csm_t = self.design_stress(ratio)
         n_rd = self.resistance(f_csm_t)
-        n_pl_rd = data.area * fy / data.gamma_m0
-        gain = n_rd / n_pl_rd - 1
-        utilisation = None if data.design_force is None else data.design_force / n_rd
-        passes = None if utilisation is None else utilisation <= 1.0
 
         notes = [SLENDERNESS_NOT_CHECKED_NOTE]
         if ratio < 1:
@@ -126,9 +112,14 @@ class CSMTension:
             substituted: str,
             value: float,
             unit: str,
+            latex: str,
         ) -> None:
-            trace.add(CalcStep(symbol, description, _CLAUSE, formula, substituted, value, unit))
+            trace.add(
+                CalcStep(symbol, description, _CLAUSE, formula, substituted, value, unit, latex)
+            )
 
+        stress = r"\,\mathrm{N/mm^2}"
+        force = r"\,\mathrm{N}"
         step(
             "ε_csm,t/ε_y",
             f"tensile strain limit ratio, governed by {governing.value} (Formula B.14)",
@@ -136,6 +127,14 @@ class CSMTension:
             f"min{{{TENSION_STRAIN_RATIO_CAP:g} ; {model.strain_limit_ratio_c1:.6g}}}",
             ratio,
             dimless,
+            tex(
+                r"\frac{\varepsilon_{csm,t}}{\varepsilon_y} = "
+                r"\min\left\{15;\ \frac{C_1\varepsilon_u}{\varepsilon_y}\right\} = "
+                r"\min\{<cap>;\ <c1>\} = <v>",
+                cap=TENSION_STRAIN_RATIO_CAP,
+                c1=model.strain_limit_ratio_c1,
+                v=ratio,
+            ),
         )
         step(
             "ε_csm,t",
@@ -144,6 +143,13 @@ class CSMTension:
             f"{ratio:.6g} × {eps_y:.6g}",
             strain,
             dimless,
+            tex(
+                r"\varepsilon_{csm,t} = \frac{\varepsilon_{csm,t}}{\varepsilon_y}\,"
+                r"\varepsilon_y = <r> \times <ey> = <v>",
+                r=ratio,
+                ey=eps_y,
+                v=strain,
+            ),
         )
         step(
             "f_csm,t",
@@ -152,6 +158,16 @@ class CSMTension:
             f"{fy:g} + {e_sh:.6g} × {eps_y:.6g} × ({ratio:.6g} − 1)",
             f_csm_t,
             units.STRESS,
+            tex(
+                r"f_{csm,t} = f_y + E_{sh}\,\varepsilon_y"
+                r"\left(\frac{\varepsilon_{csm,t}}{\varepsilon_y} - 1\right) = "
+                r"<fy> + <esh> \times <ey> \times (<r> - 1) = <v>" + stress,
+                fy=fy,
+                esh=e_sh,
+                ey=eps_y,
+                r=ratio,
+                v=f_csm_t,
+            ),
         )
         step(
             "N_csm,t,Rd",
@@ -160,43 +176,21 @@ class CSMTension:
             f"{data.area:g} × {f_csm_t:.6g} / {data.gamma_m0:g}",
             n_rd,
             units.FORCE,
+            tex(
+                r"N_{csm,t,Rd} = \frac{A\,f_{csm,t}}{\gamma_{M0}} = "
+                r"\frac{<a> \times <f>}{<g>} = <v>" + force,
+                a=data.area,
+                f=f_csm_t,
+                g=data.gamma_m0,
+                v=n_rd,
+            ),
         )
-        step(
-            "N_pl,Rd",
-            "classic tension resistance for comparison",
-            "A f_y / γ_M0",
-            f"{data.area:g} × {fy:g} / {data.gamma_m0:g}",
-            n_pl_rd,
-            units.FORCE,
-        )
-        step(
-            "gain",
-            "resistance gain of CSM over the classic check",
-            "N_csm,t,Rd / N_pl,Rd − 1",
-            f"{n_rd:.6g} / {n_pl_rd:.6g} − 1",
-            gain,
-            dimless,
-        )
-        if data.design_force is not None and utilisation is not None:
-            step(
-                "η",
-                "utilisation",
-                "N_Ed / N_csm,t,Rd",
-                f"{data.design_force:g} / {n_rd:.6g}",
-                utilisation,
-                dimless,
-            )
-
         return TensionResult(
             strain_ratio=ratio,
             governing=governing,
             strain=strain,
             design_stress=f_csm_t,
             resistance=n_rd,
-            classic_resistance=n_pl_rd,
-            gain=gain,
-            utilisation=utilisation,
-            passes=passes,
             notes=tuple(notes),
             trace=trace,
         )
