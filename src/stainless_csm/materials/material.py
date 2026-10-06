@@ -3,7 +3,6 @@
 import math
 from dataclasses import dataclass
 
-from stainless_csm.config.national_annex import ELASTIC_MODULUS
 from stainless_csm.core.enums import StainlessFamily
 from stainless_csm.core.errors import InvalidMaterialError
 from stainless_csm.materials.grade import Grade
@@ -16,7 +15,7 @@ class Material:
     family: StainlessFamily
     fy: float
     fu: float
-    elastic_modulus: float = ELASTIC_MODULUS
+    elastic_modulus: float
     source: str = "user-defined"
 
     def __post_init__(self) -> None:
@@ -39,7 +38,7 @@ class Material:
             )
 
     @classmethod
-    def from_grade(cls, grade: Grade, elastic_modulus: float = ELASTIC_MODULUS) -> "Material":
+    def from_grade(cls, grade: Grade, elastic_modulus: float) -> "Material":
         return cls(
             family=grade.family,
             fy=grade.fy,
@@ -54,7 +53,7 @@ class Material:
         family: StainlessFamily,
         fy: float,
         fu: float,
-        elastic_modulus: float = ELASTIC_MODULUS,
+        elastic_modulus: float,
         source: str = "user-defined",
     ) -> "Material":
         """Typed-in values, e.g. source="user-enhanced (cold-formed)" for f_ya / f_ua."""

@@ -9,6 +9,7 @@ The model *has a* Material (composition); it is not one.
 
 from stainless_csm.core import units
 from stainless_csm.core.errors import InvalidMaterialError
+from stainless_csm.core.latex import tex
 from stainless_csm.core.trace import CalcStep, CalcTrace
 from stainless_csm.data.repository import csm_coefficients_for
 from stainless_csm.material_models.base import MaterialModel, Point
@@ -133,6 +134,8 @@ class CSMBilinearModel(MaterialModel):
     def _build_trace(self) -> CalcTrace:
         m, c = self._material, self._coefficients
         dimless = units.DIMENSIONLESS
+        eps_y, eps_u = self._yield_strain, self._ultimate_strain
+        e_sh = self._strain_hardening_modulus
 
         def step(
             symbol: str,
@@ -141,89 +144,172 @@ class CSMBilinearModel(MaterialModel):
             substituted: str,
             value: float,
             unit: str,
+            latex: str,
             clause: str = _CLAUSE,
         ) -> CalcStep:
-            return CalcStep(symbol, description, clause, formula, substituted, value, unit)
+            return CalcStep(symbol, description, clause, formula, substituted, value, unit, latex)
 
+        stress = r"\,\mathrm{N/mm^2}"
         return CalcTrace(
             [
                 step(
                     "E",
-                    "modulus of elasticity",
-                    "5.1.5",
+                    "modulus of elasticity (input)",
+                    "input",
                     f"{m.elastic_modulus:g}",
                     m.elastic_modulus,
                     units.STRESS,
-                    clause="5.1.5",
+                    tex(r"E = <e>" + stress + r"\quad(\text{input})", e=m.elastic_modulus),
+                    clause="input",
                 ),
-                step("C₁", "CSM coefficient C₁", "Table B.1", m.family.value, c.c1, dimless),
-                step("C₂", "CSM coefficient C₂", "Table B.1", m.family.value, c.c2, dimless),
-                step("C₃", "CSM coefficient C₃", "Table B.1", m.family.value, c.c3, dimless),
+                step(
+                    "C₁",
+                    "CSM coefficient C₁",
+                    "Table B.1",
+                    m.family.value,
+                    c.c1,
+                    dimless,
+                    tex(r"C_1 = <v>\quad(\text{Table B.1, <f>})", v=c.c1, f=m.family.value),
+                ),
+                step(
+                    "C₂",
+                    "CSM coefficient C₂",
+                    "Table B.1",
+                    m.family.value,
+                    c.c2,
+                    dimless,
+                    tex(r"C_2 = <v>\quad(\text{Table B.1, <f>})", v=c.c2, f=m.family.value),
+                ),
+                step(
+                    "C₃",
+                    "CSM coefficient C₃",
+                    "Table B.1",
+                    m.family.value,
+                    c.c3,
+                    dimless,
+                    tex(r"C_3 = <v>\quad(\text{Table B.1, <f>})", v=c.c3, f=m.family.value),
+                ),
                 step(
                     "ε_y",
                     "elastic strain at yield",
                     "f_y / E",
                     f"{m.fy:g} / {m.elastic_modulus:g}",
-                    self._yield_strain,
+                    eps_y,
                     dimless,
+                    tex(
+                        r"\varepsilon_y = \frac{f_y}{E} = \frac{<fy>}{<e>} = <v>",
+                        fy=m.fy,
+                        e=m.elastic_modulus,
+                        v=eps_y,
+                    ),
                 ),
                 step(
                     "ε_u",
                     "strain at ultimate strength (Formula B.5)",
                     "C₃ (1 − f_y / f_u)",
                     f"{c.c3:g} × (1 − {m.fy:g} / {m.fu:g})",
-                    self._ultimate_strain,
+                    eps_u,
                     dimless,
+                    tex(
+                        r"\varepsilon_u = C_3\left(1 - \frac{f_y}{f_u}\right) "
+                        r"= <c3> \times \left(1 - \frac{<fy>}{<fu>}\right) = <v>",
+                        c3=c.c3,
+                        fy=m.fy,
+                        fu=m.fu,
+                        v=eps_u,
+                    ),
                 ),
                 step(
                     "E_sh",
                     "strain hardening modulus (Formula B.4)",
                     "(f_u − f_y) / (C₂ε_u − ε_y)",
-                    f"({m.fu:g} − {m.fy:g}) / ({c.c2:g} × {self._ultimate_strain:.6g}"
-                    f" − {self._yield_strain:.6g})",
-                    self._strain_hardening_modulus,
+                    f"({m.fu:g} − {m.fy:g}) / ({c.c2:g} × {eps_u:.6g} − {eps_y:.6g})",
+                    e_sh,
                     units.STRESS,
+                    tex(
+                        r"E_{sh} = \frac{f_u - f_y}{C_2\varepsilon_u - \varepsilon_y} "
+                        r"= \frac{<fu> - <fy>}{<c2> \times <eu> - <ey>} = <v>" + stress,
+                        fu=m.fu,
+                        fy=m.fy,
+                        c2=c.c2,
+                        eu=eps_u,
+                        ey=eps_y,
+                        v=e_sh,
+                    ),
                 ),
                 step(
                     "C₁ε_u",
                     "strain limit marker used by B.5 and B.6.1",
                     "C₁ × ε_u",
-                    f"{c.c1:g} × {self._ultimate_strain:.6g}",
+                    f"{c.c1:g} × {eps_u:.6g}",
                     self._strain_limit_c1,
                     dimless,
+                    tex(
+                        r"C_1\varepsilon_u = <c1> \times <eu> = <v>",
+                        c1=c.c1,
+                        eu=eps_u,
+                        v=self._strain_limit_c1,
+                    ),
                 ),
                 step(
                     "C₂ε_u",
                     "last strain of the curve",
                     "C₂ × ε_u",
-                    f"{c.c2:g} × {self._ultimate_strain:.6g}",
+                    f"{c.c2:g} × {eps_u:.6g}",
                     self._strain_end,
                     dimless,
+                    tex(
+                        r"C_2\varepsilon_u = <c2> \times <eu> = <v>",
+                        c2=c.c2,
+                        eu=eps_u,
+                        v=self._strain_end,
+                    ),
                 ),
                 step(
                     "σ(C₁ε_u)",
                     "stress at C₁ε_u on the hardening line",
                     "f_y + E_sh (C₁ε_u − ε_y)",
-                    f"{m.fy:g} + {self._strain_hardening_modulus:.6g}"
-                    f" × ({self._strain_limit_c1:.6g} − {self._yield_strain:.6g})",
+                    f"{m.fy:g} + {e_sh:.6g} × ({self._strain_limit_c1:.6g} − {eps_y:.6g})",
                     self._stress_at_strain_limit_c1,
                     units.STRESS,
+                    tex(
+                        r"\sigma(C_1\varepsilon_u) = f_y + E_{sh}\left(C_1\varepsilon_u - "
+                        r"\varepsilon_y\right) = <fy> + <esh> \times (<c1eu> - <ey>) = <v>"
+                        + stress,
+                        fy=m.fy,
+                        esh=e_sh,
+                        c1eu=self._strain_limit_c1,
+                        ey=eps_y,
+                        v=self._stress_at_strain_limit_c1,
+                    ),
                 ),
                 step(
                     "E_sh/E",
                     "hardening modulus relative to the elastic modulus",
                     "E_sh / E",
-                    f"{self._strain_hardening_modulus:.6g} / {m.elastic_modulus:g}",
+                    f"{e_sh:.6g} / {m.elastic_modulus:g}",
                     self._hardening_ratio,
                     dimless,
+                    tex(
+                        r"\frac{E_{sh}}{E} = \frac{<esh>}{<e>} = <v>",
+                        esh=e_sh,
+                        e=m.elastic_modulus,
+                        v=self._hardening_ratio,
+                    ),
                 ),
                 step(
                     "C₁ε_u/ε_y",
                     "strain limit marker relative to yield strain (compare with 15 in B.14)",
                     "C₁ε_u / ε_y",
-                    f"{self._strain_limit_c1:.6g} / {self._yield_strain:.6g}",
+                    f"{self._strain_limit_c1:.6g} / {eps_y:.6g}",
                     self._strain_limit_ratio_c1,
                     dimless,
+                    tex(
+                        r"\frac{C_1\varepsilon_u}{\varepsilon_y} = \frac{<c1eu>}{<ey>} = <v>",
+                        c1eu=self._strain_limit_c1,
+                        ey=eps_y,
+                        v=self._strain_limit_ratio_c1,
+                    ),
                 ),
             ]
         )

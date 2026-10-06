@@ -18,6 +18,7 @@ class CalcStep:
     substituted: str
     value: float
     unit: str
+    latex: str = ""  # the whole step as one LaTeX equation, for display
 
 
 class CalcTrace:

@@ -2,6 +2,7 @@ import math
 
 import pytest
 
+from helpers import E
 from stainless_csm.core.enums import StainlessFamily
 from stainless_csm.core.errors import InvalidMaterialError, OutOfRangeError
 from stainless_csm.data.repository import GradeRepository
@@ -19,7 +20,7 @@ CASES = [
 
 def model_for(designation: str) -> CSMBilinearModel:
     grade = GradeRepository.load_default().get(designation)
-    return CSMBilinearModel(Material.from_grade(grade))
+    return CSMBilinearModel(Material.from_grade(grade, E))
 
 
 @pytest.mark.parametrize(("designation", "eps_y", "eps_u", "e_sh", "ratio"), CASES)
@@ -79,7 +80,7 @@ def test_end_of_curve_is_inclusive() -> None:
 def test_fy_barely_below_fu_is_rejected() -> None:
     # eps_u ~ 5e-7, so C2*eps_u < eps_y and E_sh would be negative/infinite.
     with pytest.raises(InvalidMaterialError, match="too close to 1"):
-        CSMBilinearModel(Material(StainlessFamily.AUSTENITIC, 210, 210.0001))
+        CSMBilinearModel(Material(StainlessFamily.AUSTENITIC, 210, 210.0001, E))
 
 
 def test_key_points() -> None:
@@ -124,7 +125,7 @@ def test_trace_records_every_derived_value() -> None:
     assert trace.get("ε_y").value == m.yield_strain
     assert trace.get("ε_y").substituted == "210 / 200000"
     assert trace.get("E_sh").value == m.strain_hardening_modulus
-    assert trace.get("E").clause == "5.1.5"
+    assert trace.get("E").clause == "input"
     assert all(s.clause == "B.4" for s in trace if s.symbol != "E")
 
 

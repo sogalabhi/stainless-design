@@ -1,9 +1,9 @@
-"""Default values for E and the National Annex parameters (NDPs)."""
+"""Constants that are written inside Annex B itself.
 
-ELASTIC_MODULUS = 200_000.0  # N/mm², 5.1.5
-GAMMA_M0 = 1.10  # partial factor, National Annex
-OMEGA = 15.0  # strain-ratio cap Ω in B.6, National Annex (not the same symbol as the 15 in B.14)
+Nothing from outside Annex B lives here or anywhere else in the engine: E, nu, gamma_M0, Omega and
+each plate's k_sigma are inputs the user must give. There are no defaults and no suggestions.
+"""
 
-# Fixed strain-ratio cap written as the number 15 in Formula (B.14). Deliberately not OMEGA:
-# B.14 hard-codes it, while Ω (B.5/B.6) is a project-specific parameter a National Annex can change.
+# The number 15 written inside Formula (B.14). It is part of Annex B itself, so it is a fixed
+# constant of the formula (and deliberately not the same thing as the parameter Omega).
 TENSION_STRAIN_RATIO_CAP = 15.0

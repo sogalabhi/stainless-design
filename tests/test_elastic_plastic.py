@@ -1,5 +1,6 @@
 import pytest
 
+from helpers import E
 from stainless_csm.core.enums import StainlessFamily
 from stainless_csm.core.errors import InvalidMaterialError, OutOfRangeError
 from stainless_csm.material_models.base import MaterialModel
@@ -9,7 +10,7 @@ from stainless_csm.materials.material import Material
 
 @pytest.fixture
 def model() -> ElasticPerfectlyPlasticModel:
-    return ElasticPerfectlyPlasticModel(Material(StainlessFamily.AUSTENITIC, 210, 500), 0.05)
+    return ElasticPerfectlyPlasticModel(Material(StainlessFamily.AUSTENITIC, 210, 500, E), 0.05)
 
 
 def test_is_a_material_model(model: ElasticPerfectlyPlasticModel) -> None:
@@ -34,7 +35,7 @@ def test_no_extrapolation(model: ElasticPerfectlyPlasticModel) -> None:
 
 def test_max_strain_must_exceed_yield() -> None:
     with pytest.raises(InvalidMaterialError):
-        ElasticPerfectlyPlasticModel(Material(StainlessFamily.AUSTENITIC, 210, 500), 0.0001)
+        ElasticPerfectlyPlasticModel(Material(StainlessFamily.AUSTENITIC, 210, 500, E), 0.0001)
 
 
 def test_curve_points_include_the_kink(model: ElasticPerfectlyPlasticModel) -> None:

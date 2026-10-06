@@ -15,3 +15,7 @@ class OutOfRangeError(CSMError):
 
 class NotApplicableError(CSMError):
     """The method does not apply to this case (e.g. holes, slenderness out of range)."""
+
+
+class InvalidSectionError(CSMError):
+    """Section geometry or slenderness inputs are physically meaningless."""

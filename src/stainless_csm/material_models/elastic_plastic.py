@@ -2,6 +2,7 @@
 
 from stainless_csm.core import units
 from stainless_csm.core.errors import InvalidMaterialError
+from stainless_csm.core.latex import tex
 from stainless_csm.core.trace import CalcStep, CalcTrace
 from stainless_csm.material_models.base import MaterialModel
 from stainless_csm.materials.material import Material
@@ -29,6 +30,12 @@ class ElasticPerfectlyPlasticModel(MaterialModel):
                     substituted=f"{material.fy:g} / {material.elastic_modulus:g}",
                     value=self._yield_strain,
                     unit=units.DIMENSIONLESS,
+                    latex=tex(
+                        r"\varepsilon_y = \frac{f_y}{E} = \frac{<fy>}{<e>} = <v>",
+                        fy=material.fy,
+                        e=material.elastic_modulus,
+                        v=self._yield_strain,
+                    ),
                 )
             ]
         )
