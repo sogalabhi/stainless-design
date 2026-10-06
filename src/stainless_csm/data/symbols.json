@@ -1,0 +1,561 @@
+{
+  "_comment": "One line per symbol. Wording follows EN 1993-1-4:2025 clause 3.2 where the standard defines the symbol. 'symbol' is the exact text used in the calculation trace; 'topics' say which website pages show it. 'detail' is the long explanation for the Help page; 'diagram' names the sketch drawn beside it (csm_curve, plate, section, base_curve, tension).",
+  "symbols": [
+    {
+      "group": "Material and the CSM model (B.4)",
+      "symbol": "f_y",
+      "latex": "f_y",
+      "name": "Yield strength",
+      "meaning": "The 0.2 % proof strength: the stress where the steel starts to yield; an input.",
+      "unit": "N/mm²",
+      "clause": "input",
+      "topics": [
+        "material",
+        "tension",
+        "deformation"
+      ],
+      "detail": "Stainless steel has no sharp yield point, so f_y is the 0.2 % proof strength: the stress that leaves 0.2 % permanent strain after unloading. It is the stress where the first, steep line of the curve ends and the curve starts to round over. Everything in the CSM is measured against it: the strain axis is scaled by ε_y = f_y / E and slenderness is √(f_y / σ_cr). Take it from the material certificate or Table 5.1, not from the grade name alone.",
+      "diagram": "csm_curve"
+    },
+    {
+      "group": "Material and the CSM model (B.4)",
+      "symbol": "f_u",
+      "latex": "f_u",
+      "name": "Ultimate tensile strength",
+      "meaning": "The highest stress the steel reaches before it fails; an input.",
+      "unit": "N/mm²",
+      "clause": "input",
+      "topics": [
+        "material",
+        "tension"
+      ],
+      "detail": "f_u is the peak of the engineering stress-strain curve. For stainless steel it is far above f_y, and that gap is the whole reason the CSM exists: the classic method stops at f_y and throws the gap away, the CSM lets a stocky section use part of it. The ratio f_y/f_u also controls the ultimate strain ε_u (Formula B.5) and the hardening slope E_sh, so a wrong f_u changes the whole curve.",
+      "diagram": "csm_curve"
+    },
+    {
+      "group": "Material and the CSM model (B.4)",
+      "symbol": "f_ya, f_ua",
+      "latex": "f_{ya},\\ f_{ua}",
+      "name": "Average strengths of cold-formed sections",
+      "meaning": "Yield and ultimate strength raised by cold-forming; may replace f_y and f_u (B.3(3)); an input.",
+      "unit": "N/mm²",
+      "clause": "B.3(3)",
+      "topics": [
+        "material"
+      ],
+      "detail": "Cold-forming (press braking, rolling, drawing) hardens the corners and sometimes the flats of a section, raising its strength above the plain sheet values. B.3(3) allows the raised values f_ya and f_ua to replace f_y and f_u when they are known. In this tool they are simply typed in as custom values; they are not computed here.",
+      "diagram": "csm_curve"
+    },
+    {
+      "group": "Material and the CSM model (B.4)",
+      "symbol": "E",
+      "latex": "E",
+      "name": "Modulus of elasticity",
+      "meaning": "Stiffness of the elastic range, the slope of the first line; an input.",
+      "unit": "N/mm²",
+      "clause": "input",
+      "topics": [
+        "material",
+        "tension",
+        "deformation"
+      ],
+      "detail": "E is the slope of the first line: how much stress per unit of strain before yielding. It sets the yield strain ε_y = f_y / E, and it also appears in the plate and tube buckling stresses (Formulas B.9 and B.11). The standard defines it outside Annex B, so it is an input, never a hidden default.",
+      "diagram": "csm_curve"
+    },
+    {
+      "group": "Material and the CSM model (B.4)",
+      "symbol": "ν",
+      "latex": "\\nu",
+      "name": "Poisson's ratio",
+      "meaning": "Ratio of lateral to axial strain in the elastic range; an input.",
+      "unit": "-",
+      "clause": "input",
+      "topics": [
+        "deformation"
+      ],
+      "detail": "Poisson's ratio describes how much a plate or wall shrinks sideways when it is squeezed or stretched along its length. It enters the plate buckling stress (B.9) and the tube buckling stress (B.11) through 1 − ν². It is only needed when the engine has to compute σ_cr,cs; if you type σ_cr,cs yourself, ν is not used.",
+      "diagram": "plate"
+    },
+    {
+      "group": "Material and the CSM model (B.4)",
+      "symbol": "ε_y",
+      "latex": "\\varepsilon_y",
+      "name": "Yield strain",
+      "meaning": "Elastic strain at the yield strength, f_y / E.",
+      "unit": "-",
+      "clause": "B.4",
+      "topics": [
+        "material",
+        "tension",
+        "deformation"
+      ],
+      "detail": "ε_y = f_y / E is where the curve leaves the elastic line. It is the natural unit of strain in the CSM: limits are quoted as multiples of it (ε_csm/ε_y, C₁ε_u/ε_y, 15). A section with ε_csm/ε_y = 1 only just reaches yield; above 1 it is using strain hardening.",
+      "diagram": "csm_curve"
+    },
+    {
+      "group": "Material and the CSM model (B.4)",
+      "symbol": "ε_u",
+      "latex": "\\varepsilon_u",
+      "name": "Ultimate strain",
+      "meaning": "Strain at the ultimate strength, estimated from f_y / f_u (Formula B.5).",
+      "unit": "-",
+      "clause": "B.4",
+      "topics": [
+        "material"
+      ],
+      "detail": "ε_u = C₃ (1 − f_y/f_u) (Formula B.5) is an estimate of the strain at ultimate strength. It is estimated from the strength ratio because that is what a designer always has; the actual measured value would need a tensile test. The CSM's two key strains, C₁ε_u and C₂ε_u, are both multiples of it. The larger the gap between f_u and f_y, the more ductile the model assumes the steel to be.",
+      "diagram": "csm_curve"
+    },
+    {
+      "group": "Material and the CSM model (B.4)",
+      "symbol": "E_sh",
+      "latex": "E_{sh}",
+      "name": "Strain hardening modulus",
+      "meaning": "Slope of the second line of the bilinear model: rise over run from (ε_y, f_y) to (C₂ε_u, f_u).",
+      "unit": "N/mm²",
+      "clause": "B.4",
+      "topics": [
+        "material",
+        "tension"
+      ],
+      "detail": "E_sh is the slope of the second line: how much stress is gained per unit of extra strain once the steel is past yield. It is far smaller than E but not zero, which is exactly the difference from the classic elastic-plastic model (flat after yield, E_sh = 0). It is the rise (f_u − f_y) over the run (C₂ε_u − ε_y). A large E_sh means a lot of strength is available from hardening.",
+      "diagram": "csm_curve"
+    },
+    {
+      "group": "Material and the CSM model (B.4)",
+      "symbol": "C₁",
+      "latex": "C_1",
+      "name": "CSM coefficient C1",
+      "meaning": "Sets the ductility cap C₁ε_u (Table B.1).",
+      "unit": "-",
+      "clause": "B.4",
+      "topics": [
+        "material"
+      ],
+      "detail": "C₁ comes from Table B.1 and depends on the material family (austenitic, duplex, ferritic and so on). It scales ε_u to give the ductility cap C₁ε_u: the largest strain the CSM lets any member use, however stocky. It protects against relying on strains the material may not safely reach.",
+      "diagram": "csm_curve"
+    },
+    {
+      "group": "Material and the CSM model (B.4)",
+      "symbol": "C₂",
+      "latex": "C_2",
+      "name": "CSM coefficient C2",
+      "meaning": "Sets where the hardening line ends, C₂ε_u (Table B.1).",
+      "unit": "-",
+      "clause": "B.4",
+      "topics": [
+        "material"
+      ],
+      "detail": "C₂ comes from Table B.1. It places the end of the bilinear curve at C₂ε_u, the strain where the straight hardening line reaches f_u. It is an anchor of the model, not a prediction of fracture.",
+      "diagram": "csm_curve"
+    },
+    {
+      "group": "Material and the CSM model (B.4)",
+      "symbol": "C₃",
+      "latex": "C_3",
+      "name": "CSM coefficient C3",
+      "meaning": "Scales the ultimate strain ε_u; lower for the less ductile ferritic steels (Table B.1).",
+      "unit": "-",
+      "clause": "B.4",
+      "topics": [
+        "material"
+      ],
+      "detail": "C₃ comes from Table B.1 and sets the size of ε_u = C₃(1 − f_y/f_u). Ferritic steels have a lower C₃ because they are less ductile, so their curve ends sooner and the CSM gives them less credit for strain hardening.",
+      "diagram": "csm_curve"
+    },
+    {
+      "group": "Material and the CSM model (B.4)",
+      "symbol": "C₁ε_u",
+      "latex": "C_1\\varepsilon_u",
+      "name": "Ductility cap",
+      "meaning": "The largest strain the method lets you use.",
+      "unit": "-",
+      "clause": "B.4",
+      "topics": [
+        "material"
+      ],
+      "detail": "C₁ε_u is the upper limit of the strain you may use, set by material ductility alone. In compression B.6/B.7 it caps the stocky branch together with Ω; in tension B.14 compares it with the fixed 15ε_y and uses the smaller. On the chart it is the marker where the hardening line is cut off for design.",
+      "diagram": "csm_curve"
+    },
+    {
+      "group": "Material and the CSM model (B.4)",
+      "symbol": "C₂ε_u",
+      "latex": "C_2\\varepsilon_u",
+      "name": "End of the bilinear curve",
+      "meaning": "Strain where the stress reaches f_u: an anchor point for the straight line, not the fracture strain.",
+      "unit": "-",
+      "clause": "B.4",
+      "topics": [
+        "material"
+      ],
+      "detail": "C₂ε_u is the last point of the bilinear model, where the stress equals f_u. It lies beyond C₁ε_u, so the design never uses the very end of the curve. Do not read it as the failure strain.",
+      "diagram": "csm_curve"
+    },
+    {
+      "group": "Material and the CSM model (B.4)",
+      "symbol": "σ(C₁ε_u)",
+      "latex": "\\sigma(C_1\\varepsilon_u)",
+      "name": "Stress at the ductility cap",
+      "meaning": "Stress on the hardening line at C₁ε_u.",
+      "unit": "N/mm²",
+      "clause": "B.4",
+      "topics": [
+        "material"
+      ],
+      "detail": "This is the height of the hardening line at the ductility cap: f_y + E_sh (C₁ε_u − ε_y). When C₁ε_u governs in tension, this is the design stress f_csm,t. It normally lies between f_y and f_u.",
+      "diagram": "csm_curve"
+    },
+    {
+      "group": "Material and the CSM model (B.4)",
+      "symbol": "E_sh/E",
+      "latex": "E_{sh}/E",
+      "name": "Hardening ratio",
+      "meaning": "Hardening slope as a fraction of the elastic slope.",
+      "unit": "-",
+      "clause": "B.4",
+      "topics": [
+        "material"
+      ],
+      "detail": "The hardening ratio compares the second slope with the first. A small value means a very flat second line, so the CSM adds little strength; a larger value means more. It is a quick way to see how much a given material benefits from strain hardening.",
+      "diagram": "csm_curve"
+    },
+    {
+      "group": "Material and the CSM model (B.4)",
+      "symbol": "C₁ε_u/ε_y",
+      "latex": "C_1\\varepsilon_u/\\varepsilon_y",
+      "name": "Ductility cap ratio",
+      "meaning": "The ductility cap as a multiple of the yield strain; compared with 15 in Formula B.14.",
+      "unit": "-",
+      "clause": "B.4",
+      "topics": [
+        "material",
+        "tension",
+        "deformation"
+      ],
+      "detail": "This is the ductility cap in units of yield strain, and it is the quantity that meets the fixed number 15 in Formula B.14. If it is below 15 the material's own ductility governs tension; if it is above 15 the fixed limit of 15 governs. In compression it is compared with Ω.",
+      "diagram": "csm_curve"
+    },
+    {
+      "group": "Slenderness and the base curve (B.5)",
+      "symbol": "σ_cr,p",
+      "latex": "\\sigma_{cr,p}",
+      "name": "Plate buckling stress",
+      "meaning": "Elastic critical buckling stress of one plate element (Formula B.9).",
+      "unit": "N/mm²",
+      "clause": "B.5.2",
+      "topics": [
+        "deformation"
+      ],
+      "detail": "σ_cr,p is the stress at which a flat plate under compression would buckle if the steel stayed elastic, k_σ π² E t² / (12 (1 − ν²) b̄²). It depends only on geometry (width b̄, thickness t), edge support (through k_σ) and elastic constants, not on f_y. A wide, thin plate buckles at a low stress.",
+      "diagram": "plate"
+    },
+    {
+      "group": "Slenderness and the base curve (B.5)",
+      "symbol": "σ_cr,cs",
+      "latex": "\\sigma_{cr,cs}",
+      "name": "Section buckling stress",
+      "meaning": "Elastic critical local buckling stress of the full cross-section; here the most slender plate.",
+      "unit": "N/mm²",
+      "clause": "B.5.2",
+      "topics": [
+        "deformation"
+      ],
+      "detail": "σ_cr,cs is the elastic local buckling stress of the whole cross-section. In this tool it is conservatively taken as the lowest σ_cr,p of the plates, which is the most slender plate, because that plate buckles first and drags the section with it. You may also type a value from your own analysis.",
+      "diagram": "section"
+    },
+    {
+      "group": "Slenderness and the base curve (B.5)",
+      "symbol": "σ_cr,c",
+      "latex": "\\sigma_{cr,c}",
+      "name": "Tube buckling stress",
+      "meaning": "Elastic critical local buckling stress of a circular hollow section (Formula B.11).",
+      "unit": "N/mm²",
+      "clause": "B.5.2",
+      "topics": [
+        "deformation"
+      ],
+      "detail": "σ_cr,c is the elastic local buckling stress of a circular hollow section wall, E / √(3(1 − ν²)) × 2t/d (Formula B.11). It rises as the wall gets thicker relative to the diameter. Because tubes buckle in a different mode from flat plates, they have their own formula and their own base curve.",
+      "diagram": "section"
+    },
+    {
+      "group": "Slenderness and the base curve (B.5)",
+      "symbol": "λ_p",
+      "latex": "\\bar\\lambda_p",
+      "name": "Plate slenderness",
+      "meaning": "Relative slenderness of one plate, the square root of f_y / σ_cr,p.",
+      "unit": "-",
+      "clause": "B.5.2",
+      "topics": [
+        "deformation"
+      ],
+      "detail": "λ_p = √(f_y / σ_cr,p) compares yield strength with elastic buckling strength for one plate. Below about 1 the plate would reach yield before it buckles; above 1 it buckles first. It is the plate's slenderness: low means stocky, high means slender.",
+      "diagram": "plate"
+    },
+    {
+      "group": "Slenderness and the base curve (B.5)",
+      "symbol": "λ_p,cs",
+      "latex": "\\bar\\lambda_{p,cs}",
+      "name": "Cross-section slenderness (plates)",
+      "meaning": "Relative slenderness of a section of flat plates: the square root of f_y / σ_cr,cs (Formula B.8).",
+      "unit": "-",
+      "clause": "B.5.2",
+      "topics": [
+        "deformation"
+      ],
+      "detail": "λ_p,cs = √(f_y / σ_cr,cs) is the slenderness of the whole flat-plate section (Formula B.8). It is the number you read along the horizontal axis of the base curve B.6. Same idea as λ_p, but for the section as a whole.",
+      "diagram": "section"
+    },
+    {
+      "group": "Slenderness and the base curve (B.5)",
+      "symbol": "λ_c,cs",
+      "latex": "\\bar\\lambda_{c,cs}",
+      "name": "Cross-section slenderness (tube)",
+      "meaning": "Relative slenderness of a circular hollow section: the square root of f_y / σ_cr,c (Formula B.10).",
+      "unit": "-",
+      "clause": "B.5.2",
+      "topics": [
+        "deformation"
+      ],
+      "detail": "λ_c,cs = √(f_y / σ_cr,c) is the slenderness of a circular hollow section (Formula B.10). It is the number you read along the horizontal axis of base curve B.7, whose allowed range is much narrower than for plates.",
+      "diagram": "section"
+    },
+    {
+      "group": "Slenderness and the base curve (B.5)",
+      "symbol": "λ_cs",
+      "latex": "\\bar\\lambda_{cs}",
+      "name": "Cross-section slenderness",
+      "meaning": "The slenderness used on the base curve: λ_p,cs for plates or λ_c,cs for tubes.",
+      "unit": "-",
+      "clause": "B.5.1",
+      "topics": [
+        "deformation"
+      ],
+      "detail": "λ_cs is simply whichever slenderness applies: λ_p,cs for plated sections or λ_c,cs for tubes. It is the horizontal coordinate of the section's point on the base curve and decides the zone: stocky, slender or not allowed.",
+      "diagram": "base_curve"
+    },
+    {
+      "group": "Slenderness and the base curve (B.5)",
+      "symbol": "k_σ",
+      "latex": "k_\\sigma",
+      "name": "Plate buckling factor",
+      "meaning": "How easily a plate buckles; an input for each plate.",
+      "unit": "-",
+      "clause": "input",
+      "topics": [
+        "deformation"
+      ],
+      "detail": "k_σ is the plate buckling factor. It captures how the plate's edges are held (simply supported, fixed, free, one edge free) and how the stress varies across it. A well-supported plate has a high k_σ and buckles later. The standard refers to it from B.5.2(3) but defines it elsewhere, so it is an input for each plate.",
+      "diagram": "plate"
+    },
+    {
+      "group": "Slenderness and the base curve (B.5)",
+      "symbol": "ε_csm",
+      "latex": "\\varepsilon_{csm}",
+      "name": "CSM strain limit",
+      "meaning": "The limiting compressive strain the cross-section can reach before local buckling.",
+      "unit": "-",
+      "clause": "B.5.1",
+      "topics": [
+        "deformation"
+      ],
+      "detail": "ε_csm is the largest compressive strain the cross-section can reach before local buckling stops it. The CSM uses it as the strain to read the design stress from. A stocky section can reach several times ε_y; a slender one only about ε_y or less.",
+      "diagram": "base_curve"
+    },
+    {
+      "group": "Slenderness and the base curve (B.5)",
+      "symbol": "ε_csm/ε_y",
+      "latex": "\\varepsilon_{csm}/\\varepsilon_y",
+      "name": "Strain limit ratio",
+      "meaning": "The CSM strain limit as a multiple of the yield strain; above 1 the section can strain-harden.",
+      "unit": "-",
+      "clause": "B.5.1",
+      "topics": [
+        "deformation"
+      ],
+      "detail": "This is the value read from the base curve, already capped on the stocky side. A value of 1 means the section reaches yield but no more; greater than 1 means it can use strain hardening, which is where the CSM gains strength over the classic method.",
+      "diagram": "base_curve"
+    },
+    {
+      "group": "Slenderness and the base curve (B.5)",
+      "symbol": "(ε_csm/ε_y) base curve",
+      "latex": "\\varepsilon_{csm}/\\varepsilon_y",
+      "name": "Base curve value",
+      "meaning": "The value read from the base curve (B.6 or B.7) before the cap is applied.",
+      "unit": "-",
+      "clause": "B.5.1",
+      "topics": [
+        "deformation"
+      ],
+      "detail": "The raw value from Formula B.6 (flat plates) or B.7 (tubes) before the cap is applied. On the stocky branch it rises steeply as slenderness drops, so a cap is required; on the slender branch no cap is needed.",
+      "diagram": "base_curve"
+    },
+    {
+      "group": "Slenderness and the base curve (B.5)",
+      "symbol": "min(Ω, C₁ε_u/ε_y)",
+      "latex": "\\min\\{\\Omega;\\ C_1\\varepsilon_u/\\varepsilon_y\\}",
+      "name": "Strain cap",
+      "meaning": "The cap on the stocky branch: the smaller of Ω and the material ductility cap.",
+      "unit": "-",
+      "clause": "B.5.1",
+      "topics": [
+        "deformation"
+      ],
+      "detail": "The cap on the stocky branch of B.6 and B.7: whichever is smaller of the plastic deformation limit Ω and the material ductility limit C₁ε_u/ε_y. The result shows which one governed, so you can see whether the section or the material is the limit.",
+      "diagram": "base_curve"
+    },
+    {
+      "group": "Slenderness and the base curve (B.5)",
+      "symbol": "Ω",
+      "latex": "\\Omega",
+      "name": "Plastic deformation parameter",
+      "meaning": "Limit on the permitted plastic strain; an input.",
+      "unit": "-",
+      "clause": "input",
+      "topics": [
+        "deformation"
+      ],
+      "detail": "Ω sets how much plastic strain the designer is willing to allow for the section. It is not defined inside the Annex B formulas, so it is an input. A lower Ω is more conservative. It only matters when it is smaller than the material limit C₁ε_u/ε_y.",
+      "diagram": "base_curve"
+    },
+    {
+      "group": "Section dimensions",
+      "symbol": "b̄",
+      "latex": "\\bar b",
+      "name": "Flat plate width",
+      "meaning": "Width of the flat part of a plate element; an input.",
+      "unit": "mm",
+      "clause": "input",
+      "topics": [
+        "deformation"
+      ],
+      "detail": "b̄ is the flat part of the plate, between the corner radii or welds, not the full outer width. Using the outer width makes the plate look more stocky than it is. It enters σ_cr,p squared in the denominator, so it has a strong effect.",
+      "diagram": "plate"
+    },
+    {
+      "group": "Section dimensions",
+      "symbol": "t",
+      "latex": "t",
+      "name": "Thickness",
+      "meaning": "Thickness of a plate or wall; an input.",
+      "unit": "mm",
+      "clause": "input",
+      "topics": [
+        "deformation"
+      ],
+      "detail": "t is the thickness of a plate or tube wall. It enters the buckling stress squared (B.9) or linearly (B.11), so a small increase in t makes a section noticeably less slender.",
+      "diagram": "plate"
+    },
+    {
+      "group": "Section dimensions",
+      "symbol": "d",
+      "latex": "d",
+      "name": "Outer diameter",
+      "meaning": "Outer diameter of a circular hollow section; an input.",
+      "unit": "mm",
+      "clause": "input",
+      "topics": [
+        "deformation"
+      ],
+      "detail": "d is the outer diameter of a circular hollow section. The ratio t/d, not either alone, controls the tube's buckling stress. The wall must be thinner than half the diameter.",
+      "diagram": "section"
+    },
+    {
+      "group": "Tension (B.6.1)",
+      "symbol": "A",
+      "latex": "A",
+      "name": "Cross-sectional area",
+      "meaning": "Gross area of the cross-section; an input.",
+      "unit": "mm²",
+      "clause": "input",
+      "topics": [
+        "tension"
+      ],
+      "detail": "A is the gross cross-sectional area of the member. It converts stress to force in Formula B.12. The CSM tension route applies to sections without holes, so net area is not used here.",
+      "diagram": "tension"
+    },
+    {
+      "group": "Tension (B.6.1)",
+      "symbol": "γ_M0",
+      "latex": "\\gamma_{M0}",
+      "name": "Partial factor",
+      "meaning": "Safety factor on cross-section resistance; an input.",
+      "unit": "-",
+      "clause": "input",
+      "topics": [
+        "tension"
+      ],
+      "detail": "γ_M0 is the partial safety factor applied to cross-section resistance. Its value is given by the Eurocode part and the National Annex that apply, not by Annex B, so it is an input. It divides the resistance, so a larger factor gives a lower, more conservative design value.",
+      "diagram": "tension"
+    },
+    {
+      "group": "Tension (B.6.1)",
+      "symbol": "ε_csm,t/ε_y",
+      "latex": "\\varepsilon_{csm,t}/\\varepsilon_y",
+      "name": "Tensile strain limit ratio",
+      "meaning": "The smaller of 15 and C₁ε_u/ε_y (Formula B.14).",
+      "unit": "-",
+      "clause": "B.6.1",
+      "topics": [
+        "tension"
+      ],
+      "detail": "Formula B.14: the smaller of the fixed number 15 and the material's own C₁ε_u/ε_y. The result tells you whether the fixed limit or the material ductility is holding back the tensile strain. It is the horizontal position of the design point on the stress-strain curve.",
+      "diagram": "tension"
+    },
+    {
+      "group": "Tension (B.6.1)",
+      "symbol": "ε_csm,t",
+      "latex": "\\varepsilon_{csm,t}",
+      "name": "Tensile strain limit",
+      "meaning": "Maximum attainable CSM tensile strain.",
+      "unit": "-",
+      "clause": "B.6.1",
+      "topics": [
+        "tension"
+      ],
+      "detail": "The actual tensile strain used for design: the ratio ε_csm,t/ε_y times ε_y. It is the strain at which the design stress is read from the hardening line.",
+      "diagram": "tension"
+    },
+    {
+      "group": "Tension (B.6.1)",
+      "symbol": "15ε_y",
+      "latex": "15\\varepsilon_y",
+      "name": "Fixed strain cap",
+      "meaning": "The fixed limit of 15 times the yield strain written into Formula B.14.",
+      "unit": "-",
+      "clause": "B.6.1",
+      "topics": [
+        "tension"
+      ],
+      "detail": "The fixed limit written into B.14. It caps the tensile strain the CSM may use, even for a very ductile steel, so that C₁ε_u alone cannot make the strain limit unbounded. It is a rule of the standard, not a material property; the working shows whether this limit or C₁ε_u/ε_y governed.",
+      "diagram": "tension"
+    },
+    {
+      "group": "Tension (B.6.1)",
+      "symbol": "f_csm,t",
+      "latex": "f_{csm,t}",
+      "name": "CSM tensile design stress",
+      "meaning": "Stress on the hardening line at ε_csm,t (Formula B.13).",
+      "unit": "N/mm²",
+      "clause": "B.6.1",
+      "topics": [
+        "tension"
+      ],
+      "detail": "Formula B.13: the stress on the hardening line at the tensile strain limit, f_y + E_sh ε_y (ε_csm,t/ε_y − 1). It is higher than f_y whenever the strain limit exceeds ε_y, which is the extra strength the CSM adds over the classic method.",
+      "diagram": "tension"
+    },
+    {
+      "group": "Tension (B.6.1)",
+      "symbol": "N_csm,t,Rd",
+      "latex": "N_{csm,t,Rd}",
+      "name": "CSM tension resistance",
+      "meaning": "Design value of the CSM resistance to tension axial force (Formula B.12).",
+      "unit": "N",
+      "clause": "B.6.1",
+      "topics": [
+        "tension"
+      ],
+      "detail": "Formula B.12: A f_csm,t / γ_M0. This is the design resistance of the member in pure tension according to the CSM. It is a resistance only; comparing it with an applied force is left to you because load combinations are outside Annex B.",
+      "diagram": "tension"
+    }
+  ]
+}
