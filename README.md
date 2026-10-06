@@ -184,19 +184,18 @@ served at `/docs`. After changing the schemas, regenerate the TypeScript types:
 
 ## Deploy to Vercel
 
-The website is a static build and the API runs as one Python serverless function.
+One Vercel project with two services: the website (static build) and the API (one Python serverless function). The website calls the API through relative `/api/v1/...` URLs on the same domain, so no service binding is needed.
 
 | File | Role |
 |---|---|
-| `vercel.json` | Builds `apps/web`, serves `apps/web/dist`, rewrites `/api/*` to the function, bundles `src/**` |
+| `vercel.json` | Two services: `web` (Vite, `apps/web`) and `api` (FastAPI, `api/index.py`). `/api/*` goes to `api`, everything else to `web` |
 | `api/index.py` | The function: exposes the FastAPI `app` (adds `src/` to the path) |
 | `requirements.txt` | Function dependencies: `fastapi` and `plotly` only (no PySide6 or matplotlib) |
 | `.python-version` | Python version for the function |
 | `.vercelignore` | Keeps `.venv`, `node_modules` and `tests` out of the upload |
 
 Import the repository in Vercel (root directory = the repository root) or run `vercel` from it.
-The website calls relative `/api/v1/...` URLs, so no settings are needed. Try it locally first
-with `vercel dev`. The first request after idle time is slower (cold start).
+Try it locally first with `vercel dev`, which runs both services together. The first request after idle time is slower (cold start).
 
 ## Desktop app (paused)
 
