@@ -1,0 +1,1333 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Stainless CSM",
+    "description": "Continuous Strength Method, EN 1993-1-4:2025 Annex B.",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "summary": "Health",
+        "operationId": "health_api_v1_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Api V1 Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/grades": {
+      "get": {
+        "summary": "Grades",
+        "description": "Table 5.1.",
+        "operationId": "grades_api_v1_grades_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/GradeOut"
+                  },
+                  "type": "array",
+                  "title": "Response Grades Api V1 Grades Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/symbols": {
+      "get": {
+        "summary": "Symbols",
+        "description": "The symbol glossary: one line per symbol. `topic` is material, deformation or tension.",
+        "operationId": "symbols_api_v1_symbols_get",
+        "parameters": [
+          {
+            "name": "topic",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Topic"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SymbolOut"
+                  },
+                  "title": "Response Symbols Api V1 Symbols Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/csm-coefficients": {
+      "get": {
+        "summary": "Csm Coefficients",
+        "description": "Table B.1.",
+        "operationId": "csm_coefficients_api_v1_csm_coefficients_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CoefficientsOut"
+                  },
+                  "type": "array",
+                  "title": "Response Csm Coefficients Api V1 Csm Coefficients Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/material-model": {
+      "post": {
+        "summary": "Material Model",
+        "description": "B.4: the CSM bilinear model for a material.",
+        "operationId": "material_model_api_v1_material_model_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MaterialModelRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaterialModelResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tension": {
+      "post": {
+        "summary": "Tension",
+        "description": "B.6.1: CSM tension resistance.",
+        "operationId": "tension_api_v1_tension_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TensionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TensionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/deformation-capacity": {
+      "post": {
+        "summary": "Deformation Capacity",
+        "description": "B.5: cross-section slenderness and the strain limit eps_csm / eps_y (B.6, B.7).",
+        "operationId": "deformation_capacity_api_v1_deformation_capacity_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeformationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeformationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CapSourceKey": {
+        "type": "string",
+        "enum": [
+          "omega",
+          "material_ductility"
+        ],
+        "title": "CapSourceKey"
+      },
+      "CoefficientsOut": {
+        "properties": {
+          "family": {
+            "$ref": "#/components/schemas/StainlessFamily"
+          },
+          "c1": {
+            "type": "number",
+            "title": "C1"
+          },
+          "c2": {
+            "type": "number",
+            "title": "C2"
+          },
+          "c3": {
+            "type": "number",
+            "title": "C3"
+          },
+          "selected": {
+            "type": "boolean",
+            "title": "Selected",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "family",
+          "c1",
+          "c2",
+          "c3"
+        ],
+        "title": "CoefficientsOut"
+      },
+      "DeformationRequest": {
+        "properties": {
+          "material": {
+            "$ref": "#/components/schemas/MaterialInput"
+          },
+          "geometry": {
+            "$ref": "#/components/schemas/GeometryInput"
+          },
+          "omega": {
+            "type": "number",
+            "title": "Omega",
+            "description": "Parameter Omega, an input"
+          },
+          "poisson_ratio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Poisson Ratio",
+            "description": "Poisson ratio nu, an input; not needed with sigma_cr"
+          }
+        },
+        "type": "object",
+        "required": [
+          "material",
+          "geometry",
+          "omega"
+        ],
+        "title": "DeformationRequest"
+      },
+      "DeformationResponse": {
+        "properties": {
+          "material": {
+            "$ref": "#/components/schemas/MaterialOut"
+          },
+          "family": {
+            "$ref": "#/components/schemas/FamilyKey"
+          },
+          "slenderness": {
+            "$ref": "#/components/schemas/SlendernessOut"
+          },
+          "strain_limit": {
+            "$ref": "#/components/schemas/StrainLimitOut"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Notes"
+          },
+          "trace": {
+            "items": {
+              "$ref": "#/components/schemas/TraceStepOut"
+            },
+            "type": "array",
+            "title": "Trace"
+          },
+          "figure": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Figure"
+          }
+        },
+        "type": "object",
+        "required": [
+          "material",
+          "family",
+          "slenderness",
+          "strain_limit",
+          "notes",
+          "trace",
+          "figure"
+        ],
+        "title": "DeformationResponse"
+      },
+      "ErrorResponse": {
+        "properties": {
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          },
+          "error_type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "detail",
+          "error_type"
+        ],
+        "title": "ErrorResponse"
+      },
+      "FamilyKey": {
+        "type": "string",
+        "enum": [
+          "flat_plates",
+          "circular_hollow"
+        ],
+        "title": "FamilyKey"
+      },
+      "GeometryInput": {
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/GeometryKindKey"
+          },
+          "d": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "D",
+            "description": "Outer diameter [mm] (CHS)"
+          },
+          "t": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "T",
+            "description": "Wall thickness [mm] (CHS)"
+          },
+          "plates": {
+            "items": {
+              "$ref": "#/components/schemas/PlateInput"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Plates"
+          },
+          "sigma_cr_cs": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sigma Cr Cs",
+            "description": "sigma_cr,cs [N/mm2]"
+          },
+          "family": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FamilyKey"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "With sigma_cr only"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind"
+        ],
+        "title": "GeometryInput",
+        "description": "The section. Which fields are needed depends on `kind` (the API says what is missing)."
+      },
+      "GeometryKindKey": {
+        "type": "string",
+        "enum": [
+          "chs",
+          "plates",
+          "sigma_cr"
+        ],
+        "title": "GeometryKindKey"
+      },
+      "GoverningKey": {
+        "type": "string",
+        "enum": [
+          "fixed_limit_15",
+          "material_ductility"
+        ],
+        "title": "GoverningKey",
+        "description": "Which term of Formula B.14 governs the tensile strain limit (stable machine key)."
+      },
+      "GradeOut": {
+        "properties": {
+          "designation": {
+            "type": "string",
+            "title": "Designation"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "family": {
+            "$ref": "#/components/schemas/StainlessFamily"
+          },
+          "strength_class": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strength Class"
+          },
+          "corrosion_class": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Corrosion Class"
+          },
+          "fy": {
+            "type": "number",
+            "title": "Fy"
+          },
+          "fu": {
+            "type": "number",
+            "title": "Fu"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "designation",
+          "label",
+          "family",
+          "strength_class",
+          "corrosion_class",
+          "fy",
+          "fu",
+          "note"
+        ],
+        "title": "GradeOut"
+      },
+      "GraphView": {
+        "type": "string",
+        "enum": [
+          "schematic",
+          "true_scale"
+        ],
+        "title": "GraphView"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "MaterialInput": {
+        "properties": {
+          "designation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Designation",
+            "examples": [
+              "1.4307"
+            ]
+          },
+          "family": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StainlessFamily"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "fy": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fy",
+            "description": "Yield strength [N/mm2], custom only"
+          },
+          "fu": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fu",
+            "description": "Ultimate strength [N/mm2], custom only"
+          },
+          "elastic_modulus": {
+            "type": "number",
+            "title": "Elastic Modulus",
+            "description": "E [N/mm2], an input"
+          },
+          "enhanced": {
+            "type": "boolean",
+            "title": "Enhanced",
+            "description": "Custom values enhanced by cold-forming",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "elastic_modulus"
+        ],
+        "title": "MaterialInput",
+        "description": "A Table 5.1 grade (give `designation`) or a custom material (leave it out)."
+      },
+      "MaterialModelRequest": {
+        "properties": {
+          "material": {
+            "$ref": "#/components/schemas/MaterialInput"
+          },
+          "graph_view": {
+            "$ref": "#/components/schemas/GraphView",
+            "default": "schematic"
+          }
+        },
+        "type": "object",
+        "required": [
+          "material"
+        ],
+        "title": "MaterialModelRequest"
+      },
+      "MaterialModelResponse": {
+        "properties": {
+          "material": {
+            "$ref": "#/components/schemas/MaterialOut"
+          },
+          "values": {
+            "$ref": "#/components/schemas/ModelValuesOut"
+          },
+          "hint": {
+            "type": "string",
+            "title": "Hint"
+          },
+          "coefficients": {
+            "items": {
+              "$ref": "#/components/schemas/CoefficientsOut"
+            },
+            "type": "array",
+            "title": "Coefficients"
+          },
+          "trace": {
+            "items": {
+              "$ref": "#/components/schemas/TraceStepOut"
+            },
+            "type": "array",
+            "title": "Trace"
+          },
+          "figure": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Figure",
+            "description": "Plotly figure (data and layout)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "material",
+          "values",
+          "hint",
+          "coefficients",
+          "trace",
+          "figure"
+        ],
+        "title": "MaterialModelResponse"
+      },
+      "MaterialOut": {
+        "properties": {
+          "family": {
+            "$ref": "#/components/schemas/StainlessFamily"
+          },
+          "fy": {
+            "type": "number",
+            "title": "Fy"
+          },
+          "fu": {
+            "type": "number",
+            "title": "Fu"
+          },
+          "elastic_modulus": {
+            "type": "number",
+            "title": "Elastic Modulus"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "family",
+          "fy",
+          "fu",
+          "elastic_modulus",
+          "source",
+          "note"
+        ],
+        "title": "MaterialOut"
+      },
+      "ModelValuesOut": {
+        "properties": {
+          "yield_strain": {
+            "type": "number",
+            "title": "Yield Strain"
+          },
+          "ultimate_strain": {
+            "type": "number",
+            "title": "Ultimate Strain"
+          },
+          "strain_hardening_modulus": {
+            "type": "number",
+            "title": "Strain Hardening Modulus"
+          },
+          "strain_limit_c1": {
+            "type": "number",
+            "title": "Strain Limit C1"
+          },
+          "strain_end": {
+            "type": "number",
+            "title": "Strain End"
+          },
+          "stress_at_strain_limit_c1": {
+            "type": "number",
+            "title": "Stress At Strain Limit C1"
+          },
+          "hardening_ratio": {
+            "type": "number",
+            "title": "Hardening Ratio"
+          },
+          "strain_limit_ratio_c1": {
+            "type": "number",
+            "title": "Strain Limit Ratio C1"
+          }
+        },
+        "type": "object",
+        "required": [
+          "yield_strain",
+          "ultimate_strain",
+          "strain_hardening_modulus",
+          "strain_limit_c1",
+          "strain_end",
+          "stress_at_strain_limit_c1",
+          "hardening_ratio",
+          "strain_limit_ratio_c1"
+        ],
+        "title": "ModelValuesOut"
+      },
+      "PlateInput": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Label"
+          },
+          "width": {
+            "type": "number",
+            "title": "Width",
+            "description": "Flat width b [mm]"
+          },
+          "thickness": {
+            "type": "number",
+            "title": "Thickness",
+            "description": "Thickness t [mm]"
+          },
+          "k_sigma": {
+            "type": "number",
+            "title": "K Sigma",
+            "description": "Buckling factor of the plate, an input"
+          }
+        },
+        "type": "object",
+        "required": [
+          "label",
+          "width",
+          "thickness",
+          "k_sigma"
+        ],
+        "title": "PlateInput"
+      },
+      "PlateOut": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "width": {
+            "type": "number",
+            "title": "Width"
+          },
+          "thickness": {
+            "type": "number",
+            "title": "Thickness"
+          },
+          "width_to_thickness": {
+            "type": "number",
+            "title": "Width To Thickness"
+          },
+          "k_sigma": {
+            "type": "number",
+            "title": "K Sigma"
+          },
+          "sigma_cr": {
+            "type": "number",
+            "title": "Sigma Cr"
+          },
+          "slenderness": {
+            "type": "number",
+            "title": "Slenderness"
+          },
+          "governing": {
+            "type": "boolean",
+            "title": "Governing"
+          }
+        },
+        "type": "object",
+        "required": [
+          "label",
+          "width",
+          "thickness",
+          "width_to_thickness",
+          "k_sigma",
+          "sigma_cr",
+          "slenderness",
+          "governing"
+        ],
+        "title": "PlateOut"
+      },
+      "SectionType": {
+        "type": "string",
+        "enum": [
+          "I-section",
+          "channel",
+          "T-section",
+          "angle",
+          "rectangular hollow section",
+          "circular hollow section"
+        ],
+        "title": "SectionType",
+        "description": "Section families Annex B applies to (B.2)."
+      },
+      "SigmaCrSourceKey": {
+        "type": "string",
+        "enum": [
+          "plate_b9",
+          "chs_b11",
+          "user"
+        ],
+        "title": "SigmaCrSourceKey"
+      },
+      "SlendernessOut": {
+        "properties": {
+          "source": {
+            "$ref": "#/components/schemas/SigmaCrSourceKey"
+          },
+          "source_label": {
+            "type": "string",
+            "title": "Source Label"
+          },
+          "sigma_cr_cs": {
+            "type": "number",
+            "title": "Sigma Cr Cs"
+          },
+          "value": {
+            "type": "number",
+            "title": "Value"
+          },
+          "governing_label": {
+            "type": "string",
+            "title": "Governing Label"
+          },
+          "plates": {
+            "items": {
+              "$ref": "#/components/schemas/PlateOut"
+            },
+            "type": "array",
+            "title": "Plates"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source",
+          "source_label",
+          "sigma_cr_cs",
+          "value",
+          "governing_label",
+          "plates"
+        ],
+        "title": "SlendernessOut"
+      },
+      "StainlessFamily": {
+        "type": "string",
+        "enum": [
+          "austenitic",
+          "duplex",
+          "ferritic"
+        ],
+        "title": "StainlessFamily"
+      },
+      "StrainLimitOut": {
+        "properties": {
+          "zone": {
+            "$ref": "#/components/schemas/ZoneKey"
+          },
+          "allowed": {
+            "type": "boolean",
+            "title": "Allowed"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "cap": {
+            "type": "number",
+            "title": "Cap"
+          },
+          "cap_source": {
+            "$ref": "#/components/schemas/CapSourceKey"
+          },
+          "cap_label": {
+            "type": "string",
+            "title": "Cap Label"
+          },
+          "raw_ratio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw Ratio"
+          },
+          "capped": {
+            "type": "boolean",
+            "title": "Capped"
+          },
+          "strain_ratio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strain Ratio"
+          },
+          "strain": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strain"
+          },
+          "switch": {
+            "type": "number",
+            "title": "Switch"
+          },
+          "upper": {
+            "type": "number",
+            "title": "Upper"
+          }
+        },
+        "type": "object",
+        "required": [
+          "zone",
+          "allowed",
+          "message",
+          "cap",
+          "cap_source",
+          "cap_label",
+          "raw_ratio",
+          "capped",
+          "strain_ratio",
+          "strain",
+          "switch",
+          "upper"
+        ],
+        "title": "StrainLimitOut"
+      },
+      "SymbolOut": {
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "latex": {
+            "type": "string",
+            "title": "Latex"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "meaning": {
+            "type": "string",
+            "title": "Meaning",
+            "description": "One line explaining the symbol"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "clause": {
+            "type": "string",
+            "title": "Clause"
+          },
+          "group": {
+            "type": "string",
+            "title": "Group"
+          },
+          "topics": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Topics"
+          },
+          "detail": {
+            "type": "string",
+            "title": "Detail",
+            "description": "The long explanation, for the Help page"
+          },
+          "diagram": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Diagram",
+            "description": "Name of the sketch drawn beside it"
+          }
+        },
+        "type": "object",
+        "required": [
+          "symbol",
+          "latex",
+          "name",
+          "meaning",
+          "unit",
+          "clause",
+          "group",
+          "topics",
+          "detail"
+        ],
+        "title": "SymbolOut"
+      },
+      "TensionInput": {
+        "properties": {
+          "area": {
+            "type": "number",
+            "title": "Area",
+            "description": "Cross-section area A [mm2]"
+          },
+          "section_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SectionType"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Only a label (B.2); no formula uses it"
+          },
+          "has_holes": {
+            "type": "boolean",
+            "title": "Has Holes",
+            "default": false
+          },
+          "gamma_m0": {
+            "type": "number",
+            "title": "Gamma M0",
+            "description": "Partial factor gamma_M0, an input"
+          }
+        },
+        "type": "object",
+        "required": [
+          "area",
+          "gamma_m0"
+        ],
+        "title": "TensionInput"
+      },
+      "TensionRequest": {
+        "properties": {
+          "material": {
+            "$ref": "#/components/schemas/MaterialInput"
+          },
+          "tension": {
+            "$ref": "#/components/schemas/TensionInput"
+          },
+          "graph_view": {
+            "$ref": "#/components/schemas/GraphView",
+            "default": "schematic"
+          }
+        },
+        "type": "object",
+        "required": [
+          "material",
+          "tension"
+        ],
+        "title": "TensionRequest"
+      },
+      "TensionResponse": {
+        "properties": {
+          "material": {
+            "$ref": "#/components/schemas/MaterialOut"
+          },
+          "strain_ratio": {
+            "type": "number",
+            "title": "Strain Ratio"
+          },
+          "governing": {
+            "$ref": "#/components/schemas/GoverningKey"
+          },
+          "governing_label": {
+            "type": "string",
+            "title": "Governing Label"
+          },
+          "strain": {
+            "type": "number",
+            "title": "Strain"
+          },
+          "design_stress": {
+            "type": "number",
+            "title": "Design Stress"
+          },
+          "resistance": {
+            "type": "number",
+            "title": "Resistance",
+            "description": "N_csm,t,Rd [N]"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Notes"
+          },
+          "trace": {
+            "items": {
+              "$ref": "#/components/schemas/TraceStepOut"
+            },
+            "type": "array",
+            "title": "Trace"
+          },
+          "figure": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Figure",
+            "description": "Plotly figure (data and layout)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "material",
+          "strain_ratio",
+          "governing",
+          "governing_label",
+          "strain",
+          "design_stress",
+          "resistance",
+          "notes",
+          "trace",
+          "figure"
+        ],
+        "title": "TensionResponse"
+      },
+      "TraceStepOut": {
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "clause": {
+            "type": "string",
+            "title": "Clause"
+          },
+          "formula": {
+            "type": "string",
+            "title": "Formula"
+          },
+          "substituted": {
+            "type": "string",
+            "title": "Substituted"
+          },
+          "value": {
+            "type": "number",
+            "title": "Value"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "line": {
+            "type": "string",
+            "title": "Line",
+            "description": "The step as one readable line of working"
+          },
+          "latex": {
+            "type": "string",
+            "title": "Latex",
+            "description": "The step as one LaTeX equation (render with KaTeX)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "symbol",
+          "description",
+          "clause",
+          "formula",
+          "substituted",
+          "value",
+          "unit",
+          "line",
+          "latex"
+        ],
+        "title": "TraceStepOut"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "ZoneKey": {
+        "type": "string",
+        "enum": [
+          "stocky",
+          "slender",
+          "not_allowed"
+        ],
+        "title": "ZoneKey"
+      }
+    }
+  }
+}
