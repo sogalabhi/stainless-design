@@ -190,7 +190,7 @@ One Vercel project with two services: the website (static build) and the API (on
 |---|---|
 | `vercel.json` | Two services: `web` (Vite, `apps/web`) and `api` (FastAPI, `api/index.py`). `/api/*` goes to `api`, everything else to `web` |
 | `api/index.py` | The function: exposes the FastAPI `app` (adds `src/` to the path) |
-| `requirements.txt` | Function dependencies: `fastapi` and `plotly` only (no PySide6 or matplotlib) |
+| `pyproject.toml` | Function dependencies (`dependencies`: `fastapi`, `plotly`). Vercel installs from here and ignores `requirements.txt`. PySide6 and matplotlib stay in the `ui` extra, so they are not deployed |
 | `.python-version` | Python version for the function |
 | `.vercelignore` | Keeps `.venv`, `node_modules` and `tests` out of the upload |
 
