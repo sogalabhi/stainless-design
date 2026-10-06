@@ -182,6 +182,22 @@ Domain errors come back as HTTP 422 with a plain message and an `error_type`. In
 served at `/docs`. After changing the schemas, regenerate the TypeScript types:
 `PYTHON=../../.venv/bin/python npm run gen:api` (from `apps/web`).
 
+## Deploy to Vercel
+
+The website is a static build and the API runs as one Python serverless function.
+
+| File | Role |
+|---|---|
+| `vercel.json` | Builds `apps/web`, serves `apps/web/dist`, rewrites `/api/*` to the function, bundles `src/**` |
+| `api/index.py` | The function: exposes the FastAPI `app` (adds `src/` to the path) |
+| `requirements.txt` | Function dependencies: `fastapi` and `plotly` only (no PySide6 or matplotlib) |
+| `.python-version` | Python version for the function |
+| `.vercelignore` | Keeps `.venv`, `node_modules` and `tests` out of the upload |
+
+Import the repository in Vercel (root directory = the repository root) or run `vercel` from it.
+The website calls relative `/api/v1/...` URLs, so no settings are needed. Try it locally first
+with `vercel dev`. The first request after idle time is slower (cold start).
+
 ## Desktop app (paused)
 
 A PySide6 version of steps 1 and 2 exists in `src/stainless_csm/ui`. It is not being developed and
