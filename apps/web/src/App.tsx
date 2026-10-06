@@ -1,4 +1,4 @@
-import { Layers, MoveVertical, Ruler } from "lucide-react";
+import { BookOpen, Layers, MoveVertical, Ruler } from "lucide-react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "./api/client";
@@ -8,10 +8,11 @@ import { useDarkMode, useDebounced } from "./lib/hooks";
 import { defaultMaterialForm, materialInput } from "./lib/material";
 import { defaultDeformationForm, deformationRequest } from "./lib/geometry";
 import { DeformationPage } from "./pages/DeformationPage";
+import { HelpPage } from "./pages/HelpPage";
 import { MaterialPage } from "./pages/MaterialPage";
 import { TensionPage, defaultTensionForm, missingTension } from "./pages/TensionPage";
 
-type Tab = "material" | "tension" | "deformation";
+type Tab = "material" | "tension" | "deformation" | "help";
 
 export function App() {
   const [tab, setTab] = useState<Tab>("material");
@@ -95,10 +96,15 @@ export function App() {
         <button role="tab" aria-selected={tab === "deformation"} onClick={() => setTab("deformation")}>
           <Ruler size={16} aria-hidden="true" /> 3 · Deformation capacity (B.5)
         </button>
+        <button role="tab" aria-selected={tab === "help"} onClick={() => setTab("help")}>
+          <BookOpen size={16} aria-hidden="true" /> Help
+        </button>
       </nav>
 
       <main>
-        {tab === "material" ? (
+        {tab === "help" ? (
+          <HelpPage />
+        ) : tab === "material" ? (
           <MaterialPage
             form={materialForm}
             onChange={setMaterialForm}

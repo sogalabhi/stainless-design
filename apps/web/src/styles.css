@@ -389,3 +389,309 @@ h3 {
   color: var(--muted);
 }
 
+/* Help */
+.help {
+  display: grid;
+  gap: 16px;
+}
+
+.help-stack {
+  display: grid;
+  gap: 16px;
+}
+
+.help-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px 20px;
+  max-width: 980px;
+}
+
+.help-card h2 {
+  margin: 0 0 8px;
+  font-size: 1.15rem;
+}
+
+.help-card p,
+.help-card li {
+  max-width: 72ch;
+}
+
+.lead {
+  color: var(--text);
+  font-weight: 600;
+  margin: 4px 0 8px;
+}
+
+ul.plain,
+ol.plain {
+  padding-left: 22px;
+}
+
+ul.plain li,
+ol.plain li {
+  margin-bottom: 6px;
+}
+
+.facts {
+  display: grid;
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.facts > div {
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  gap: 12px;
+}
+
+.facts dt {
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.facts dd {
+  margin: 0;
+  max-width: 72ch;
+}
+
+.compare table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.compare th,
+.compare td {
+  vertical-align: top;
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.compare tbody th {
+  width: 160px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.symbol-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 12px 0;
+}
+
+.symbol-filters .field {
+  min-width: 220px;
+}
+
+.symbol-group h3 {
+  margin: 16px 0 6px;
+}
+
+.symbol-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 6px;
+}
+
+.symbol-card summary {
+  display: grid;
+  grid-template-columns: 170px 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.symbol-name {
+  font-weight: 600;
+}
+
+.symbol-unit {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.symbol-body {
+  padding: 4px 16px 12px;
+}
+
+.symbol-body p {
+  max-width: 72ch;
+}
+
+/* Sketches */
+.dg-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+
+.diagram {
+  margin: 12px 0;
+  max-width: 640px;
+}
+
+.diagram svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.diagram figcaption {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin-top: 4px;
+  max-width: 72ch;
+}
+
+.dg-text {
+  fill: var(--text);
+  font-size: 14px;
+}
+
+.dg-muted {
+  fill: var(--muted);
+}
+
+.dg-strong {
+  font-weight: 600;
+}
+
+.dg-blue-text {
+  fill: var(--accent);
+}
+
+.dg-orange-text {
+  fill: var(--orange);
+}
+
+.dg-gap-text {
+  fill: var(--text);
+  font-style: italic;
+}
+
+.dg-axis {
+  stroke: var(--muted);
+  stroke-width: 1.5;
+  fill: none;
+}
+
+.dg-line {
+  fill: none;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.dg-blue {
+  stroke: var(--accent);
+}
+
+.dg-orange {
+  stroke: var(--orange);
+}
+
+.dg-grey {
+  stroke: var(--muted);
+}
+
+.dg-real {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 2;
+}
+
+.dg-dash {
+  stroke-dasharray: 6 5;
+}
+
+.dg-guide {
+  stroke: var(--border);
+  stroke-width: 1.5;
+  fill: none;
+}
+
+.dg-dim {
+  stroke: var(--text);
+  stroke-width: 1.2;
+}
+
+.dg-dot {
+  stroke: var(--surface);
+  stroke-width: 2;
+}
+
+.dg-blue-fill {
+  fill: var(--accent);
+}
+
+.dg-orange-fill {
+  fill: var(--orange);
+}
+
+.dg-gap {
+  fill: var(--orange-soft);
+}
+
+.dg-plate {
+  fill: var(--accent-soft);
+  stroke: var(--accent);
+  stroke-width: 1.5;
+}
+
+.dg-plate-governing {
+  fill: var(--orange-soft);
+  stroke: var(--orange);
+}
+
+.dg-hole {
+  fill: var(--surface);
+  stroke: var(--accent);
+  stroke-width: 1.5;
+}
+
+.dg-zone-stocky {
+  fill: var(--accent-soft);
+}
+
+.dg-zone-slender {
+  fill: rgba(137, 135, 129, 0.14);
+}
+
+.dg-zone-bad {
+  fill: rgba(208, 59, 59, 0.14);
+}
+
+.dg-box {
+  fill: var(--surface);
+  stroke: var(--border);
+  stroke-width: 1.5;
+}
+
+.dg-box-built {
+  fill: var(--accent-soft);
+  stroke: var(--accent);
+}
+
+.dg-arrow-head {
+  fill: var(--muted);
+  fill: context-stroke;
+}
+
+@media (max-width: 720px) {
+  .facts > div {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+
+  .symbol-card summary {
+    grid-template-columns: 80px 1fr;
+  }
+
+  .symbol-unit {
+    display: none;
+  }
+}

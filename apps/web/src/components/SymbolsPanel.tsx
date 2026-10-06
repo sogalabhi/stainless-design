@@ -19,6 +19,7 @@ export function SymbolsPanel({ topic }: { topic: SymbolTopic }) {
   }
   return (
     <Collapsible title="Symbols used on this page">
+      <p className="muted">Longer explanations with sketches are in the Help tab.</p>
       {query.isError ? <p className="muted">The symbol list could not be loaded.</p> : null}
       {[...groups.entries()].map(([group, entries]) => (
         <div className="table-wrap symbols" key={group}>
