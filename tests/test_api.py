@@ -182,6 +182,7 @@ def test_openapi_spec_documents_every_endpoint() -> None:
         f"{V1}/material-model",
         f"{V1}/tension",
         f"{V1}/deformation-capacity",
+        f"{V1}/section-comparison",
         f"{V1}/symbols",
     }
     json.dumps(client.get("/openapi.json").json())

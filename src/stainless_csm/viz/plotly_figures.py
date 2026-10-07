@@ -21,6 +21,7 @@ from stainless_csm.csm.deformation_capacity import (
 from stainless_csm.csm.tension import GoverningStrainLimit, TensionResult
 from stainless_csm.material_models.csm_bilinear import CSMBilinearModel
 from stainless_csm.material_models.elastic_plastic import ElasticPerfectlyPlasticModel
+from stainless_csm.services import Comparison
 from stainless_csm.viz.axis import StrainAxis
 from stainless_csm.viz.palette import BLUE, CRITICAL, MUTED, ORANGE
 
@@ -467,3 +468,95 @@ def base_curve_figure(result: DeformationResult) -> dict[str, Any]:
 
 def _frange(start: float, stop: float, n: int = 120) -> list[float]:
     return [start + (stop - start) * i / (n - 1) for i in range(n)]
+
+
+_REFERENCE_TEXT = {
+    "capped": "cap reached",
+    "yield": "down to yield",
+    "limit": "thinnest allowed",
+}
+# where each label goes on the base curve, so none runs off the plot or sits on another
+_REFERENCE_POSITION = {
+    "capped": "top right",
+    "yield": "bottom right",
+    "limit": "top left",
+}
+
+
+def _reference_marker(
+    x: list[float], y: list[float], text: list[str], position: list[str] | None, name: str
+) -> dict[str, Any]:
+    """Grey markers for the reference sections. Without `position` the names show on hover only."""
+    trace: dict[str, Any] = {
+        "type": "scatter",
+        "x": x,
+        "y": y,
+        "mode": "markers" if position is None else "markers+text",
+        "marker": {"color": MUTED, "size": 10, "line": {"color": "white", "width": 2}},
+        "name": name,
+    }
+    if position is None:
+        trace["text"] = text
+        trace["hovertemplate"] = "%{text}<extra></extra>"
+    else:
+        trace["text"] = [typeset_html(t) for t in text]
+        trace["textposition"] = position
+        trace["hoverinfo"] = "skip"
+    return trace
+
+
+def comparison_base_curve_figure(comparison: Comparison) -> dict[str, Any]:
+    """The base curve with your section and the reference sections marked on it."""
+    figure = base_curve_figure(comparison.your_capacity)
+    marks = [
+        ref for ref in comparison.references if ref.key != "yours" and ref.point.capacity.allowed
+    ]
+    if marks:
+        figure["data"].append(
+            _reference_marker(
+                [ref.point.slenderness for ref in marks],
+                [float(ref.point.capacity.strain_ratio or 0.0) for ref in marks],
+                [_REFERENCE_TEXT[ref.key] for ref in marks],
+                [_REFERENCE_POSITION[ref.key] for ref in marks],
+                "Reference sections",
+            )
+        )
+    return figure
+
+
+def comparison_stress_figure(model: CSMBilinearModel, comparison: Comparison) -> dict[str, Any]:
+    """The B.4 curve against the classic one, with the stress each section is read at."""
+    figure = stress_strain_figure(model, schematic=False)
+    marks = [ref for ref in comparison.references if ref.point.stress is not None]
+    yours = [ref for ref in marks if ref.key == "yours"]
+    others = [ref for ref in marks if ref.key != "yours"]
+    if others:
+        figure["data"].append(
+            _reference_marker(
+                [float(ref.point.capacity.strain or 0.0) for ref in others],
+                [float(ref.point.stress or 0.0) for ref in others],
+                [_REFERENCE_TEXT[ref.key] for ref in others],
+                None,
+                "Reference sections",
+            )
+        )
+    if yours:
+        ref = yours[0]
+        figure["data"].append(
+            {
+                "type": "scatter",
+                "x": [ref.point.capacity.strain],
+                "y": [ref.point.stress],
+                "marker": {
+                    "color": ORANGE,
+                    "size": 13,
+                    "symbol": "diamond",
+                    "line": {"color": "white", "width": 2},
+                },
+                "text": ["your section"],
+                "hovertemplate": "%{text}<extra></extra>",
+                "mode": "markers",
+                "name": "Your section",
+            }
+        )
+    return figure

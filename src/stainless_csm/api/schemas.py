@@ -259,3 +259,44 @@ class DeformationResponse(BaseModel):
     notes: list[str]
     trace: list[TraceStepOut]
     figure: dict[str, Any]
+
+
+# --- Comparison: the same section made thicker or thinner ---------------------------------
+
+
+class ComparisonRequest(BaseModel):
+    """Same inputs as B.5. The section must be plates or a circular hollow section."""
+
+    material: MaterialInput
+    geometry: GeometryInput
+    omega: float = Field(description="Parameter Omega, an input")
+    poisson_ratio: float | None = Field(default=None, description="Poisson ratio nu, an input")
+
+
+class ComparisonPointOut(BaseModel):
+    factor: float = Field(description="Every thickness is multiplied by this")
+    slenderness: float
+    zone: ZoneKey
+    strain_ratio: float | None
+    strain: float | None
+    stress: float | None = Field(description="Stress read from the B.4 curve at the strain [N/mm2]")
+
+
+class ReferenceSectionOut(BaseModel):
+    key: str
+    label: str
+    point: ComparisonPointOut
+
+
+class ComparisonResponse(BaseModel):
+    material: MaterialOut
+    family: FamilyKey
+    values: ModelValuesOut
+    switch: float
+    upper: float
+    cap: float
+    points: list[ComparisonPointOut]
+    references: list[ReferenceSectionOut]
+    base_curve_figure: dict[str, Any]
+    stress_figure: dict[str, Any]
+    notes: list[str]

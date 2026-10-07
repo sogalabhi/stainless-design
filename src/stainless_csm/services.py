@@ -1,6 +1,7 @@
 """Use cases shared by every front end (desktop app and web API): build the inputs, run the
 engine. No UI framework is imported here."""
 
+import math
 from dataclasses import dataclass
 from enum import Enum
 
@@ -8,9 +9,11 @@ from stainless_csm.core.enums import SectionType, StainlessFamily
 from stainless_csm.core.errors import InvalidSectionError
 from stainless_csm.core.trace import CalcTrace
 from stainless_csm.csm.deformation_capacity import (
+    LIMITS,
     CSMDeformationCapacity,
     DeformationResult,
     SectionFamily,
+    raw_ratio,
 )
 from stainless_csm.csm.slenderness import (
     PlateElement,
@@ -207,3 +210,149 @@ def run_deformation_capacity(model: CSMBilinearModel, form: DeformationForm) -> 
     for step in capacity.trace:
         trace.add(step)
     return DeformationOutcome(family, slenderness, capacity, tuple(notes), trace)
+
+
+# --- Comparison: the same section made thicker or thinner -------------------------------------
+
+
+@dataclass(frozen=True)
+class ComparisonPoint:
+    """The section with every thickness multiplied by `factor`, run through B.5 and B.4."""
+
+    factor: float
+    slenderness: float
+    capacity: DeformationResult
+    stress: float | None  # stress read from the B.4 curve at eps_csm; None when not allowed
+
+
+@dataclass(frozen=True)
+class ReferenceSection:
+    key: str  # a stable machine key
+    label: str
+    point: ComparisonPoint
+
+
+@dataclass(frozen=True)
+class Comparison:
+    family: SectionFamily
+    switch: float
+    upper: float
+    points: tuple[ComparisonPoint, ...]  # ascending thickness factor
+    references: tuple[ReferenceSection, ...]  # ascending slenderness
+    your_capacity: DeformationResult  # factor 1
+
+
+SWEEP_POINTS = 81
+_BISECTION_STEPS = 80
+
+
+def scale_thickness(geometry: GeometryForm, factor: float) -> GeometryForm:
+    """The same section with every thickness multiplied by `factor` (widths and k_sigma kept)."""
+    if geometry.kind is GeometryKind.CHS:
+        _require(geometry.kind, d=geometry.d, t=geometry.t)
+        assert geometry.t is not None
+        return GeometryForm(GeometryKind.CHS, d=geometry.d, t=geometry.t * factor)
+    if geometry.kind is GeometryKind.PLATES:
+        plates = tuple(
+            PlateForm(p.label, p.width, p.thickness * factor, p.k_sigma) for p in geometry.plates
+        )
+        return GeometryForm(GeometryKind.PLATES, plates=plates)
+    raise InvalidSectionError(
+        "Comparing sections needs a circular hollow section or flat plates: a typed "
+        "σ_cr,cs has no thickness to change."
+    )
+
+
+def _largest_factor(geometry: GeometryForm) -> float:
+    """The factor beyond which the section is geometrically impossible (a tube's wall)."""
+    if geometry.kind is GeometryKind.CHS and geometry.d and geometry.t:
+        return geometry.d / (2 * geometry.t) * 0.999
+    return 1e3
+
+
+def _point(model: CSMBilinearModel, form: DeformationForm, factor: float) -> ComparisonPoint:
+    scaled = DeformationForm(scale_thickness(form.geometry, factor), form.omega, form.poisson_ratio)
+    outcome = run_deformation_capacity(model, scaled)
+    capacity = outcome.capacity
+    stress = None if capacity.strain is None else model.stress_at(capacity.strain)
+    return ComparisonPoint(factor, outcome.slenderness.slenderness, capacity, stress)
+
+
+def _slenderness_at(model: CSMBilinearModel, form: DeformationForm, factor: float) -> float:
+    scaled = scale_thickness(form.geometry, factor)
+    return build_slenderness(model.material, scaled, form.poisson_ratio)[1].slenderness
+
+
+def _factor_for_slenderness(
+    model: CSMBilinearModel, form: DeformationForm, target: float
+) -> float | None:
+    """The thickness factor that gives `target` slenderness, or None if it is out of reach.
+
+    Slenderness falls as the section gets thicker, so a bisection on the factor finds it.
+    """
+    low, high = 1e-3, _largest_factor(form.geometry)
+    if not _slenderness_at(model, form, high) <= target <= _slenderness_at(model, form, low):
+        return None
+    for _ in range(_BISECTION_STEPS):
+        mid = math.sqrt(low * high)
+        if _slenderness_at(model, form, mid) > target:
+            low = mid
+        else:
+            high = mid
+    return math.sqrt(low * high)
+
+
+def _slenderness_where_cap_starts(family: SectionFamily, cap: float, switch: float) -> float | None:
+    """Slenderness on the stocky branch where the base-curve value just reaches the cap."""
+    low, high = 1e-3, switch
+    if not raw_ratio(family, high) <= cap <= raw_ratio(family, low):
+        return None
+    for _ in range(_BISECTION_STEPS):
+        mid = math.sqrt(low * high)
+        if raw_ratio(family, mid) > cap:
+            low = mid
+        else:
+            high = mid
+    return math.sqrt(low * high)
+
+
+def run_comparison(
+    model: CSMBilinearModel, form: DeformationForm, n: int = SWEEP_POINTS
+) -> Comparison:
+    """B.5 for one section made thicker and thinner, plus the sections that mark its zones.
+
+    The reference sections are the ones where the Annex B curve changes: the thickness at which
+    the cap just starts to hold, where the strain limit has fallen to the yield strain (the
+    branch change of B.6 / B.7), and the thinnest section the method accepts.
+    """
+    yours = _point(model, form, 1.0)
+    family = yours.capacity.family
+    limits = LIMITS[family]
+    cap = yours.capacity.cap
+
+    wanted: list[tuple[str, str, float | None]] = [
+        ("limit", "Thinnest allowed", limits.upper),
+        ("yield", "Strain limit down to yield", limits.switch),
+        ("capped", "Cap just reached", _slenderness_where_cap_starts(family, cap, limits.switch)),
+    ]
+    references = [
+        ReferenceSection("yours", "Your section", yours),
+    ]
+    factors = [1.0]
+    for key, label, target in wanted:
+        factor = None if target is None else _factor_for_slenderness(model, form, target)
+        if factor is None:
+            continue
+        references.append(ReferenceSection(key, label, _point(model, form, factor)))
+        factors.append(factor)
+    references.sort(key=lambda ref: ref.point.slenderness)
+
+    largest = _largest_factor(form.geometry)
+    low = min(factors) * 0.7
+    high = min(max(factors) * 1.3, largest)
+    grid = [low * (high / low) ** (i / (n - 1)) for i in range(n)]
+    grid = sorted({*grid, *factors})
+    points = tuple(_point(model, form, factor) for factor in grid)
+    return Comparison(
+        family, limits.switch, limits.upper, points, tuple(references), yours.capacity
+    )

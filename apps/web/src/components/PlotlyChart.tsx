@@ -32,6 +32,8 @@ export function PlotlyChart({
   label: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  // a fixed box, so redraws from the slider cannot change the page layout around the chart
+  const height = (figure.layout as Layout | undefined)?.height;
 
   useEffect(() => {
     const element = ref.current;
@@ -51,5 +53,11 @@ export function PlotlyChart({
     };
   }, []);
 
-  return <div ref={ref} className="plot" role="img" aria-label={label} />;
+  return <div
+      ref={ref}
+      className="plot"
+      role="img"
+      aria-label={label}
+      style={typeof height === "number" ? { height } : undefined}
+    />;
 }

@@ -26,6 +26,66 @@ const ZONE_TEXT = {
   not_allowed: "Not allowed: beyond the slenderness limit",
 } as const;
 
+/** The section fields, shared by the Deformation and Visualise tabs (one state, edited in either). */
+export function SectionInputs({
+  form,
+  onChange,
+}: {
+  form: DeformationFormState;
+  onChange: (form: DeformationFormState) => void;
+}) {
+  const set = (patch: Partial<DeformationFormState>) => onChange({ ...form, ...patch });
+  return (
+    <>
+      <SelectField
+        label="Section"
+        value={form.kind}
+        options={GEOMETRY_KINDS}
+        onChange={(kind) => set({ kind })}
+      />
+      {form.kind === "chs" ? (
+        <>
+          <NumberField label="Outer diameter d" unit="mm" value={form.d} onChange={(d) => set({ d })} />
+          <NumberField label="Wall thickness t" unit="mm" value={form.t} onChange={(t) => set({ t })} />
+        </>
+      ) : null}
+      {form.kind === "plates" ? <PlatesEditor form={form} onChange={onChange} /> : null}
+      {form.kind === "sigma_cr" ? (
+        <>
+          <NumberField
+            label="σ_cr,cs"
+            unit="N/mm²"
+            value={form.sigmaCr}
+            step={10}
+            onChange={(sigmaCr) => set({ sigmaCr })}
+          />
+          <SelectField
+            label="Section family"
+            value={form.family}
+            options={FAMILIES}
+            placeholder="choose the family"
+            onChange={(family) => set({ family })}
+          />
+        </>
+      ) : null}
+      {form.kind !== "sigma_cr" ? (
+        <NumberField
+          label="Poisson's ratio ν"
+          value={form.poissonRatio}
+          step={0.05}
+          onChange={(poissonRatio) => set({ poissonRatio })}
+        />
+      ) : null}
+      <NumberField
+        label="Ω"
+        value={form.omega}
+        step={1}
+        onChange={(omega) => set({ omega })}
+      />
+    </>
+  );
+}
+
 export function DeformationPage({
   form,
   onChange,
@@ -39,7 +99,6 @@ export function DeformationPage({
   materialReady: boolean;
   dark: boolean;
 }) {
-  const set = (patch: Partial<DeformationFormState>) => onChange({ ...form, ...patch });
   const result = query.data;
   const missing = missingDeformation(form);
   const complete = missing.length === 0;
@@ -49,51 +108,7 @@ export function DeformationPage({
       <section className="panel inputs" aria-label="Section inputs">
         <h2>Inputs</h2>
         {result ? <p className="muted">Material: {result.material.source}</p> : null}
-        <SelectField
-          label="Section"
-          value={form.kind}
-          options={GEOMETRY_KINDS}
-          onChange={(kind) => set({ kind })}
-        />
-        {form.kind === "chs" ? (
-          <>
-            <NumberField label="Outer diameter d" unit="mm" value={form.d} onChange={(d) => set({ d })} />
-            <NumberField label="Wall thickness t" unit="mm" value={form.t} onChange={(t) => set({ t })} />
-          </>
-        ) : null}
-        {form.kind === "plates" ? <PlatesEditor form={form} onChange={onChange} /> : null}
-        {form.kind === "sigma_cr" ? (
-          <>
-            <NumberField
-              label="σ_cr,cs"
-              unit="N/mm²"
-              value={form.sigmaCr}
-              step={10}
-              onChange={(sigmaCr) => set({ sigmaCr })}
-            />
-            <SelectField
-              label="Section family"
-              value={form.family}
-              options={FAMILIES}
-              placeholder="choose the family"
-              onChange={(family) => set({ family })}
-            />
-          </>
-        ) : null}
-        {form.kind !== "sigma_cr" ? (
-          <NumberField
-            label="Poisson's ratio ν"
-            value={form.poissonRatio}
-            step={0.05}
-            onChange={(poissonRatio) => set({ poissonRatio })}
-          />
-        ) : null}
-        <NumberField
-          label="Ω"
-          value={form.omega}
-          step={1}
-          onChange={(omega) => set({ omega })}
-        />
+        <SectionInputs form={form} onChange={onChange} />
       </section>
 
       <section className="results" aria-label="Deformation capacity results" aria-busy={query.isFetching}>

@@ -42,6 +42,20 @@ describe("Help page", () => {
     expect(screen.getByRole("heading", { name: "What this means in practice" })).toBeInTheDocument();
   });
 
+  it("explains buckling, local buckling and plastic bending against IS 800", async () => {
+    renderHelp();
+    await openTopic("Buckling and bending");
+    for (const name of ["Overall buckling", "Local buckling", "Plastic bending"]) {
+      expect(screen.getAllByText(name).length).toBeGreaterThan(0);
+    }
+    const table = screen.getByRole("table");
+    expect(within(table).getByText("Overall (member) buckling")).toBeInTheDocument();
+    expect(within(table).getByRole("columnheader", { name: /IS 800/ })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /Moment against rotation/ })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /Overall buckling, local buckling and plastic bending/ })).toBeInTheDocument();
+    expect(screen.getByText(/No IS 800 number is calculated/)).toBeInTheDocument();
+  });
+
   it("describes all three modules", async () => {
     renderHelp();
     await openTopic("Modules");

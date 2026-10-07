@@ -138,7 +138,7 @@ src/stainless_csm/
   materials/       Grade (Table 5.1) and Material (what the steel is)
   material_models/ stress-strain models: CSM bilinear (B.4) and the classic elastic-plastic one
   csm/             Annex B: slenderness (B.5.2), base curve (B.5.1), section presets, tension (B.6.1)
-  services.py      use cases shared by every front end (no UI imports)
+  services.py      use cases shared by every front end (no UI imports), incl. the thickness sweep
   formatting.py    number and text formatting (no UI imports)
   viz/             strain axis and Plotly figures (no UI imports)
   api/             FastAPI service: schemas, mappers, routes, OpenAPI export
@@ -158,10 +158,33 @@ cd apps/web && npm install && npm run build      # once, builds apps/web/dist
 .venv/bin/stainless-csm-api                       # http://127.0.0.1:8100 (API and built site)
 ```
 
-The website has three steps: **1 Material (B.4)**, **2 Tension (B.6.1)** and **3 Deformation
-capacity (B.5)**. "Graph view" switches between a schematic (not to scale, like Figure B.1) and a
-true-scale view. "Show working" lists each calculation step as a typeset equation, and "Symbols used
-on this page" explains every symbol in one line.
+The website has three steps, **1 Material (B.4)**, **2 Tension (B.6.1)** and **3 Deformation
+capacity (B.5)**, a **4 Visualise** tab and a **Help** tab. "Graph view" switches between a schematic
+(not to scale, like Figure B.1) and a true-scale view. "Show working" lists each calculation step as
+a typeset equation, and "Symbols used on this page" explains every symbol in one line.
+
+**4 Visualise** shows stocky against slender live. It carries the same material and section fields
+as steps 1 and 3 (one shared state, so a change in either place shows in both) and redraws as you
+type. A slider multiplies every thickness (widths, diameter and k_σ stay as entered), and each
+position is a full B.5 calculation on the B.4 material, run by the engine, not re-derived in the
+browser. It shows:
+
+- a 3D view (three.js, loaded only when the tab opens) with your section, the section where the cap
+  just holds, the one where the strain limit has fallen to yield, the thinnest section the method
+  accepts, and the slider section, side by side. The sections are drawn from the plate widths or
+  diameter you entered, and the plates are drawn as separate slabs because Annex B gives them no
+  layout;
+- the base curve and the material curve, each with those sections and the slider marked, and the
+  flat-yield curve for contrast;
+- a strain and stress picture across the depth of a bent section, with the CSM stress against the
+  flat-yield stress (no moment: B.6.3 is not built).
+
+The wave size in 3D is only a picture of "more slender, more buckling": the CSM does not calculate a
+buckled shape. A typed σ_cr,cs has no thickness to change, so that mode shows a message instead.
+
+The Help tab also has a **Buckling and bending** topic: overall buckling, local buckling and plastic
+bending, a moment-rotation sketch of the IS 800 classes against the continuous CSM, and a table of
+mild steel (IS 800) against this tool.
 
 The API port is 8100 (8000 is often taken by other dev servers); change it with
 `STAINLESS_CSM_PORT`. For front-end development run `npm run dev` in `apps/web`; Vite proxies
@@ -177,6 +200,7 @@ The API port is 8100 (8000 is often taken by other dev servers); change it with
 | POST | `/api/v1/material-model` | B.4 |
 | POST | `/api/v1/tension` | B.6.1 |
 | POST | `/api/v1/deformation-capacity` | B.5 |
+| POST | `/api/v1/section-comparison` | B.5 and B.4 for the section made thicker and thinner |
 
 Domain errors come back as HTTP 422 with a plain message and an `error_type`. Interactive docs are
 served at `/docs`. After changing the schemas, regenerate the TypeScript types:
@@ -243,3 +267,6 @@ asserts identical numbers, so the website can never disagree with the engine.
 - The tension screen does not check the B.2 slenderness limits (only the area is given); step 3
   covers them for a section.
 - Elliptical hollow sections are outside B.6.1.
+- The Visualise tab needs a circular hollow section or flat plates. A tube cannot be made thicker
+  than half its diameter, so the slider stops there. The 3D wrinkles are illustrative, and the
+  bending picture shows stress, not a moment.

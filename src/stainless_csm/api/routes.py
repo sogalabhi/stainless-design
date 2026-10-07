@@ -106,3 +106,27 @@ def deformation_capacity(request: s.DeformationRequest) -> s.DeformationResponse
         trace=mappers.trace_steps(outcome.trace),
         figure=plotly_figures.base_curve_figure(outcome.capacity),
     )
+
+
+@router.post("/section-comparison", response_model=s.ComparisonResponse, responses=ERRORS)
+def section_comparison(request: s.ComparisonRequest) -> s.ComparisonResponse:
+    """B.5 for the same section made thicker and thinner, to compare stocky with slender."""
+    material = services.build_material(mappers.material_form(request.material))
+    model = CSMBilinearModel(material)
+    comparison = services.run_comparison(model, mappers.comparison_form(request))
+    return s.ComparisonResponse(
+        material=mappers.material_out(material, request.material.designation),
+        family=mappers.family_key(comparison.family),
+        values=mappers.model_values(model),
+        switch=comparison.switch,
+        upper=comparison.upper,
+        cap=comparison.your_capacity.cap,
+        points=[mappers.comparison_point_out(point) for point in comparison.points],
+        references=[mappers.reference_out(ref) for ref in comparison.references],
+        base_curve_figure=plotly_figures.comparison_base_curve_figure(comparison),
+        stress_figure=plotly_figures.comparison_stress_figure(model, comparison),
+        notes=[
+            "Every thickness is multiplied by one factor; widths, diameter and k_σ stay as "
+            "entered. Each point is a full B.5 calculation on the same B.4 material."
+        ],
+    )

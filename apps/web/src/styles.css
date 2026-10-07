@@ -695,3 +695,92 @@ ol.plain li {
     display: none;
   }
 }
+
+.dg-stress-fill {
+  fill: var(--accent-soft);
+}
+
+.scene3d {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  overflow: hidden;
+  cursor: grab;
+}
+
+.scene3d:active {
+  cursor: grabbing;
+}
+
+.sweep-slider {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0;
+}
+
+.sweep-slider input[type="range"] {
+  width: 100%;
+}
+
+.sweep-slider-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.legend-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+  margin: 10px 0;
+}
+
+.legend-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: var(--bg);
+}
+
+.legend-card h4 {
+  margin: 0 0 4px;
+  font-size: 0.9rem;
+}
+
+.legend-card p {
+  margin: 2px 0;
+  font-size: 0.85rem;
+}
+
+.legend-card.is-yours {
+  border-color: var(--orange);
+}
+
+.swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  margin-right: 6px;
+  vertical-align: baseline;
+}
+
+.swatch-stocky {
+  background: var(--accent);
+}
+
+.swatch-slender {
+  background: var(--muted);
+}
+
+.swatch-not_allowed {
+  background: var(--bad);
+}
+
+.visual-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 16px;
+}

@@ -181,3 +181,35 @@ def strain_limit_out(result: DeformationResult) -> s.StrainLimitOut:
 
 def family_key(family: SectionFamily) -> s.FamilyKey:
     return _FAMILY_KEYS[family]
+
+
+# --- comparison ------------------------------------------------------------------------
+
+
+def comparison_form(request: s.ComparisonRequest) -> services.DeformationForm:
+    return deformation_form(
+        s.DeformationRequest(
+            material=request.material,
+            geometry=request.geometry,
+            omega=request.omega,
+            poisson_ratio=request.poisson_ratio,
+        )
+    )
+
+
+def comparison_point_out(point: services.ComparisonPoint) -> s.ComparisonPointOut:
+    capacity = point.capacity
+    return s.ComparisonPointOut(
+        factor=point.factor,
+        slenderness=point.slenderness,
+        zone=s.ZoneKey[capacity.zone.name],
+        strain_ratio=capacity.strain_ratio,
+        strain=capacity.strain,
+        stress=point.stress,
+    )
+
+
+def reference_out(reference: services.ReferenceSection) -> s.ReferenceSectionOut:
+    return s.ReferenceSectionOut(
+        key=reference.key, label=reference.label, point=comparison_point_out(reference.point)
+    )

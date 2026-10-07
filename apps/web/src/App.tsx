@@ -1,4 +1,4 @@
-import { BookOpen, Layers, MoveVertical, Ruler } from "lucide-react";
+import { BookOpen, Box, Layers, MoveVertical, Ruler } from "lucide-react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "./api/client";
@@ -6,13 +6,15 @@ import type { GraphView } from "./api/types";
 import { Segmented } from "./components/ui";
 import { useDarkMode, useDebounced } from "./lib/hooks";
 import { defaultMaterialForm, materialInput } from "./lib/material";
+import { comparisonRequest } from "./lib/comparison";
 import { defaultDeformationForm, deformationRequest } from "./lib/geometry";
 import { DeformationPage } from "./pages/DeformationPage";
 import { HelpPage } from "./pages/HelpPage";
 import { MaterialPage } from "./pages/MaterialPage";
+import { VisualisePage } from "./pages/VisualisePage";
 import { TensionPage, defaultTensionForm, missingTension } from "./pages/TensionPage";
 
-type Tab = "material" | "tension" | "deformation" | "help";
+type Tab = "material" | "tension" | "deformation" | "visualise" | "help";
 
 export function App() {
   const [tab, setTab] = useState<Tab>("material");
@@ -68,6 +70,16 @@ export function App() {
     retry: false,
   });
 
+  const comparisonRequestBody =
+    material === null ? null : comparisonRequest(material, debouncedDeformation);
+  const comparisonQuery = useQuery({
+    queryKey: ["comparison", comparisonRequestBody],
+    queryFn: ({ signal }) => api.sectionComparison(comparisonRequestBody!, signal),
+    enabled: tab === "visualise" && comparisonRequestBody !== null,
+    placeholderData: keepPreviousData,
+    retry: false,
+  });
+
   return (
     <div className="app">
       <header className="topbar">
@@ -96,6 +108,9 @@ export function App() {
         <button role="tab" aria-selected={tab === "deformation"} onClick={() => setTab("deformation")}>
           <Ruler size={16} aria-hidden="true" /> 3 · Deformation capacity (B.5)
         </button>
+        <button role="tab" aria-selected={tab === "visualise"} onClick={() => setTab("visualise")}>
+          <Box size={16} aria-hidden="true" /> 4 · Visualise
+        </button>
         <button role="tab" aria-selected={tab === "help"} onClick={() => setTab("help")}>
           <BookOpen size={16} aria-hidden="true" /> Help
         </button>
@@ -110,6 +125,16 @@ export function App() {
             onChange={setMaterialForm}
             grades={grades.data ?? []}
             query={materialQuery}
+            dark={dark}
+          />
+        ) : tab === "visualise" ? (
+          <VisualisePage
+            materialForm={materialForm}
+            onMaterialChange={setMaterialForm}
+            grades={grades.data ?? []}
+            form={deformationForm}
+            onChange={setDeformationForm}
+            query={comparisonQuery}
             dark={dark}
           />
         ) : tab === "deformation" ? (

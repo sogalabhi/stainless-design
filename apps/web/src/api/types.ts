@@ -23,3 +23,8 @@ export type GeometryKindKey = S["GeometryKindKey"];
 export type PlateInput = S["PlateInput"];
 export type FamilyKey = S["FamilyKey"];
 export type PlateOut = S["PlateOut"];
+
+export type ComparisonRequest = S["ComparisonRequest"];
+export type ComparisonResponse = S["ComparisonResponse"];
+export type ComparisonPointOut = S["ComparisonPointOut"];
+export type ReferenceSectionOut = S["ReferenceSectionOut"];

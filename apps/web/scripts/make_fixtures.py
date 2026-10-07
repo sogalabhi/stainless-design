@@ -43,6 +43,18 @@ def main() -> None:
         ).json(),
     )
     write(
+        "comparison",
+        client.post(
+            "/api/v1/section-comparison",
+            json={
+                "material": material,
+                "geometry": {"kind": "chs", "d": 100, "t": 3},
+                "omega": 15,
+                "poisson_ratio": 0.3,
+            },
+        ).json(),
+    )
+    write(
         "deformation_not_allowed",
         client.post(
             "/api/v1/deformation-capacity",

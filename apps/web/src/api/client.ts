@@ -1,5 +1,7 @@
 import type {
   CoefficientsOut,
+  ComparisonRequest,
+  ComparisonResponse,
   DeformationRequest,
   DeformationResponse,
   GradeOut,
@@ -86,4 +88,6 @@ export const api = {
     post<TensionResponse>("/api/v1/tension", body, signal),
   deformationCapacity: (body: DeformationRequest, signal?: AbortSignal) =>
     post<DeformationResponse>("/api/v1/deformation-capacity", body, signal),
+  sectionComparison: (body: ComparisonRequest, signal?: AbortSignal) =>
+    post<ComparisonResponse>("/api/v1/section-comparison", body, signal),
 };

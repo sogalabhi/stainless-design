@@ -2,11 +2,12 @@ import { useState } from "react";
 import { Sym } from "../components/Symbols";
 import { Segmented } from "../components/ui";
 import { CompareCurvesDiagram, DiagramDefs, WorkflowDiagram } from "../help/diagrams";
+import { BucklingBending } from "../help/BucklingBending";
 import { Modules } from "../help/Modules";
 import { SymbolsBrowser } from "../help/SymbolsBrowser";
 import { WhyNotIs800 } from "../help/WhyNotIs800";
 
-type Topic = "overview" | "is800" | "modules" | "symbols";
+type Topic = "overview" | "buckling" | "is800" | "modules" | "symbols";
 
 function Overview() {
   return (
@@ -58,7 +59,8 @@ function Overview() {
           </li>
           <li>
             The Symbols tab here explains every symbol in detail, with sketches. The Modules tab
-            explains why each step exists.
+            explains why each step exists. Buckling and bending explains local buckling and plastic
+            bending, and the 4 · Visualise tab shows them live for your own section.
           </li>
         </ul>
       </section>
@@ -76,6 +78,7 @@ export function HelpPage() {
         value={topic}
         options={[
           { value: "overview", label: "Overview" },
+          { value: "buckling", label: "Buckling and bending" },
           { value: "is800", label: "Why not IS 800" },
           { value: "modules", label: "Modules" },
           { value: "symbols", label: "Symbols" },
@@ -83,6 +86,7 @@ export function HelpPage() {
         onChange={setTopic}
       />
       {topic === "overview" ? <Overview /> : null}
+      {topic === "buckling" ? <BucklingBending /> : null}
       {topic === "is800" ? <WhyNotIs800 /> : null}
       {topic === "modules" ? <Modules /> : null}
       {topic === "symbols" ? <SymbolsBrowser /> : null}

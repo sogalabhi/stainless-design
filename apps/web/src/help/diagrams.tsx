@@ -10,7 +10,7 @@ const SUB = /_([\p{L}\p{N},]+)/u;
 type Anchor = "start" | "middle" | "end";
 
 /** SVG text where ε_y is drawn as ε with a real subscript. */
-function T({
+export function T({
   x,
   y,
   children,
@@ -41,7 +41,7 @@ function T({
   );
 }
 
-function Figure({
+export function Figure({
   label,
   caption,
   width,
@@ -65,7 +65,7 @@ function Figure({
   );
 }
 
-function Axes({ x0, y0, x1, y1, xLabel, yLabel, yOffset = 52 }: { x0: number; y0: number; x1: number; y1: number; xLabel: string; yLabel: string; yOffset?: number }) {
+export function Axes({ x0, y0, x1, y1, xLabel, yLabel, yOffset = 52 }: { x0: number; y0: number; x1: number; y1: number; xLabel: string; yLabel: string; yOffset?: number }) {
   return (
     <g>
       <line x1={x0} y1={y0} x2={x1} y2={y0} className="dg-axis" markerEnd={arrow} />
@@ -327,6 +327,82 @@ export function ClassesDiagram() {
       <T x={470} y={219} className="dg-text dg-muted">class 4</T>
       <T x={150} y={60} anchor="start" className="dg-text dg-blue-text">continuous (CSM): above yield when stocky</T>
       <T x={526} y={252} anchor="end" className="dg-text dg-muted">steps: same value inside a class</T>
+    </Figure>
+  );
+}
+
+
+/** The three things that can end a member's capacity, drawn side by side. */
+export function FailureKindsDiagram() {
+  const support = (x: number, y: number) => (
+    <polygon points={`${x},${y} ${x - 9},${y + 14} ${x + 9},${y + 14}`} className="dg-box" />
+  );
+  const load = (x: number, y0: number, y1: number) => (
+    <line x1={x} y1={y0} x2={x} y2={y1} className="dg-line dg-orange" markerEnd={arrow} />
+  );
+  return (
+    <Figure
+      label="Overall buckling, local buckling and plastic bending"
+      caption="Left: overall buckling, the whole member bows sideways. Middle: local buckling, a thin wall wrinkles while the member stays straight. Right: plastic bending, the steel yields and a hinge forms. Not to scale."
+      width={560}
+      height={290}
+    >
+      {load(95, 14, 44)}
+      <path d="M 95 50 C 135 100, 135 170, 95 216" className="dg-line dg-blue" />
+      <line x1={95} y1={50} x2={95} y2={216} className="dg-guide dg-dash" />
+      {support(95, 218)}
+      <T x={95} y={262} className="dg-text dg-strong">Overall buckling</T>
+      <T x={95} y={280} className="dg-text dg-muted">the whole member bows</T>
+
+      {load(280, 14, 44)}
+      <path
+        d="M 240 50 C 252 85, 228 115, 240 125 C 252 135, 228 165, 240 215 L 320 215 C 308 165, 332 135, 320 125 C 308 115, 332 85, 320 50 Z"
+        className="dg-plate"
+      />
+      <T x={280} y={262} className="dg-text dg-strong">Local buckling</T>
+      <T x={280} y={280} className="dg-text dg-muted">a thin wall wrinkles</T>
+
+      {load(465, 60, 128)}
+      <path d="M 395 150 L 465 176 L 535 150" className="dg-line dg-blue" />
+      {support(395, 152)}
+      {support(535, 152)}
+      <circle cx={465} cy={176} r={9} className="dg-dot dg-orange-fill" />
+      <T x={465} y={262} className="dg-text dg-strong">Plastic bending</T>
+      <T x={465} y={280} className="dg-text dg-muted">yielding forms a hinge</T>
+    </Figure>
+  );
+}
+
+/** Moment against rotation: IS 800 classes as separate curves, the CSM as one continuous one. */
+export function MomentRotationDiagram() {
+  return (
+    <Figure
+      label="Moment against rotation for the four IS 800 classes and for a continuous CSM curve"
+      caption="Each grey curve is a class: class 1 holds the plastic moment M_pl through a long rotation, class 2 reaches it and falls soon, class 3 reaches only the elastic moment M_el, class 4 buckles before it. The blue curve is a stainless section under the CSM: one continuous curve, rising above M_pl, and each section stops at its own point where local buckling ends it. Not to scale."
+      width={560}
+      height={320}
+    >
+      <Axes x0={70} y0={280} x1={540} y1={20} xLabel="rotation" yLabel="moment" />
+      <line x1={70} y1={118} x2={500} y2={118} className="dg-guide dg-dash" />
+      <line x1={70} y1={158} x2={500} y2={158} className="dg-guide dg-dash" />
+      <T x={62} y={122} anchor="end">M_pl</T>
+      <T x={62} y={162} anchor="end">M_el</T>
+      <path d="M 70 280 L 130 158 C 150 130, 170 118, 200 118 L 380 118 C 410 120, 430 140, 450 190" className="dg-line dg-grey" />
+      <path d="M 70 280 L 130 158 C 150 130, 170 118, 200 118 L 250 118 C 280 122, 300 150, 320 205" className="dg-line dg-grey" />
+      <path d="M 70 280 L 130 158 L 150 158 C 175 160, 190 185, 200 225" className="dg-line dg-grey" />
+      <path d="M 70 280 L 112 196 C 125 194, 135 210, 140 245" className="dg-line dg-grey" />
+      <T x={456} y={196} anchor="start" className="dg-text dg-muted">class 1</T>
+      <T x={326} y={210} anchor="start" className="dg-text dg-muted">class 2</T>
+      <T x={206} y={232} anchor="start" className="dg-text dg-muted">class 3</T>
+      <T x={146} y={252} anchor="start" className="dg-text dg-muted">class 4</T>
+      <path d="M 130 158 C 160 112, 220 78, 380 62" className="dg-line dg-blue" />
+      <line x1={70} y1={158} x2={130} y2={158} className="dg-guide" />
+      <circle cx={159} cy={122} r={6} className="dg-dot dg-blue-fill" />
+      <circle cx={218} cy={93} r={6} className="dg-dot dg-blue-fill" />
+      <circle cx={380} cy={62} r={6} className="dg-dot dg-orange-fill" />
+      <T x={170} y={146} anchor="start" className="dg-text dg-blue-text">slender</T>
+      <T x={206} y={82} anchor="end" className="dg-text dg-blue-text">less stocky</T>
+      <T x={374} y={50} anchor="end" className="dg-text dg-orange-text">stocky: above M_pl</T>
     </Figure>
   );
 }

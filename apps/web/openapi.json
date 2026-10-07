@@ -241,6 +241,45 @@
           }
         }
       }
+    },
+    "/api/v1/section-comparison": {
+      "post": {
+        "summary": "Section Comparison",
+        "description": "B.5 for the same section made thicker and thinner, to compare stocky with slender.",
+        "operationId": "section_comparison_api_v1_section_comparison_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ComparisonRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComparisonResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -284,6 +323,172 @@
           "c3"
         ],
         "title": "CoefficientsOut"
+      },
+      "ComparisonPointOut": {
+        "properties": {
+          "factor": {
+            "type": "number",
+            "title": "Factor",
+            "description": "Every thickness is multiplied by this"
+          },
+          "slenderness": {
+            "type": "number",
+            "title": "Slenderness"
+          },
+          "zone": {
+            "$ref": "#/components/schemas/ZoneKey"
+          },
+          "strain_ratio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strain Ratio"
+          },
+          "strain": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strain"
+          },
+          "stress": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stress",
+            "description": "Stress read from the B.4 curve at the strain [N/mm2]"
+          }
+        },
+        "type": "object",
+        "required": [
+          "factor",
+          "slenderness",
+          "zone",
+          "strain_ratio",
+          "strain",
+          "stress"
+        ],
+        "title": "ComparisonPointOut"
+      },
+      "ComparisonRequest": {
+        "properties": {
+          "material": {
+            "$ref": "#/components/schemas/MaterialInput"
+          },
+          "geometry": {
+            "$ref": "#/components/schemas/GeometryInput"
+          },
+          "omega": {
+            "type": "number",
+            "title": "Omega",
+            "description": "Parameter Omega, an input"
+          },
+          "poisson_ratio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Poisson Ratio",
+            "description": "Poisson ratio nu, an input"
+          }
+        },
+        "type": "object",
+        "required": [
+          "material",
+          "geometry",
+          "omega"
+        ],
+        "title": "ComparisonRequest",
+        "description": "Same inputs as B.5. The section must be plates or a circular hollow section."
+      },
+      "ComparisonResponse": {
+        "properties": {
+          "material": {
+            "$ref": "#/components/schemas/MaterialOut"
+          },
+          "family": {
+            "$ref": "#/components/schemas/FamilyKey"
+          },
+          "values": {
+            "$ref": "#/components/schemas/ModelValuesOut"
+          },
+          "switch": {
+            "type": "number",
+            "title": "Switch"
+          },
+          "upper": {
+            "type": "number",
+            "title": "Upper"
+          },
+          "cap": {
+            "type": "number",
+            "title": "Cap"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/ComparisonPointOut"
+            },
+            "type": "array",
+            "title": "Points"
+          },
+          "references": {
+            "items": {
+              "$ref": "#/components/schemas/ReferenceSectionOut"
+            },
+            "type": "array",
+            "title": "References"
+          },
+          "base_curve_figure": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Base Curve Figure"
+          },
+          "stress_figure": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Stress Figure"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Notes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "material",
+          "family",
+          "values",
+          "switch",
+          "upper",
+          "cap",
+          "points",
+          "references",
+          "base_curve_figure",
+          "stress_figure",
+          "notes"
+        ],
+        "title": "ComparisonResponse"
       },
       "DeformationRequest": {
         "properties": {
@@ -867,6 +1072,28 @@
           "governing"
         ],
         "title": "PlateOut"
+      },
+      "ReferenceSectionOut": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "point": {
+            "$ref": "#/components/schemas/ComparisonPointOut"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "label",
+          "point"
+        ],
+        "title": "ReferenceSectionOut"
       },
       "SectionType": {
         "type": "string",

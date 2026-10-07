@@ -141,6 +141,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/section-comparison": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Section Comparison
+         * @description B.5 for the same section made thicker and thinner, to compare stocky with slender.
+         */
+        post: operations["section_comparison_api_v1_section_comparison_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -164,6 +184,70 @@ export interface components {
              * @default false
              */
             selected?: boolean;
+        };
+        /** ComparisonPointOut */
+        ComparisonPointOut: {
+            /**
+             * Factor
+             * @description Every thickness is multiplied by this
+             */
+            factor: number;
+            /** Slenderness */
+            slenderness: number;
+            zone: components["schemas"]["ZoneKey"];
+            /** Strain Ratio */
+            strain_ratio: number | null;
+            /** Strain */
+            strain: number | null;
+            /**
+             * Stress
+             * @description Stress read from the B.4 curve at the strain [N/mm2]
+             */
+            stress: number | null;
+        };
+        /**
+         * ComparisonRequest
+         * @description Same inputs as B.5. The section must be plates or a circular hollow section.
+         */
+        ComparisonRequest: {
+            material: components["schemas"]["MaterialInput"];
+            geometry: components["schemas"]["GeometryInput"];
+            /**
+             * Omega
+             * @description Parameter Omega, an input
+             */
+            omega: number;
+            /**
+             * Poisson Ratio
+             * @description Poisson ratio nu, an input
+             */
+            poisson_ratio?: number | null;
+        };
+        /** ComparisonResponse */
+        ComparisonResponse: {
+            material: components["schemas"]["MaterialOut"];
+            family: components["schemas"]["FamilyKey"];
+            values: components["schemas"]["ModelValuesOut"];
+            /** Switch */
+            switch: number;
+            /** Upper */
+            upper: number;
+            /** Cap */
+            cap: number;
+            /** Points */
+            points: components["schemas"]["ComparisonPointOut"][];
+            /** References */
+            references: components["schemas"]["ReferenceSectionOut"][];
+            /** Base Curve Figure */
+            base_curve_figure: {
+                [key: string]: unknown;
+            };
+            /** Stress Figure */
+            stress_figure: {
+                [key: string]: unknown;
+            };
+            /** Notes */
+            notes: string[];
         };
         /** DeformationRequest */
         DeformationRequest: {
@@ -400,6 +484,14 @@ export interface components {
             slenderness: number;
             /** Governing */
             governing: boolean;
+        };
+        /** ReferenceSectionOut */
+        ReferenceSectionOut: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            point: components["schemas"]["ComparisonPointOut"];
         };
         /**
          * SectionType
@@ -777,6 +869,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DeformationResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    section_comparison_api_v1_section_comparison_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ComparisonRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ComparisonResponse"];
                 };
             };
             /** @description Unprocessable Content */
