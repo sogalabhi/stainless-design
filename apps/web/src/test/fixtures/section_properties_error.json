@@ -1,0 +1,4 @@
+{
+  "detail": "The two flanges (2 t_f = 200 mm) fill the whole height h = 200 mm: 2 t_f must be less than h.",
+  "error_type": "InvalidSectionError"
+}

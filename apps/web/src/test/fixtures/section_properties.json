@@ -1,0 +1,210 @@
+{
+  "shape": "I-section",
+  "label": "computed from your dimensions: geometry, not a rule of EN 1993-1-4",
+  "method": "The outline is a polygon (fillets and corner radii are arcs of many segments, welds are triangles of leg s); Green's theorem gives A, the centroid and the second moments. The plastic neutral axis cuts the area in two equal halves.",
+  "origin": "the lower left corner of the bounding box, y to the right and z up",
+  "width": 100.0,
+  "height": 200.0,
+  "area": 2848.4220126352134,
+  "centroid": {
+    "y": 50.00000000000017,
+    "z": 100.00000000000034
+  },
+  "fibres": {
+    "top": 99.99999999999966,
+    "bottom": 100.00000000000034,
+    "left": 50.00000000000017,
+    "right": 49.99999999999983
+  },
+  "i_y": 19431768.885451473,
+  "i_z": 1423684.009920828,
+  "i_yz": -6.146728992462158e-08,
+  "w_el_y": {
+    "value": 194317.68885451407,
+    "smaller_side": "equal",
+    "sides": {
+      "top": 194317.6888545154,
+      "bottom": 194317.68885451407
+    }
+  },
+  "w_el_z": {
+    "value": 28473.680198416463,
+    "smaller_side": "equal",
+    "sides": {
+      "left": 28473.680198416463,
+      "right": 28473.68019841666
+    }
+  },
+  "plastic_axis_y": 100.0,
+  "plastic_axis_z": 50.0,
+  "w_pl_y": 220639.636747982,
+  "w_pl_z": 44612.23904351971,
+  "shear_centre": {
+    "point": {
+      "y": 50.00000000000017,
+      "z": 100.00000000000034
+    },
+    "label": "thin-walled approximation",
+    "note": "doubly symmetric: at the centroid"
+  },
+  "principal": null,
+  "rows": [
+    {
+      "key": "A",
+      "symbol": "A",
+      "name": "Cross-sectional area",
+      "value": 2848.42,
+      "unit": "mm²",
+      "group": "Area and centroid",
+      "note": "gross, with the fillets and welds"
+    },
+    {
+      "key": "y_c",
+      "symbol": "y_c",
+      "name": "Centroid, horizontal",
+      "value": 50.0,
+      "unit": "mm",
+      "group": "Area and centroid",
+      "note": "from the lower left corner of the bounding box, y to the right and z up"
+    },
+    {
+      "key": "z_c",
+      "symbol": "z_c",
+      "name": "Centroid, vertical",
+      "value": 100.0,
+      "unit": "mm",
+      "group": "Area and centroid",
+      "note": "from the lower left corner of the bounding box, y to the right and z up"
+    },
+    {
+      "key": "e_top",
+      "symbol": "e_top",
+      "name": "Centroid to the top fibre",
+      "value": 100.0,
+      "unit": "mm",
+      "group": "Area and centroid",
+      "note": null
+    },
+    {
+      "key": "e_bottom",
+      "symbol": "e_bottom",
+      "name": "Centroid to the bottom fibre",
+      "value": 100.0,
+      "unit": "mm",
+      "group": "Area and centroid",
+      "note": null
+    },
+    {
+      "key": "e_left",
+      "symbol": "e_left",
+      "name": "Centroid to the left fibre",
+      "value": 50.0,
+      "unit": "mm",
+      "group": "Area and centroid",
+      "note": null
+    },
+    {
+      "key": "e_right",
+      "symbol": "e_right",
+      "name": "Centroid to the right fibre",
+      "value": 50.0,
+      "unit": "mm",
+      "group": "Area and centroid",
+      "note": null
+    },
+    {
+      "key": "I_y",
+      "symbol": "I_y",
+      "name": "Second moment about y-y",
+      "value": 19431800.0,
+      "unit": "mm⁴",
+      "group": "Second moment of area (about the centroid)",
+      "note": null
+    },
+    {
+      "key": "I_z",
+      "symbol": "I_z",
+      "name": "Second moment about z-z",
+      "value": 1423680.0,
+      "unit": "mm⁴",
+      "group": "Second moment of area (about the centroid)",
+      "note": null
+    },
+    {
+      "key": "W_el_y",
+      "symbol": "W_el,y",
+      "name": "Elastic modulus about y-y",
+      "value": 194318.0,
+      "unit": "mm³",
+      "group": "Elastic section modulus",
+      "note": null
+    },
+    {
+      "key": "W_el_z",
+      "symbol": "W_el,z",
+      "name": "Elastic modulus about z-z",
+      "value": 28473.7,
+      "unit": "mm³",
+      "group": "Elastic section modulus",
+      "note": null
+    },
+    {
+      "key": "z_pl_y",
+      "symbol": "z_pl,y",
+      "name": "Plastic neutral axis for y-y",
+      "value": 100.0,
+      "unit": "mm",
+      "group": "Plastic section modulus",
+      "note": "height of the equal-area line above the lowest point"
+    },
+    {
+      "key": "W_pl_y",
+      "symbol": "W_pl,y",
+      "name": "Plastic modulus about y-y",
+      "value": 220640.0,
+      "unit": "mm³",
+      "group": "Plastic section modulus",
+      "note": null
+    },
+    {
+      "key": "y_pl_z",
+      "symbol": "y_pl,z",
+      "name": "Plastic neutral axis for z-z",
+      "value": 50.0,
+      "unit": "mm",
+      "group": "Plastic section modulus",
+      "note": "distance of the equal-area line from the leftmost point"
+    },
+    {
+      "key": "W_pl_z",
+      "symbol": "W_pl,z",
+      "name": "Plastic modulus about z-z",
+      "value": 44612.2,
+      "unit": "mm³",
+      "group": "Plastic section modulus",
+      "note": null
+    },
+    {
+      "key": "y_s",
+      "symbol": "y_s",
+      "name": "Shear centre, horizontal",
+      "value": 50.0,
+      "unit": "mm",
+      "group": "Shear centre (thin-walled approximation)",
+      "note": "thin-walled approximation: doubly symmetric: at the centroid"
+    },
+    {
+      "key": "z_s",
+      "symbol": "z_s",
+      "name": "Shear centre, vertical",
+      "value": 100.0,
+      "unit": "mm",
+      "group": "Shear centre (thin-walled approximation)",
+      "note": "thin-walled approximation: doubly symmetric: at the centroid"
+    }
+  ],
+  "notes": [
+    "Reference values: nothing enters a calculation unless you click Use, which copies the value into its input field.",
+    "No torsion constant or warping constant: Annex B does not use them."
+  ]
+}

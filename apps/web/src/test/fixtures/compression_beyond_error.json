@@ -1,0 +1,4 @@
+{
+ "detail": "The cross-section is too slender for the CSM: relative slenderness 3.408 is above the limit 1.6 for sections of flat plates (B.5.1). Use the classic cross-section resistance (8.2, Class 4 effective widths).",
+ "error_type": "NotApplicableError"
+}
