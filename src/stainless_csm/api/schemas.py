@@ -153,6 +153,16 @@ class SymbolOut(BaseModel):
     diagram: str | None = Field(default=None, description="Name of the sketch drawn beside it")
 
 
+class InputHelpOut(BaseModel):
+    key: str = Field(description="The dock field key (plate fields: one entry each)")
+    name: str
+    what: str = Field(description="What the input is")
+    why: str = Field(description="The clauses and formulas that use it")
+    where: str = Field(description="Where to get it; never a number of its own")
+    source: str = Field(description="'In EN 1993-1-4 (clause)' or 'Outside EN 1993-1-4: ...'")
+    in_standard: bool = Field(description="True when the value comes from EN 1993-1-4")
+
+
 class ErrorResponse(BaseModel):
     detail: str
     error_type: str
@@ -165,6 +175,24 @@ class GeometryKindKey(StrEnum):
     CHS = "chs"
     PLATES = "plates"
     SIGMA_CR = "sigma_cr"
+    TEMPLATE = "template"
+
+
+class FabricationKey(StrEnum):
+    ROLLED = "rolled"
+    WELDED = "welded"
+
+
+class PlateRoleKey(StrEnum):
+    WEB = "web"
+    FLANGE = "flange"
+    STEM = "stem"
+    LEG = "leg"
+
+
+class PlateTypeKey(StrEnum):
+    INTERNAL = "internal"
+    OUTSTAND = "outstand"
 
 
 class FamilyKey(StrEnum):
@@ -196,8 +224,21 @@ class PlateInput(BaseModel):
     k_sigma: float = Field(description="Buckling factor of the plate, an input")
 
 
+class KSigmaInput(BaseModel):
+    """k_sigma of each kind of plate (EN 1993-1-5, outside Annex B): an input, one per role."""
+
+    web: float | None = None
+    flange: float | None = None
+    stem: float | None = None
+    leg: float | None = None
+
+
 class GeometryInput(BaseModel):
-    """The section. Which fields are needed depends on `kind` (the API says what is missing)."""
+    """The section. Which fields are needed depends on `kind` (the API says what is missing).
+
+    With kind "template" give `shape` and its dimensions in mm; the engine derives the flat width c
+    of each plate as 8.2.2(5) and Tables 7.2 to 7.4 draw it. k_sigma of each plate is an input.
+    """
 
     kind: GeometryKindKey
     d: float | None = Field(default=None, description="Outer diameter [mm] (CHS)")
@@ -205,6 +246,31 @@ class GeometryInput(BaseModel):
     plates: list[PlateInput] = Field(default_factory=list, max_length=20)
     sigma_cr_cs: float | None = Field(default=None, description="sigma_cr,cs [N/mm2]")
     family: FamilyKey | None = Field(default=None, description="With sigma_cr only")
+    shape: SectionType | None = Field(default=None, description="Section template: the shape")
+    fabrication: FabricationKey | None = Field(
+        default=None, description="Template I-section, channel, T-section: rolled (r) or welded (s)"
+    )
+    h: float | None = Field(default=None, description="Template: overall height h [mm]")
+    b: float | None = Field(default=None, description="Template: overall width b [mm]")
+    t_w: float | None = Field(default=None, description="Template: web or stem thickness [mm]")
+    t_f: float | None = Field(default=None, description="Template: flange thickness [mm]")
+    r: float | None = Field(
+        default=None,
+        description="Template: root radius r of a rolled section, or of an angle "
+        "(properties and drawing only; 0 is sharp)",
+    )
+    s: float | None = Field(default=None, description="Template: weld leg s of a welded section")
+    c_stem: float | None = Field(
+        default=None, description="Template T-section: flat width of the stem, typed [mm]"
+    )
+    r_o: float | None = Field(
+        default=None,
+        description="Template RHS: outer corner radius r_o [mm]; properties and drawing only, "
+        "not c (0 is sharp)",
+    )
+    k_sigma: KSigmaInput | None = Field(
+        default=None, description="Template: k_sigma of each plate role"
+    )
 
 
 class DeformationRequest(BaseModel):
@@ -225,6 +291,15 @@ class PlateOut(BaseModel):
     sigma_cr: float
     slenderness: float
     governing: bool
+    role: PlateRoleKey | None = Field(
+        default=None, description="Section template only: which part of the section this is"
+    )
+    plate_type: PlateTypeKey | None = Field(
+        default=None, description="Section template only: internal or outstand"
+    )
+    c_source: str | None = Field(
+        default=None, description="Section template only: where the flat width c comes from"
+    )
 
 
 class SlendernessOut(BaseModel):
@@ -280,6 +355,7 @@ class ComparisonPointOut(BaseModel):
     strain_ratio: float | None
     strain: float | None
     stress: float | None = Field(description="Stress read from the B.4 curve at the strain [N/mm2]")
+    governing_label: str = Field(description="The plate that sets the slenderness at this point")
 
 
 class ReferenceSectionOut(BaseModel):
@@ -299,4 +375,150 @@ class ComparisonResponse(BaseModel):
     references: list[ReferenceSectionOut]
     base_curve_figure: dict[str, Any]
     stress_figure: dict[str, Any]
+    notes: list[str]
+
+
+# --- B.6.2: compression ------------------------------------------------------------------
+
+
+class CompressionFormulaKey(StrEnum):
+    """Which formula of B.6.2 gave the resistance (stable machine key)."""
+
+    B15 = "b15"
+    B16 = "b16"
+
+
+class CompressionRequest(BaseModel):
+    """The B.5 inputs of the section, plus the area and gamma_M0 (inputs, never assumed)."""
+
+    material: MaterialInput
+    geometry: GeometryInput
+    omega: float = Field(description="Parameter Omega, an input")
+    poisson_ratio: float | None = Field(
+        default=None, description="Poisson ratio nu, an input; not needed with sigma_cr"
+    )
+    area: float = Field(description="Cross-section area A [mm2]")
+    gamma_m0: float = Field(description="Partial factor gamma_M0, an input")
+    graph_view: GraphView = GraphView.SCHEMATIC
+
+
+class CompressionResponse(BaseModel):
+    material: MaterialOut
+    family: FamilyKey
+    slenderness: SlendernessOut
+    strain_limit: StrainLimitOut
+    strain_ratio: float = Field(description="eps_csm / eps_y, from B.5.1")
+    formula: CompressionFormulaKey
+    formula_label: str = Field(description="B.15 or B.16")
+    design_stress: float | None = Field(
+        description="f_csm [N/mm2] (Formula B.17); null when B.15 applies, where B.17 is not used"
+    )
+    resistance: float = Field(description="N_csm,Rd [N]")
+    notes: list[str]
+    trace: list[TraceStepOut]
+    capacity_figure: dict[str, Any] = Field(
+        description="Plotly figure: N_csm,Rd / (A f_y / gamma_M0) against slenderness"
+    )
+    point_figure: dict[str, Any] = Field(
+        description="Plotly figure: the compression point on the B.4 curve"
+    )
+
+
+# --- Section properties: reference values from the template dimensions ------------------------
+
+
+class SectionPropertiesRequest(BaseModel):
+    """The typed template dimensions in mm. Which ones are needed depends on `shape`."""
+
+    shape: SectionType
+    fabrication: FabricationKey | None = Field(
+        default=None, description="I-section, channel and T-section: rolled (r) or welded (s)"
+    )
+    h: float | None = Field(default=None, description="Overall height h [mm] (longer leg: angle)")
+    b: float | None = Field(default=None, description="Overall width b [mm] (shorter leg: angle)")
+    t_w: float | None = Field(default=None, description="Web or stem thickness [mm]")
+    t_f: float | None = Field(default=None, description="Flange thickness [mm]")
+    t: float | None = Field(default=None, description="Wall or leg thickness [mm]")
+    d: float | None = Field(default=None, description="Outer diameter [mm] (CHS)")
+    r: float | None = Field(
+        default=None, description="Root radius r [mm]: rolled I, channel, T-section, or an angle"
+    )
+    s: float | None = Field(default=None, description="Weld leg s [mm]: welded sections")
+    r_o: float | None = Field(
+        default=None, description="Outer corner radius r_o [mm] of a rectangular hollow section"
+    )
+
+
+class PointOut(BaseModel):
+    y: float = Field(description="mm, from the origin to the right")
+    z: float = Field(description="mm, from the origin upwards")
+
+
+class FibreDistancesOut(BaseModel):
+    top: float
+    bottom: float
+    left: float
+    right: float
+
+
+class ElasticModulusOut(BaseModel):
+    value: float = Field(description="The smaller of the two [mm3]")
+    smaller_side: str = Field(
+        description="Which fibre gives the smaller modulus; 'equal' when the two sides are equal"
+    )
+    sides: dict[str, float] = Field(description="The modulus at each extreme fibre [mm3]")
+
+
+class PrincipalAxesOut(BaseModel):
+    angle_deg: float = Field(
+        description="Angle of the major axis u from the y axis, counter-clockwise, z up [degrees]"
+    )
+    i_u: float
+    i_v: float
+
+
+class ShearCentreOut(BaseModel):
+    point: PointOut
+    label: str = Field(description="Always 'thin-walled approximation'")
+    note: str
+
+
+class PropertyRowOut(BaseModel):
+    """One line of the properties table. `value` has six significant figures (what Use copies)."""
+
+    key: str = Field(description="A stable machine key, for example A, I_y, W_pl_y")
+    symbol: str
+    name: str
+    value: float
+    unit: str
+    group: str
+    note: str | None = None
+
+
+class SectionPropertiesResponse(BaseModel):
+    shape: SectionType
+    label: str = Field(description="Where these numbers come from: geometry, not the standard")
+    method: str
+    origin: str = Field(description="Where the coordinates start")
+    width: float = Field(description="Bounding box along y [mm]")
+    height: float = Field(description="Bounding box along z [mm]")
+    area: float = Field(description="A [mm2]")
+    centroid: PointOut
+    fibres: FibreDistancesOut = Field(description="Centroid to the extreme fibres [mm]")
+    i_y: float = Field(description="[mm4], about the centroidal axis parallel to y")
+    i_z: float
+    i_yz: float
+    w_el_y: ElasticModulusOut
+    w_el_z: ElasticModulusOut
+    plastic_axis_y: float = Field(
+        description="z of the equal-area line parallel to y, for bending about y-y [mm]"
+    )
+    plastic_axis_z: float = Field(
+        description="y of the equal-area line parallel to z, for bending about z-z [mm]"
+    )
+    w_pl_y: float = Field(description="[mm3]")
+    w_pl_z: float
+    shear_centre: ShearCentreOut
+    principal: PrincipalAxesOut | None = Field(default=None, description="Angles only")
+    rows: list[PropertyRowOut]
     notes: list[str]

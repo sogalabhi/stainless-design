@@ -181,9 +181,12 @@ def test_openapi_spec_documents_every_endpoint() -> None:
         f"{V1}/csm-coefficients",
         f"{V1}/material-model",
         f"{V1}/tension",
+        f"{V1}/compression",
         f"{V1}/deformation-capacity",
         f"{V1}/section-comparison",
+        f"{V1}/section-properties",
         f"{V1}/symbols",
+        f"{V1}/input-help",
     }
     json.dumps(client.get("/openapi.json").json())
 
@@ -308,6 +311,150 @@ def test_deformation_capacity_contract_equals_service() -> None:
     assert all(step["latex"] for step in api["trace"])
 
 
+# --- B.6.2 -------------------------------------------------------------------------------
+
+
+def compression_body(designation: str = "1.4307", **changes: object) -> dict[str, object]:
+    body: dict[str, object] = {
+        **deformation_body(designation, kind="plates", plates=[plate_input()]),
+        "area": 1000,
+        "gamma_m0": GAMMA_M0,
+    }
+    return {**body, **changes}
+
+
+def test_compression_stocky_plate_uses_b16() -> None:
+    r = client.post(f"{V1}/compression", json=compression_body())
+    assert r.status_code == 200
+    out = r.json()
+    assert out["formula"] == "b16"
+    assert out["formula_label"] == "B.16"
+    assert out["family"] == "flat_plates"
+    assert out["slenderness"]["value"] == pytest.approx(0.3408, rel=1e-3)
+    assert out["strain_ratio"] == pytest.approx(12.03, rel=1e-2)
+    assert out["strain_limit"]["strain_ratio"] == out["strain_ratio"]
+    assert out["design_stress"] == pytest.approx(246.6, rel=2e-3)
+    assert out["resistance"] == pytest.approx(1000 * out["design_stress"] / GAMMA_M0)
+    assert not {"utilisation", "passes", "verdict", "classic_resistance", "gain"} & set(out)
+
+
+def test_compression_slender_plate_uses_b15_and_has_no_f_csm() -> None:
+    body = compression_body(geometry={"kind": "plates", "plates": [plate_input("web", 250, 3)]})
+    out = client.post(f"{V1}/compression", json=body).json()
+    assert out["formula"] == "b15"
+    assert out["design_stress"] is None
+    assert out["resistance"] == pytest.approx(out["strain_ratio"] * 1000 * 210 / GAMMA_M0)
+    assert any("B.17" in note and "not used" in note for note in out["notes"])
+
+
+def test_compression_chs() -> None:
+    body = compression_body(geometry={"kind": "chs", "d": 100, "t": 3})
+    out = client.post(f"{V1}/compression", json=body).json()
+    assert out["family"] == "circular_hollow"
+    assert out["formula"] == "b16"
+
+
+def test_compression_returns_both_charts_in_both_views() -> None:
+    for view, word in (("schematic", "not to scale"), ("true_scale", "true scale")):
+        out = client.post(f"{V1}/compression", json=compression_body(graph_view=view)).json()
+        assert word in out["point_figure"]["layout"]["xaxis"]["title"]["text"]
+        names = [t.get("name") for t in out["capacity_figure"]["data"]]
+        assert "Your section" in names
+        assert any("B.15" in str(n) for n in names) and any("B.16" in str(n) for n in names)
+        assert any(t.get("name") == "CSM bilinear (B.4)" for t in out["point_figure"]["data"])
+
+
+def test_compression_beyond_the_limit_is_a_clear_422() -> None:
+    body = compression_body(geometry={"kind": "plates", "plates": [plate_input("thin", 400, 2)]})
+    r = client.post(f"{V1}/compression", json=body)
+    assert r.status_code == 422
+    assert r.json()["error_type"] == "NotApplicableError"
+    assert "too slender" in r.json()["detail"]
+    assert "1.6" in r.json()["detail"]
+
+
+def test_compression_bad_inputs_are_422s() -> None:
+    r = client.post(f"{V1}/compression", json=compression_body(area=0))
+    assert r.status_code == 422
+    assert "Area" in r.json()["detail"]
+    r = client.post(f"{V1}/compression", json=compression_body(gamma_m0=0))
+    assert r.status_code == 422
+    assert "γM0" in r.json()["detail"]
+    r = client.post(
+        f"{V1}/compression",
+        json=compression_body(geometry={"kind": "chs", "d": 100}),
+    )
+    assert r.status_code == 422
+    assert r.json()["error_type"] == "InvalidSectionError"
+
+
+def test_compression_inputs_from_outside_annex_b_are_required() -> None:
+    for name in ("area", "gamma_m0", "omega"):
+        body = compression_body()
+        del body[name]
+        response = client.post(f"{V1}/compression", json=body)
+        assert response.status_code == 422, name
+        assert name in response.text
+
+
+def test_compression_has_no_holes_input() -> None:
+    schema = client.get("/openapi.json").json()["components"]["schemas"]["CompressionRequest"]
+    assert "has_holes" not in schema["properties"]
+
+
+def test_compression_contract_equals_service() -> None:
+    plates = (services.PlateForm("web", 138, 4, 4.0), services.PlateForm("flange", 88, 4, 4.0))
+    form = services.CompressionForm(
+        services.DeformationForm(
+            services.GeometryForm(kind=services.GeometryKind.PLATES, plates=plates), OMEGA, NU
+        ),
+        1234.5,
+        GAMMA_M0,
+    )
+    model = CSMBilinearModel(services.build_material(services.MaterialForm("1.4404", E)))
+    outcome = services.run_compression(model, form)
+    body = compression_body(
+        "1.4404",
+        geometry={
+            "kind": "plates",
+            "plates": [plate_input("web", 138, 4), plate_input("flange", 88, 4)],
+        },
+        area=1234.5,
+    )
+    api = client.post(f"{V1}/compression", json=body).json()
+    assert api["resistance"] == outcome.result.resistance
+    assert api["design_stress"] == outcome.result.design_stress
+    assert api["strain_ratio"] == outcome.result.strain_ratio
+    assert api["formula_label"] == outcome.result.formula.value
+    assert api["slenderness"]["value"] == outcome.deformation.slenderness.slenderness
+    assert [step["symbol"] for step in api["trace"]] == [s.symbol for s in outcome.trace]
+    assert all(step["latex"] for step in api["trace"])
+
+
+@pytest.mark.parametrize("designation", GradeRepository.load_default().designations())
+def test_compression_contract_for_every_grade(designation: str) -> None:
+    body = compression_body(designation, geometry={"kind": "chs", "d": 100, "t": 3})
+    api = client.post(f"{V1}/compression", json=body).json()
+    model = CSMBilinearModel(services.build_material(services.MaterialForm(designation, E)))
+    form = services.CompressionForm(
+        services.DeformationForm(
+            services.GeometryForm(services.GeometryKind.CHS, d=100, t=3), OMEGA, NU
+        ),
+        1000.0,
+        GAMMA_M0,
+    )
+    outcome = services.run_compression(model, form)
+    assert api["resistance"] == outcome.result.resistance
+    assert api["strain_ratio"] == outcome.result.strain_ratio
+    assert api["design_stress"] == outcome.result.design_stress
+
+
+def test_no_emoji_in_the_compression_response() -> None:
+    from test_no_emoji import EMOJI
+
+    assert not EMOJI.search(client.post(f"{V1}/compression", json=compression_body()).text)
+
+
 # --- nothing outside Annex B is assumed ---------------------------------------------------
 
 
@@ -343,4 +490,348 @@ def test_every_value_from_outside_annex_b_is_a_required_input() -> None:
 
 def test_there_are_no_section_presets() -> None:
     kinds = client.get("/openapi.json").json()["components"]["schemas"]["GeometryKindKey"]["enum"]
-    assert kinds == ["chs", "plates", "sigma_cr"]
+    assert kinds == ["chs", "plates", "sigma_cr", "template"]
+
+
+# --- section templates (8.2.2(5), Tables 7.2 to 7.4) ---------------------------------------
+
+
+def i_template(**changes: object) -> dict[str, object]:
+    """The rolled I-section of plan.md 4c: c_w = 159.0, c_f = 35.2."""
+    geometry: dict[str, object] = {
+        "kind": "template",
+        "shape": "I-section",
+        "fabrication": "rolled",
+        "h": 200,
+        "b": 100,
+        "t_w": 5.6,
+        "t_f": 8.5,
+        "r": 12,
+        "k_sigma": {"web": 4.0, "flange": 0.43},
+    }
+    geometry.update(changes)
+    return geometry
+
+
+def rhs_template(**changes: object) -> dict[str, object]:
+    geometry: dict[str, object] = {
+        "kind": "template",
+        "shape": "rectangular hollow section",
+        "h": 100,
+        "b": 50,
+        "t": 4,
+        "k_sigma": {"web": 4.0, "flange": 4.0},
+    }
+    geometry.update(changes)
+    return geometry
+
+
+def test_template_b5_reports_c_k_sigma_type_and_source_per_plate() -> None:
+    r = client.post(f"{V1}/deformation-capacity", json=deformation_body(**i_template()))
+    assert r.status_code == 200
+    out = r.json()
+    web, flange = out["slenderness"]["plates"]
+    assert (web["role"], web["plate_type"], web["width"], web["k_sigma"]) == (
+        "web",
+        "internal",
+        pytest.approx(159.0),
+        4.0,
+    )
+    assert (flange["role"], flange["plate_type"], flange["width"]) == (
+        "flange",
+        "outstand",
+        pytest.approx(35.2),
+    )
+    assert "Table 7.2" in web["c_source"] and "Table 7.3" in flange["c_source"]
+    assert web["governing"] is True and out["slenderness"]["governing_label"] == "web"
+    assert out["slenderness"]["value"] == pytest.approx(0.48388, rel=1e-4)
+    assert [s["symbol"] for s in out["trace"]][:2] == ["c_w", "c_f"]
+    assert out["trace"][0]["clause"] == "8.2.2(5)" and out["trace"][0]["latex"]
+
+
+def test_manual_plates_carry_no_template_fields() -> None:
+    out = client.post(
+        f"{V1}/deformation-capacity", json=deformation_body(kind="plates", plates=[plate_input()])
+    ).json()
+    plate = out["slenderness"]["plates"][0]
+    assert plate["role"] is None and plate["plate_type"] is None and plate["c_source"] is None
+
+
+def test_template_rhs_and_chs() -> None:
+    rhs = client.post(f"{V1}/deformation-capacity", json=deformation_body(**rhs_template())).json()
+    assert [p["width"] for p in rhs["slenderness"]["plates"]] == [
+        pytest.approx(88.0),
+        pytest.approx(38.0),
+    ]
+    assert rhs["strain_limit"]["strain_ratio"] == pytest.approx(8.545, rel=1e-3)
+    chs = client.post(
+        f"{V1}/deformation-capacity",
+        json=deformation_body(kind="template", shape="circular hollow section", d=100, t=3),
+    ).json()
+    assert chs["family"] == "circular_hollow" and chs["slenderness"]["plates"] == []
+
+
+@pytest.mark.parametrize(
+    ("changes", "words"),
+    [
+        ({"t_f": 100}, "2 t_f"),
+        ({"r": 95}, "c_w"),
+        ({"fabrication": None}, "fabrication"),
+        ({"r": None}, "r"),
+        ({"k_sigma": {"web": 4.0}}, "k_σ of the flange"),
+        ({"shape": None}, "section type"),
+    ],
+)
+def test_template_impossible_or_incomplete_geometry_is_a_422(
+    changes: dict[str, object], words: str
+) -> None:
+    r = client.post(f"{V1}/deformation-capacity", json=deformation_body(**i_template(**changes)))
+    assert r.status_code == 422
+    assert r.json()["error_type"] == "InvalidSectionError"
+    assert words in r.json()["detail"]
+
+
+def test_template_rhs_too_thick_is_a_422() -> None:
+    r = client.post(
+        f"{V1}/deformation-capacity", json=deformation_body(**rhs_template(t=25))
+    )
+    assert r.status_code == 422 and "too thick" in r.json()["detail"]
+
+
+def test_template_is_accepted_by_compression() -> None:
+    body = {**deformation_body(**i_template()), "area": 2848, "gamma_m0": GAMMA_M0}
+    r = client.post(f"{V1}/compression", json=body)
+    assert r.status_code == 200
+    out = r.json()
+    assert out["formula_label"] == "B.16"
+    assert out["slenderness"]["plates"][0]["c_source"].startswith("c as drawn in Table 7.2")
+    assert [s["symbol"] for s in out["trace"] if s["symbol"].startswith("c_")] == ["c_w", "c_f"]
+    body["geometry"] = i_template(r=95)
+    assert client.post(f"{V1}/compression", json=body).status_code == 422
+
+
+def test_template_contract_b5_equals_service() -> None:
+    from stainless_csm.sections.templates import Fabrication, PlateRole
+
+    geometry = services.GeometryForm(
+        services.GeometryKind.TEMPLATE,
+        shape=SectionType.I_SECTION,
+        fabrication=Fabrication.ROLLED,
+        h=200, b=100, tw=5.6, tf=8.5, r=12,
+        k_sigma={PlateRole.WEB: 4.0, PlateRole.FLANGE: 0.43},
+    )  # fmt: skip
+    model = CSMBilinearModel(services.build_material(services.MaterialForm("1.4404", E)))
+    form = services.DeformationForm(geometry, OMEGA, NU)
+    outcome = services.run_deformation_capacity(model, form)
+    api = client.post(
+        f"{V1}/deformation-capacity", json=deformation_body("1.4404", **i_template())
+    ).json()
+    assert api["slenderness"]["value"] == outcome.slenderness.slenderness
+    assert api["strain_limit"]["strain_ratio"] == outcome.capacity.strain_ratio
+    assert [p["width"] for p in api["slenderness"]["plates"]] == [
+        p.c for p in outcome.template_plates
+    ]
+    assert [s["symbol"] for s in api["trace"]] == [s.symbol for s in outcome.trace]
+    comp = services.run_compression(model, services.CompressionForm(form, 2848.0, GAMMA_M0))
+    body = {**deformation_body("1.4404", **i_template()), "area": 2848, "gamma_m0": GAMMA_M0}
+    c_api = client.post(f"{V1}/compression", json=body).json()
+    assert c_api["resistance"] == comp.result.resistance
+    assert c_api["strain_ratio"] == comp.result.strain_ratio
+    assert [s["symbol"] for s in c_api["trace"]] == [s.symbol for s in comp.trace]
+
+
+def test_template_comparison_contract_and_governing_plate() -> None:
+    body = deformation_body(**rhs_template())
+    api = client.post(f"{V1}/section-comparison", json=body)
+    assert api.status_code == 200
+    out = api.json()
+    assert len(out["points"]) > 50
+    assert all(p["governing_label"] in {"web", "flange"} for p in out["points"])
+    from stainless_csm.sections.templates import PlateRole
+
+    geometry = services.GeometryForm(
+        services.GeometryKind.TEMPLATE,
+        shape=SectionType.RHS,
+        h=100, b=50, t=4,
+        k_sigma={PlateRole.WEB: 4.0, PlateRole.FLANGE: 4.0},
+    )  # fmt: skip
+    model = CSMBilinearModel(services.build_material(services.MaterialForm("1.4307", E)))
+    comparison = services.run_comparison(model, services.DeformationForm(geometry, OMEGA, NU))
+    assert [p["factor"] for p in out["points"]] == [p.factor for p in comparison.points]
+    assert [p["slenderness"] for p in out["points"]] == [p.slenderness for p in comparison.points]
+
+
+def test_template_comparison_impossible_geometry_is_a_422() -> None:
+    body = deformation_body(**rhs_template(t=25))
+    assert client.post(f"{V1}/section-comparison", json=body).status_code == 422
+
+
+def test_there_are_no_template_presets_or_hidden_k_sigma() -> None:
+    schemas = client.get("/openapi.json").json()["components"]["schemas"]
+    geometry = schemas["GeometryInput"]["properties"]
+    for key in ("h", "b", "t_w", "t_f", "r", "s", "c_stem", "fabrication", "shape", "k_sigma"):
+        assert "default" not in geometry[key] or geometry[key]["default"] is None
+    # no k_sigma default for any role
+    assert all(
+        prop.get("default") is None for prop in schemas["KSigmaInput"]["properties"].values()
+    )
+
+
+# --- section properties (plan.md 4d): reference values from the template dimensions -------------
+
+
+def properties_body(**changes: object) -> dict[str, object]:
+    """The rolled I-section of plan.md 4d."""
+    body: dict[str, object] = {
+        "shape": "I-section",
+        "fabrication": "rolled",
+        "h": 200,
+        "b": 100,
+        "t_w": 5.6,
+        "t_f": 8.5,
+        "r": 12,
+    }
+    body.update(changes)
+    return body
+
+
+def test_section_properties_of_the_rolled_i_section() -> None:
+    r = client.post(f"{V1}/section-properties", json=properties_body())
+    assert r.status_code == 200
+    out = r.json()
+    assert out["area"] == pytest.approx(2848.0, rel=0.005)
+    assert out["i_y"] == pytest.approx(1943e4, rel=0.005)
+    assert out["w_el_y"]["value"] == pytest.approx(194.3e3, rel=0.005)
+    assert out["w_pl_y"] == pytest.approx(220.6e3, rel=0.005)
+    assert out["centroid"] == {"y": pytest.approx(50.0), "z": pytest.approx(100.0)}
+    assert out["principal"] is None
+    assert out["label"] == "computed from your dimensions: geometry, not a rule of EN 1993-1-4"
+    assert out["shear_centre"]["label"] == "thin-walled approximation"
+    rows = {row["key"]: row for row in out["rows"]}
+    assert rows["A"]["value"] == pytest.approx(2848.42, rel=1e-6) and rows["A"]["unit"] == "mm²"
+    assert rows["W_pl_y"]["unit"] == "mm³" and rows["I_y"]["unit"] == "mm⁴"
+    assert "thin-walled approximation" in rows["y_s"]["note"]
+    assert "W_el_y_top" not in rows  # the two sides are equal for an I-section
+
+
+def test_section_properties_of_an_angle_report_the_principal_axes() -> None:
+    body = {"shape": "angle", "h": 100, "b": 75, "t": 8, "r": 0}
+    out = client.post(f"{V1}/section-properties", json=body).json()
+    assert out["area"] == pytest.approx(1336.0)
+    assert out["principal"]["i_u"] > out["principal"]["i_v"]
+    assert 0 < out["principal"]["angle_deg"] < 45
+    keys = [row["key"] for row in out["rows"]]
+    assert {"theta_u", "I_u", "I_v", "I_yz"} <= set(keys)
+    assert {"W_el_y_top", "W_el_y_bottom", "W_el_z_left", "W_el_z_right"} <= set(keys)
+    rows = {row["key"]: row for row in out["rows"]}
+    assert "smaller" in rows["W_el_y"]["note"]
+
+
+def test_section_properties_of_the_other_shapes() -> None:
+    rhs = {"shape": "rectangular hollow section", "h": 100, "b": 50, "t": 4, "r_o": 0}
+    out = client.post(f"{V1}/section-properties", json=rhs).json()
+    assert out["area"] == pytest.approx(1136.0) and out["w_pl_y"] == pytest.approx(36128.0)
+    chs = {"shape": "circular hollow section", "d": 100, "t": 5}
+    out = client.post(f"{V1}/section-properties", json=chs).json()
+    assert out["area"] == pytest.approx(1492.26, rel=1e-4)
+    t = properties_body(shape="T-section", h=100, b=100, t_w=6, t_f=8, r=0)  # no c_stem needed
+    assert client.post(f"{V1}/section-properties", json=t).status_code == 200
+    channel = properties_body(shape="channel", h=200, b=75, t_w=8.5, t_f=11.5, r=11.5)
+    out = client.post(f"{V1}/section-properties", json=channel).json()
+    assert out["shear_centre"]["point"]["y"] < 0  # outside the web, away from the flanges
+
+
+@pytest.mark.parametrize(
+    ("body", "words"),
+    [
+        (properties_body(t_f=100), "2 t_f"),
+        (properties_body(r=95), "c_w"),
+        (properties_body(r=None), "please give r"),
+        (properties_body(fabrication=None), "fabrication"),
+        (properties_body(h=None), "h"),
+        ({"shape": "rectangular hollow section", "h": 100, "b": 50, "t": 4}, "r_o"),
+        ({"shape": "rectangular hollow section", "h": 100, "b": 50, "t": 4, "r_o": 30}, "r_o"),
+        ({"shape": "rectangular hollow section", "h": 100, "b": 50, "t": 25, "r_o": 0}, "thick"),
+        ({"shape": "angle", "h": 100, "b": 75, "t": 8}, "root radius"),
+        ({"shape": "angle", "h": 100, "b": 75, "t": 8, "r": 70}, "root radius"),
+        ({"shape": "circular hollow section", "d": 100, "t": 50}, "half the diameter"),
+    ],
+)
+def test_section_properties_impossible_or_incomplete_geometry_is_a_422(
+    body: dict[str, object], words: str
+) -> None:
+    r = client.post(f"{V1}/section-properties", json=body)
+    assert r.status_code == 422
+    assert r.json()["error_type"] == "InvalidSectionError"
+    assert words in r.json()["detail"]
+
+
+def test_section_properties_need_a_shape() -> None:
+    assert client.post(f"{V1}/section-properties", json={"h": 100}).status_code == 422
+
+
+def test_section_properties_contract_service_equals_api() -> None:
+    from stainless_csm.sections.templates import Fabrication
+
+    geometry = services.GeometryForm(
+        services.GeometryKind.TEMPLATE,
+        shape=SectionType.I_SECTION,
+        fabrication=Fabrication.ROLLED,
+        h=200, b=100, tw=5.6, tf=8.5, r=12,
+    )  # fmt: skip
+    p = services.run_section_properties(geometry)
+    api = client.post(f"{V1}/section-properties", json=properties_body()).json()
+    assert api["area"] == p.area
+    assert (api["centroid"]["y"], api["centroid"]["z"]) == (p.y_c, p.z_c)
+    assert (api["i_y"], api["i_z"], api["i_yz"]) == (p.i_y, p.i_z, p.i_yz)
+    assert api["w_el_y"]["value"] == p.w_el_y and api["w_el_z"]["value"] == p.w_el_z
+    assert (api["w_pl_y"], api["w_pl_z"]) == (p.w_pl_y, p.w_pl_z)
+    assert (api["plastic_axis_y"], api["plastic_axis_z"]) == (p.plastic_axis_y, p.plastic_axis_z)
+    assert (api["shear_centre"]["point"]["y"], api["shear_centre"]["point"]["z"]) == (
+        p.shear_centre_y,
+        p.shear_centre_z,
+    )
+    rows = {row["key"]: row["value"] for row in api["rows"]}
+    assert rows["A"] == float(f"{p.area:.6g}") and rows["W_pl_y"] == float(f"{p.w_pl_y:.6g}")
+    assert rows["I_y"] == float(f"{p.i_y:.6g}")
+
+
+def test_section_properties_contract_for_an_angle() -> None:
+    geometry = services.GeometryForm(
+        services.GeometryKind.TEMPLATE, shape=SectionType.ANGLE, h=100, b=75, t=8, r=10
+    )
+    p = services.run_section_properties(geometry)
+    api = client.post(
+        f"{V1}/section-properties", json={"shape": "angle", "h": 100, "b": 75, "t": 8, "r": 10}
+    ).json()
+    assert p.principal is not None
+    assert api["principal"] == {
+        "angle_deg": p.principal.angle_deg,
+        "i_u": p.principal.i_u,
+        "i_v": p.principal.i_v,
+    }
+    assert api["area"] == p.area
+
+
+def test_every_property_row_symbol_is_in_the_glossary() -> None:
+    from stainless_csm.symbols import load_symbols
+
+    known = {entry.symbol for entry in load_symbols()}
+    bodies = [
+        properties_body(shape="T-section", h=100, b=100, t_w=6, t_f=8, r=0),
+        {"shape": "angle", "h": 100, "b": 75, "t": 8, "r": 0},
+        properties_body(shape="channel", h=200, b=75, t_w=8.5, t_f=11.5, r=11.5),
+    ]
+    for body in bodies:
+        rows = client.post(f"{V1}/section-properties", json=body).json()["rows"]
+        assert {row["symbol"] for row in rows} <= known
+
+
+def test_section_properties_do_not_feed_any_calculation_on_their_own() -> None:
+    # B.5 and B.6.2 take A, c and k_sigma from their own request fields: the properties endpoint
+    # is a separate reference, and r_o has no default
+    schemas = client.get("/openapi.json").json()["components"]["schemas"]
+    request = schemas["SectionPropertiesRequest"]["properties"]
+    for key in ("r", "r_o", "h", "b", "t", "d", "s"):
+        assert request[key].get("default") is None
+    assert "r_o" in schemas["GeometryInput"]["properties"]

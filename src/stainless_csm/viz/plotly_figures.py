@@ -11,6 +11,7 @@ from typing import Any
 import plotly.graph_objects as go
 
 from stainless_csm.config.national_annex import TENSION_STRAIN_RATIO_CAP
+from stainless_csm.csm.compression import CompressionFormula, CompressionResult, capacity_ratio
 from stainless_csm.csm.deformation_capacity import (
     LIMITS,
     DeformationResult,
@@ -54,8 +55,10 @@ def stress_strain_figure(
     model: CSMBilinearModel,
     schematic: bool,
     tension: TensionResult | None = None,
+    compression: CompressionResult | None = None,
 ) -> dict[str, Any]:
-    """The B.4 curve against the classic elastic-plastic one; adds the B.6.1 point if given."""
+    """The B.4 curve against the classic elastic-plastic one; adds the B.6.1 point if given, or
+    the B.6.2 compression point (ε_csm, f_csm) if that is given."""
     fy, fu = model.material.fy, model.material.fu
     eps_y, eps_c1, eps_end = model.yield_strain, model.strain_limit_c1, model.strain_end
 
@@ -65,6 +68,10 @@ def stress_strain_figure(
         labelled.append((tension.strain, "ε_csm,t"))
         if cap_15 <= eps_end:
             labelled.append((cap_15, "15ε_y"))
+    compression_strain = None
+    if compression is not None:
+        compression_strain = compression.strain_ratio * eps_y
+        labelled.append((compression_strain, "ε_csm"))
     axis = StrainAxis.build(labelled, schematic)
     x = axis.x
 
@@ -72,23 +79,33 @@ def stress_strain_figure(
     shapes: list[dict[str, Any]] = []
     annotations: list[dict[str, Any]] = []
 
-    if tension is None:
-        end_strain, end_stress, band = eps_end, fu, "Extra strength from strain hardening"
-    else:
+    if tension is not None:
         end_strain, end_stress = tension.strain, tension.design_stress
-        band = "Extra strength used in tension"
-    fig.add_trace(
-        go.Scatter(
-            x=[x(eps_y), x(end_strain), x(end_strain)],
-            y=[fy, end_stress, fy],
-            mode="lines",
-            fill="toself",
-            line={"width": 0},
-            fillcolor=BLUE_FILL,
-            name=band,
-            hoverinfo="skip",
+        band: str | None = "Extra strength used in tension"
+    elif compression is not None and compression_strain is not None:
+        # Below ε_y there is no hardening to use (B.17 is not used), so no band is drawn.
+        end_strain = compression_strain
+        end_stress = compression.design_stress if compression.design_stress is not None else fy
+        band = (
+            "Extra strength used in compression"
+            if compression.formula is CompressionFormula.B16
+            else None
         )
-    )
+    else:
+        end_strain, end_stress, band = eps_end, fu, "Extra strength from strain hardening"
+    if band is not None:
+        fig.add_trace(
+            go.Scatter(
+                x=[x(eps_y), x(end_strain), x(end_strain)],
+                y=[fy, end_stress, fy],
+                mode="lines",
+                fill="toself",
+                line={"width": 0},
+                fillcolor=BLUE_FILL,
+                name=band,
+                hoverinfo="skip",
+            )
+        )
 
     classic = ElasticPerfectlyPlasticModel(model.material, eps_end).curve_points(60)
     fig.add_trace(
@@ -173,6 +190,8 @@ def stress_strain_figure(
 
     if tension is not None:
         _add_tension_marks(fig, shapes, annotations, x, model, tension, cap_15, eps_end)
+    if compression is not None and compression_strain is not None:
+        _add_compression_mark(fig, shapes, x, model, compression, compression_strain)
 
     ticks, ticktext = axis.ticks(typeset_html)
     fig.update_layout(
@@ -269,6 +288,70 @@ def _add_tension_marks(
             name="Tension limit ε_csm,t".replace("ε_csm,t", "ε<sub>csm,t</sub>"),
             hovertemplate=f"strain = {tension.strain:.5f}<br>"
             f"stress = {tension.design_stress:.1f} N/mm2<extra></extra>",
+        )
+    )
+
+
+def compression_point_figure(
+    model: CSMBilinearModel, schematic: bool, result: CompressionResult
+) -> dict[str, Any]:
+    """The B.4 curve with the B.6.2 point (ε_csm, f_csm); f_y up to f_csm is shaded."""
+    return stress_strain_figure(model, schematic, compression=result)
+
+
+def _add_compression_mark(
+    fig: go.Figure,
+    shapes: list[dict[str, Any]],
+    x: Any,
+    model: CSMBilinearModel,
+    compression: CompressionResult,
+    strain: float,
+) -> None:
+    """The B.6.2 point on the B.4 curve: (ε_csm, f_csm), or (ε_csm, E ε_csm) below yield."""
+    hardened = compression.design_stress is not None
+    stress = (
+        compression.design_stress
+        if compression.design_stress is not None
+        else (model.stress_at(strain))
+    )
+    shapes.append(
+        {
+            "type": "line",
+            "x0": 0,
+            "x1": x(strain),
+            "y0": stress,
+            "y1": stress,
+            "line": {"color": ORANGE, "width": 1.5, "dash": "dot"},
+        }
+    )
+    shapes.append(
+        {
+            "type": "line",
+            "x0": x(strain),
+            "x1": x(strain),
+            "y0": 0,
+            "y1": stress,
+            "line": {"color": ORANGE, "width": 1.5, "dash": "dot"},
+        }
+    )
+    label = (
+        f"f_csm = {stress:.1f}" if hardened else f"E ε_csm = {stress:.1f} (B.15; f_csm not used)"
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=[x(strain)],
+            y=[stress],
+            mode="markers+text",
+            marker={
+                "color": ORANGE,
+                "size": 13,
+                "symbol": "diamond",
+                "line": {"color": "white", "width": 2},
+            },
+            text=[typeset_html(label)],
+            textposition="top left" if hardened else "bottom right",
+            name="Compression limit ε<sub>csm</sub> (B.6.2)",
+            hovertemplate=f"strain = {strain:.5f}<br>stress = {stress:.1f} N/mm2<extra></extra>",
         )
     )
 
@@ -560,3 +643,191 @@ def comparison_stress_figure(model: CSMBilinearModel, comparison: Comparison) ->
             }
         )
     return figure
+
+
+def _capped_ratio(family: SectionFamily, cap: float, slenderness: float) -> float:
+    """ε_csm/ε_y of the base curve at a slenderness: B.6 or B.7, held to the cap when stocky."""
+    value = raw_ratio(family, slenderness)
+    return min(value, cap) if slenderness <= LIMITS[family].switch else value
+
+
+def _slenderness_where_ratio_is_one(
+    family: SectionFamily, cap: float, start: float, stop: float
+) -> float | None:
+    """The slenderness where the base curve crosses ε_csm/ε_y = 1, or None if it does not."""
+    if not _capped_ratio(family, cap, start) >= 1 > _capped_ratio(family, cap, stop):
+        return None
+    low, high = start, stop
+    for _ in range(80):
+        mid = (low + high) / 2
+        if _capped_ratio(family, cap, mid) >= 1:
+            low = mid
+        else:
+            high = mid
+    return (low + high) / 2
+
+
+def compression_capacity_figure(
+    model: CSMBilinearModel, deformation: DeformationResult, result: CompressionResult
+) -> dict[str, Any]:
+    """N_csm,Rd / (A f_y / γ_M0) against λ: the B.15 branch, the B.16 branch, the cap, the junction
+    at ε_csm/ε_y = 1 and the user's section.
+
+    Every point is the engine's own base curve (B.6 or B.7, held to the cap) passed through B.15
+    or B.16 with B.17. A and γ_M0 cancel in the ratio, so the chart does not depend on them.
+    """
+    family = deformation.family
+    limits = LIMITS[family]
+    plates = family is SectionFamily.FLAT_PLATES
+    sub = "p,cs" if plates else "c,cs"
+    cap = deformation.cap
+    start = 0.1 if plates else 0.05
+    junction = _slenderness_where_ratio_is_one(family, cap, start, limits.upper)
+
+    def at(lam: float) -> tuple[float, float, float]:
+        ratio = _capped_ratio(family, cap, lam)
+        return lam, capacity_ratio(model, ratio), ratio
+
+    grid = [start + (limits.upper - start) * i / 239 for i in range(240)]
+    rows = [at(lam) for lam in grid]
+    b16 = [row for row in rows if row[2] >= 1]
+    b15 = [row for row in rows if row[2] < 1]
+    if junction is not None:
+        # the two branches meet exactly where ε_csm/ε_y = 1
+        meeting = (junction, capacity_ratio(model, 1.0), 1.0)
+        b16.append(meeting)
+        b15.insert(0, meeting)
+
+    fig = go.Figure()
+    shapes: list[dict[str, Any]] = []
+    annotations: list[dict[str, Any]] = []
+    hover = (
+        "λ = %{x:.3f}<br>N<sub>csm,Rd</sub> / (A f<sub>y</sub> / γ<sub>M0</sub>) = %{y:.3f}"
+        "<br>ε<sub>csm</sub> / ε<sub>y</sub> = %{customdata:.3f}<extra></extra>"
+    )
+    for name, branch, dash, width in (
+        ("Formula B.16 (ε<sub>csm</sub>/ε<sub>y</sub> ≥ 1, with B.17)", b16, "solid", 3),
+        ("Formula B.15 (ε<sub>csm</sub>/ε<sub>y</sub> &lt; 1)", b15, "dash", 2.5),
+    ):
+        if not branch:
+            continue
+        fig.add_trace(
+            go.Scatter(
+                x=[row[0] for row in branch],
+                y=[row[1] for row in branch],
+                customdata=[row[2] for row in branch],
+                mode="lines",
+                line={"color": BLUE, "width": width, "dash": dash},
+                name=name,
+                hovertemplate=hover,
+            )
+        )
+
+    x_max = limits.upper * 1.04
+    y_top = max(row[1] for row in rows)
+    y_max = max(y_top, capacity_ratio(model, cap)) * 1.15
+
+    cap_level = capacity_ratio(model, cap)
+    shapes.append(
+        {
+            "type": "line",
+            "x0": 0,
+            "x1": x_max,
+            "y0": cap_level,
+            "y1": cap_level,
+            "line": {"color": ORANGE, "width": 1.5, "dash": "dash"},
+        }
+    )
+    annotations.append(
+        {
+            "x": x_max,
+            "y": cap_level,
+            "text": (
+                f"cap: ε<sub>csm</sub>/ε<sub>y</sub> = {cap:.4g} "
+                f"({typeset_html(deformation.cap_source.value)})"
+            ),
+            "showarrow": False,
+            "xanchor": "right",
+            "yanchor": "bottom",
+        }
+    )
+
+    if junction is not None:
+        cap_governs = cap <= 1
+        switch_clause = "B.6" if plates else "B.7"
+        text = "ε<sub>csm</sub>/ε<sub>y</sub> = 1: B.15 meets B.16" + (
+            "<br>the cap holds the curve here, so it is not a kink"
+            if cap_governs
+            else f"<br>a kink; also the {switch_clause} switch, λ = {limits.switch:g}"
+        )
+        fig.add_trace(
+            go.Scatter(
+                x=[junction],
+                y=[capacity_ratio(model, 1.0)],
+                mode="markers+text",
+                marker={
+                    "color": "rgba(0,0,0,0)",
+                    "size": 11,
+                    "symbol": "circle",
+                    "line": {"color": MUTED, "width": 2.5},
+                },
+                text=[text],
+                textposition="top right",
+                name="ε<sub>csm</sub>/ε<sub>y</sub> = 1",
+                hovertemplate=f"λ = {junction:.4f}<br>ε<sub>csm</sub>/ε<sub>y</sub> = 1"
+                "<extra></extra>",
+            )
+        )
+
+    lam = deformation.slenderness
+    yours = capacity_ratio(model, result.strain_ratio)
+    shapes.append(
+        {
+            "type": "line",
+            "x0": lam,
+            "x1": lam,
+            "y0": 0,
+            "y1": yours,
+            "line": {"color": ORANGE, "width": 1, "dash": "dot"},
+        }
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=[lam],
+            y=[yours],
+            mode="markers+text",
+            marker={
+                "color": ORANGE,
+                "size": 13,
+                "symbol": "diamond",
+                "line": {"color": "white", "width": 2},
+            },
+            text=[f"your section: λ = {lam:.3f}, {yours:.3f}"],
+            textposition="top right" if lam < x_max * 0.6 else "top left",
+            name="Your section",
+            hoverinfo="skip",
+        )
+    )
+
+    fig.update_layout(
+        shapes=shapes,
+        annotations=annotations,
+        height=450,
+        margin={"l": 10, "r": 10, "t": 20, "b": 10},
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        legend={"orientation": "h", "y": -0.25},
+        xaxis={
+            "title": {"text": f"relative cross-section slenderness λ<sub>{sub}</sub>"},
+            "range": [0, x_max],
+            "gridcolor": GRID,
+            "zeroline": False,
+        },
+        yaxis={
+            "title": {"text": "N<sub>csm,Rd</sub> / (A f<sub>y</sub> / γ<sub>M0</sub>)"},
+            "range": [0, y_max],
+            "gridcolor": GRID,
+            "zeroline": False,
+        },
+    )
+    return _to_dict(fig)

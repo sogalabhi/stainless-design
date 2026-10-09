@@ -1,0 +1,201 @@
+{
+  "_comment": "The '?' help on every input of the website. One entry per dock field key; the three plate fields (width, thickness, k_sigma) are one entry each, matched by suffix. Parts: what (what it is), why (the clauses and formulas that use it), where (the source; never a number of its own), source (the tag: 'In EN 1993-1-4 (clause)' or 'Outside EN 1993-1-4: you provide it'). Facts follow plan.md section 4e. Each part is at most 200 characters.",
+  "fields": {
+    "grade": {
+      "name": "Grade",
+      "what": "The designation of the stainless steel. Picking one fills in f_y, f_u and the family from the table.",
+      "why": "Grade, f_y and f_u are linked: the table gives f_y and f_u for each grade, and the family sets the coefficients of Table B.1.",
+      "where": "Table 5.1, by grade and product form. If your steel is not listed, choose Custom and enter f_y and f_u yourself.",
+      "source": "In EN 1993-1-4 (Table 5.1)"
+    },
+    "fy": {
+      "name": "Yield strength f_y",
+      "what": "The 0.2 % proof strength: the stress where the steel starts to yield.",
+      "why": "It sets the yield strain f_y / E and measures every slenderness in the method. Used in B.4, B.5, B.8 and B.13.",
+      "where": "Table 5.1 by grade and product form, or the specified value. For cold-formed sections the averages f_ya and f_ua of 5.1.2.3 may be used (B.3(3)).",
+      "source": "In EN 1993-1-4 (Table 5.1)"
+    },
+    "fu": {
+      "name": "Ultimate tensile strength f_u",
+      "what": "The highest stress the steel reaches in a tension test.",
+      "why": "It fixes the top of the stress-strain curve of the CSM material model. Used in B.4 and B.5.",
+      "where": "Table 5.1 by grade and product form, or the specified value. For cold-formed sections the averages f_ya and f_ua of 5.1.2.3 may be used (B.3(3)).",
+      "source": "In EN 1993-1-4 (Table 5.1)"
+    },
+    "family": {
+      "name": "Family",
+      "what": "The stainless steel family: austenitic, duplex or ferritic.",
+      "why": "Each family has its own coefficients C₁, C₂ and C₃, which shape the CSM stress-strain curve and its strain limit.",
+      "where": "Table B.1 lists the coefficients by family. A grade picked from Table 5.1 sets the family for you; for Custom, choose the family of your steel.",
+      "source": "In EN 1993-1-4 (Table B.1)"
+    },
+    "E": {
+      "name": "Modulus of elasticity E",
+      "what": "Young's modulus: the stiffness of the steel in the elastic range.",
+      "why": "It gives the yield strain f_y / E and appears in the plate and tube buckling stresses. Used in B.4, B.9 and B.11.",
+      "where": "5.1.5 gives E = 200 000 N/mm².",
+      "source": "In EN 1993-1-4 (5.1.5)"
+    },
+    "enhanced": {
+      "name": "Values enhanced by cold-forming",
+      "what": "Tick this if f_y and f_u are the averaged values of a cold-formed section, which include the strength gained by cold work.",
+      "why": "B.3(3) allows the CSM to use these enhanced values for cold-formed sections.",
+      "where": "Work out f_ya and f_ua as in 5.1.2.3 and enter them as f_y and f_u. Leave this unticked for the values of Table 5.1.",
+      "source": "In EN 1993-1-4 (B.3(3))"
+    },
+    "sectionType": {
+      "name": "Section type",
+      "what": "The shape of the cross-section.",
+      "why": "B.2 lists the six shapes Annex B covers. The shape also decides which dimensions are asked and whether B.5 treats the section as flat plates or as a tube.",
+      "where": "Your drawings or the manufacturer's section table. Choose one of the six shapes: I-section, channel, T-section, angle, rectangular hollow section or circular hollow section.",
+      "source": "In EN 1993-1-4 (B.2)"
+    },
+    "fabrication": {
+      "name": "Fabrication",
+      "what": "How the corner between web and flange is made: rolled, with a root radius r, or welded, with a weld leg s.",
+      "why": "It decides whether you enter r or s, and both change the flat width c of the web and flange (8.2.2(5), Tables 7.2 and 7.3).",
+      "where": "The manufacturer's data or your drawings.",
+      "source": "In EN 1993-1-4 (8.2.2(5))"
+    },
+    "h": {
+      "name": "Overall height h",
+      "what": "The overall height of the section. For an angle, the length of the longer leg.",
+      "why": "It gives the flat widths c of the plates (8.2.2(5)), which B.9 turns into the plate slenderness. It also drives the drawing and the section properties.",
+      "where": "The manufacturer's section table or the drawings. The standard gives no values.",
+      "source": "Outside EN 1993-1-4: you provide it"
+    },
+    "b": {
+      "name": "Overall width b",
+      "what": "The overall width of the section. For an angle, the length of the shorter leg.",
+      "why": "It gives the flat widths c of the flanges (8.2.2(5)), which B.9 turns into the plate slenderness. It also drives the drawing and the section properties.",
+      "where": "The manufacturer's section table or the drawings. The standard gives no values.",
+      "source": "Outside EN 1993-1-4: you provide it"
+    },
+    "tw": {
+      "name": "Web thickness t_w",
+      "what": "The thickness of the web, the plate that joins the flanges.",
+      "why": "It shortens the flat widths c of the flange and web (8.2.2(5)) and sets the web slenderness in B.9.",
+      "where": "The manufacturer's section table or the drawings. The standard gives no values.",
+      "source": "Outside EN 1993-1-4: you provide it"
+    },
+    "tf": {
+      "name": "Flange thickness t_f",
+      "what": "The thickness of the flange.",
+      "why": "It shortens the flat width c of the web (8.2.2(5)) and sets the flange slenderness in B.9.",
+      "where": "The manufacturer's section table or the drawings. The standard gives no values.",
+      "source": "Outside EN 1993-1-4: you provide it"
+    },
+    "t": {
+      "name": "Wall thickness t",
+      "what": "The wall thickness of a hollow section, or the thickness of an angle leg.",
+      "why": "It gives c = h − 3t for a rectangular hollow section (8.2.2(5)) and sets the slenderness in B.9 and B.11.",
+      "where": "The manufacturer's section table or the drawings. The standard gives no values.",
+      "source": "Outside EN 1993-1-4: you provide it"
+    },
+    "r": {
+      "name": "Root radius r",
+      "what": "The radius of the rounded inside corner of a rolled section, between web and flange or at the heel of an angle.",
+      "why": "In a rolled I-section, channel or T-section it shortens the flat widths c (8.2.2(5), Tables 7.2, 7.3). For an angle it changes only the section properties and the drawing.",
+      "where": "The manufacturer's section table or the drawings.",
+      "source": "Outside EN 1993-1-4: you provide it"
+    },
+    "s": {
+      "name": "Weld leg s",
+      "what": "The leg length of the fillet weld that joins the web to the flange of a welded section.",
+      "why": "It shortens the flat widths c of the web and flange (8.2.2(5), Tables 7.2 and 7.3).",
+      "where": "Your fabrication drawings.",
+      "source": "Outside EN 1993-1-4: you provide it"
+    },
+    "rO": {
+      "name": "Outer corner radius r_o",
+      "what": "The outside radius of the rounded corners of a rectangular hollow section. Enter 0 for sharp corners.",
+      "why": "It changes only the section properties and the drawing. It does not change c = h − 3t (8.2.2(5)).",
+      "where": "The manufacturer's section table or the drawings.",
+      "source": "Outside EN 1993-1-4: you provide it"
+    },
+    "d": {
+      "name": "Outer diameter d",
+      "what": "The outside diameter of a circular hollow section.",
+      "why": "It gives the tube slenderness in B.10 and B.11.",
+      "where": "The manufacturer's section table or the drawings. The standard gives no values.",
+      "source": "Outside EN 1993-1-4: you provide it"
+    },
+    "cStem": {
+      "name": "Stem flat width c_stem",
+      "what": "The flat width of the stem of a T-section: the straight part of the stem, clear of the corner.",
+      "why": "B.9 needs a flat width for every plate. You type this one because the PDF draws no flat width for a T-section stem.",
+      "where": "Measure it on your drawings.",
+      "source": "Outside EN 1993-1-4: you provide it"
+    },
+    "area": {
+      "name": "Area A",
+      "what": "The gross cross-sectional area of the member.",
+      "why": "It turns stress into force in B.12, B.15 and B.16.",
+      "where": "The manufacturer's section table, or the Use button in the Section geometry window, which copies the area computed from your dimensions.",
+      "source": "Outside EN 1993-1-4: you provide it"
+    },
+    "gammaM0": {
+      "name": "Partial factor γM0",
+      "what": "The partial safety factor applied to the resistance of the cross-section.",
+      "why": "It divides the CSM resistance in B.12, B.15 and B.16, so a larger value gives a lower design resistance.",
+      "where": "8.1 NOTE gives 1.10 unless the National Annex gives another value.",
+      "source": "In EN 1993-1-4 (8.1 NOTE)"
+    },
+    "hasHoles": {
+      "name": "Section has holes",
+      "what": "Tick this if the section has bolt holes or slots.",
+      "why": "The CSM tension route of B.6.1 does not cover sections with holes, so the tool stops and says why.",
+      "where": "B.6.1(2) sends sections with holes to EN 1993-1-3:2024, 8.1.2 or EN 1993-1-1:2022, 8.2.3.",
+      "source": "In EN 1993-1-4 (B.6.1(2))"
+    },
+    "route": {
+      "name": "Slenderness from",
+      "what": "How the slenderness of the section is found: from its dimensions, from flat plates entered one by one, or from a critical stress you type.",
+      "why": "B.5 needs the critical buckling stress. Dimensions and plates use the plate formula B.9, a circular tube uses B.10 and B.11, and a typed σ_cr,cs skips them.",
+      "where": "Choose the route that matches the data you have.",
+      "source": "In EN 1993-1-4 (B.5)"
+    },
+    "nu": {
+      "name": "Poisson's ratio ν",
+      "what": "How much a plate or wall shrinks sideways when it is stretched along its length.",
+      "why": "It enters the plate and tube buckling stresses through 1 − ν². Used in B.9 and B.11. It is not used if you type σ_cr,cs.",
+      "where": "5.1.5 gives ν = 0.3.",
+      "source": "In EN 1993-1-4 (5.1.5)"
+    },
+    "omega": {
+      "name": "Plastic strain limit Ω",
+      "what": "A limit on the plastic strain you accept in the section, written as a multiple of the yield strain ε_y.",
+      "why": "B.6 and B.7 cap the strain ratio at min(Ω, C₁ε_u/ε_y), so a smaller Ω gives a more conservative result.",
+      "where": "7.4.3.5 describes it as a project-specific limit on plastic strain. The PDF gives no value, so take it from the requirements of your project.",
+      "source": "Outside EN 1993-1-4: you provide it"
+    },
+    "sigmaCr": {
+      "name": "Critical stress σ_cr,cs",
+      "what": "The elastic critical local buckling stress of the whole cross-section.",
+      "why": "B.8 turns it into the slenderness that B.5 uses, and B.10 does the same for a tube. Typing it replaces the plate calculation of B.9.",
+      "where": "B.5.2(2): numerical methods (for example a finite strip program) or the analytical expressions of reference [9]. Both are outside EN 1993-1-4.",
+      "source": "Outside EN 1993-1-4: you provide it"
+    },
+    "kSigma": {
+      "name": "Plate buckling factor k_σ",
+      "what": "A number that says how well the edges of a plate are held and how the stress varies across it. A higher value means the plate buckles later.",
+      "why": "B.9 uses it to find the critical buckling stress of the plate.",
+      "where": "EN 1993-1-5:2024, 6.4.1, by plate support (internal plate or outstand) and stress ratio ψ. It is outside EN 1993-1-4.",
+      "source": "Outside EN 1993-1-4: you provide it"
+    },
+    "plateWidth": {
+      "name": "Flat width b̄",
+      "what": "The flat width of one plate: the straight part between the corners or welds, not the overall width.",
+      "why": "B.9 uses it squared in the plate buckling stress, so it has a strong effect on the result.",
+      "where": "Measure it on your drawings. For the six standard shapes, the Section dimensions route works it out by 8.2.2(5).",
+      "source": "Outside EN 1993-1-4: you provide it"
+    },
+    "plateThickness": {
+      "name": "Plate thickness t",
+      "what": "The thickness of this plate.",
+      "why": "B.9 uses it in the plate buckling stress, together with the flat width.",
+      "where": "The manufacturer's section table or the drawings.",
+      "source": "Outside EN 1993-1-4: you provide it"
+    }
+  }
+}

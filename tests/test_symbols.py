@@ -9,6 +9,7 @@ from stainless_csm.core.enums import SectionType
 from stainless_csm.csm.deformation_capacity import SectionFamily
 from stainless_csm.csm.tension import CSMTension, TensionInput
 from stainless_csm.material_models.csm_bilinear import CSMBilinearModel
+from stainless_csm.sections.templates import Fabrication, PlateRole
 from stainless_csm.symbols import (
     README_END,
     README_START,
@@ -41,9 +42,15 @@ def test_latex_is_balanced() -> None:
         assert entry.latex.count("{") == entry.latex.count("}"), entry.symbol
 
 
-def test_topics_are_the_three_pages() -> None:
-    assert {t for e in load_symbols() for t in e.topics} == {"material", "tension", "deformation"}
+def test_topics_are_the_pages() -> None:
+    assert {t for e in load_symbols() for t in e.topics} == {
+        "material",
+        "tension",
+        "deformation",
+        "compression",
+    }
     assert 0 < len(symbols_for("tension")) < len(load_symbols())
+    assert 0 < len(symbols_for("compression")) < len(load_symbols())
     assert len(symbols_for(None)) == len(load_symbols())
 
 
@@ -71,9 +78,33 @@ def trace_symbols() -> set[str]:
             family=SectionFamily.FLAT_PLATES,
         ),
     )
-    for geometry in geometries:
+    k = {role: 0.43 for role in PlateRole}
+
+    def template(shape: SectionType, **dims: float) -> services.GeometryForm:
+        return services.GeometryForm(
+            services.GeometryKind.TEMPLATE,
+            shape=shape,
+            fabrication=Fabrication.ROLLED,
+            k_sigma=k,
+            **dims,  # type: ignore[arg-type]
+        )
+
+    templates = (
+        template(SectionType.I_SECTION, h=200, b=100, tw=5.6, tf=8.5, r=12),
+        template(SectionType.T_SECTION, h=100, b=100, tw=6, tf=8, r=10, c_stem=80),
+        template(SectionType.ANGLE, h=100, b=75, t=8),
+        template(SectionType.RHS, h=100, b=50, t=4),
+    )
+    for geometry in (*geometries, *templates):
         form = services.DeformationForm(geometry, OMEGA, NU)
         found |= {s.symbol for s in services.run_deformation_capacity(model, form).trace}
+    # B.6.2 with both formulas: a stocky and a slender section
+    plates = (services.PlateForm("web", 100, 5, 4.0), services.PlateForm("web", 250, 3, 4.0))
+    for plate in plates:
+        geometry = services.GeometryForm(services.GeometryKind.PLATES, plates=(plate,))
+        deformation = services.DeformationForm(geometry, OMEGA, NU)
+        form = services.CompressionForm(deformation, 1000.0, GAMMA_M0)
+        found |= {s.symbol for s in services.run_compression(model, form).trace}
     return {normalised(s) for s in found}
 
 
@@ -88,7 +119,7 @@ def test_readme_table_matches_the_glossary() -> None:
     assert block == symbols_markdown(), "run: python -m stainless_csm.symbols and paste into README"
 
 
-DIAGRAMS = {"csm_curve", "plate", "section", "base_curve", "tension"}
+DIAGRAMS = {"csm_curve", "plate", "section", "base_curve", "tension", "compression"}
 
 
 def test_every_symbol_has_a_detail_and_a_known_diagram() -> None:

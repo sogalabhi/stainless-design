@@ -7,6 +7,7 @@ from fastapi import APIRouter
 from stainless_csm import services
 from stainless_csm.api import mappers
 from stainless_csm.api import schemas as s
+from stainless_csm.input_help import load_input_help
 from stainless_csm.material_models.csm_bilinear import CSMBilinearModel
 from stainless_csm.symbols import symbols_for
 from stainless_csm.viz import plotly_figures
@@ -29,7 +30,7 @@ def grades() -> list[s.GradeOut]:
 
 @router.get("/symbols", response_model=list[s.SymbolOut])
 def symbols(topic: str | None = None) -> list[s.SymbolOut]:
-    """The symbol glossary: one line per symbol. `topic` is material, deformation or tension."""
+    """The symbol glossary, one line per symbol. `topic` filters it (material, tension, ...)."""
     return [
         s.SymbolOut(
             symbol=e.symbol,
@@ -44,6 +45,23 @@ def symbols(topic: str | None = None) -> list[s.SymbolOut]:
             diagram=e.diagram,
         )
         for e in symbols_for(topic)
+    ]
+
+
+@router.get("/input-help", response_model=list[s.InputHelpOut])
+def input_help() -> list[s.InputHelpOut]:
+    """The "?" help for every input: what, why, where to get it, and its source tag."""
+    return [
+        s.InputHelpOut(
+            key=e.key,
+            name=e.name,
+            what=e.what,
+            why=e.why,
+            where=e.where,
+            source=e.source,
+            in_standard=e.in_standard,
+        )
+        for e in load_input_help()
     ]
 
 
@@ -100,12 +118,53 @@ def deformation_capacity(request: s.DeformationRequest) -> s.DeformationResponse
     return s.DeformationResponse(
         material=mappers.material_out(material, request.material.designation),
         family=mappers.family_key(outcome.family),
-        slenderness=mappers.slenderness_out(outcome.slenderness),
+        slenderness=mappers.slenderness_out(outcome.slenderness, outcome.template_plates),
         strain_limit=mappers.strain_limit_out(outcome.capacity),
         notes=list(outcome.notes),
         trace=mappers.trace_steps(outcome.trace),
         figure=plotly_figures.base_curve_figure(outcome.capacity),
     )
+
+
+@router.post("/compression", response_model=s.CompressionResponse, responses=ERRORS)
+def compression(request: s.CompressionRequest) -> s.CompressionResponse:
+    """B.6.2: CSM compression resistance (B.5 for the section, then B.15 to B.17)."""
+    material = services.build_material(mappers.material_form(request.material))
+    model = CSMBilinearModel(material)
+    outcome = services.run_compression(model, mappers.compression_form(request))
+    result = outcome.result
+    schematic = request.graph_view is s.GraphView.SCHEMATIC
+    deformation = outcome.deformation
+    return s.CompressionResponse(
+        material=mappers.material_out(material, request.material.designation),
+        family=mappers.family_key(deformation.family),
+        slenderness=mappers.slenderness_out(deformation.slenderness, deformation.template_plates),
+        strain_limit=mappers.strain_limit_out(deformation.capacity),
+        strain_ratio=result.strain_ratio,
+        formula=s.CompressionFormulaKey[result.formula.name],
+        formula_label=result.formula.value,
+        design_stress=result.design_stress,
+        resistance=result.resistance,
+        notes=list(deformation.notes) + list(result.notes),
+        trace=mappers.trace_steps(outcome.trace),
+        capacity_figure=plotly_figures.compression_capacity_figure(
+            model, deformation.capacity, result
+        ),
+        point_figure=plotly_figures.compression_point_figure(model, schematic, result),
+    )
+
+
+@router.post(
+    "/section-properties", response_model=s.SectionPropertiesResponse, responses=ERRORS
+)
+def section_properties(request: s.SectionPropertiesRequest) -> s.SectionPropertiesResponse:
+    """A, centroid, I, W_el, W_pl, plastic axes and shear centre from the template dimensions.
+
+    Reference values (geometry, not a rule of EN 1993-1-4): they enter no calculation unless the
+    user copies one into an input field.
+    """
+    result = services.run_section_properties(mappers.section_geometry_form(request))
+    return mappers.section_properties_out(result)
 
 
 @router.post("/section-comparison", response_model=s.ComparisonResponse, responses=ERRORS)
