@@ -1,0 +1,4 @@
+{
+  "detail": "B.6.3.1 does not apply; use 8.2.4: λ_LT = 0.5 is above 0.4, so the CSM bending resistance of B.6.3 is not used.",
+  "error_type": "NotApplicableError"
+}

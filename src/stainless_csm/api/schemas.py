@@ -424,6 +424,81 @@ class CompressionResponse(BaseModel):
     )
 
 
+# --- B.6.3: bending about an axis of symmetry -------------------------------------------
+
+
+class BendingAxisKey(StrEnum):
+    """The axis of bending (Table B.2): y-y is the major axis, z-z the minor axis."""
+
+    MAJOR = "major"
+    MINOR = "minor"
+
+
+class BendingFormulaKey(StrEnum):
+    """Which formula of B.6.3.2 gave the resistance (stable machine key)."""
+
+    B19 = "b19"
+    B20 = "b20"
+
+
+class BendingRequest(BaseModel):
+    """The section in bending (B.6.3.1(1), B.6.3.2): every value outside Annex B is an input.
+
+    In `geometry`, `k_sigma`, `plates[].k_sigma` and `sigma_cr_cs` are the values for the
+    *bending* stress pattern about the chosen axis, not those of compression (EN 1993-1-5, 6.4.1).
+    """
+
+    material: MaterialInput
+    section_type: SectionType
+    axis: BendingAxisKey | None = Field(
+        default=None,
+        description="Axis of bending; may be left out for a circular hollow section only",
+    )
+    geometry: GeometryInput
+    omega: float = Field(description="Parameter Omega, an input")
+    poisson_ratio: float | None = Field(
+        default=None, description="Poisson ratio nu, an input; not needed with sigma_cr"
+    )
+    w_el: float = Field(description="Elastic section modulus W_el about the axis [mm3], an input")
+    w_pl: float = Field(description="Plastic section modulus W_pl about the axis [mm3], an input")
+    gamma_m0: float = Field(description="Partial factor gamma_M0, an input")
+    lambda_lt: float = Field(description="Relative slenderness for lateral-torsional buckling")
+
+
+class BendingParameterRowOut(BaseModel):
+    """One printed row of Table B.2."""
+
+    section: str
+    section_type: SectionType
+    axis: str = Field(description="major, minor or any")
+    aspect_ratio: str = Field(description="As printed: Any, h/b < 2, -")
+    alpha: float
+    selected: bool = Field(description="The row that gave alpha for this section and axis")
+
+
+class BendingResponse(BaseModel):
+    material: MaterialOut
+    family: FamilyKey
+    slenderness: SlendernessOut
+    strain_limit: StrainLimitOut
+    strain_ratio: float = Field(description="eps_csm / eps_y, from B.5.1, section in bending")
+    formula: BendingFormulaKey
+    formula_label: str = Field(description="B.19 or B.20")
+    alpha: float = Field(description="CSM bending parameter, Table B.2")
+    table_b2: list[BendingParameterRowOut] = Field(description="Table B.2, the used row marked")
+    elastic_moment: float = Field(description="W_el f_y / gamma_M0 [N mm], a reference line")
+    plastic_moment: float = Field(description="W_pl f_y / gamma_M0 [N mm], a reference line")
+    resistance: float = Field(description="M_csm,c,Rd [N mm]")
+    notes: list[str]
+    trace: list[TraceStepOut]
+    moment_figure: dict[str, Any] = Field(
+        description="Plotly figure: M_csm,c,Rd against eps_csm / eps_y"
+    )
+    blocks_figure: dict[str, Any] = Field(
+        description="Plotly figure: strain and stress across the depth at eps_csm"
+    )
+
+
 # --- Section properties: reference values from the template dimensions ------------------------
 
 

@@ -339,7 +339,7 @@ describe("the properties table", () => {
     expect(within(modal).getAllByText(/thin-walled approximation/).length).toBeGreaterThan(0);
   });
 
-  it("has a Use button for A only, today", async () => {
+  it("has a Use button for A only until an axis of bending is chosen", async () => {
     const user = userEvent.setup();
     renderApp();
     await typeRolledI(user);

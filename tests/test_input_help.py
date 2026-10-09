@@ -15,6 +15,7 @@ DOCK_KEYS = {
     "area", "gammaM0", "hasHoles",
     "route", "nu", "omega", "sigmaCr",
     "kSigma", "plateWidth", "plateThickness",
+    "axis", "wEl", "wPl", "lambdaLT", "kSigmaBending", "sigmaCrBending",
 }  # fmt: skip
 
 PARTS = ("what", "why", "where", "source")
@@ -74,6 +75,29 @@ def test_what_the_facts_say_about_the_inputs_outside_annex_b() -> None:
     assert "5.1.2.3" in by_key["fy"].where and "B.3(3)" in by_key["fy"].where
     assert "B.2" in by_key["sectionType"].why
     assert by_key["cStem"].source == OUTSIDE_STANDARD
+
+
+def test_what_the_facts_say_about_the_bending_inputs() -> None:
+    by_key = {e.key: e for e in load_input_help()}
+    # axis of bending: the user's choice, Table B.2 (inside Annex B)
+    assert by_key["axis"].source == "In EN 1993-1-4 (Table B.2)" and by_key["axis"].in_standard
+    assert "Table B.2" in by_key["axis"].why
+    # W_el and W_pl: from the section table or the geometry window, never from the standard
+    for key in ("wEl", "wPl"):
+        assert by_key[key].source == OUTSIDE_STANDARD, key
+        assert "section table" in by_key[key].where and "Section geometry" in by_key[key].where, key
+        assert "B.19" in by_key[key].why or "B.20" in by_key[key].why, key
+    # lambda_LT: member design, 8.3, outside Annex B; the gate of B.6.3.1
+    assert by_key["lambdaLT"].source == OUTSIDE_STANDARD
+    assert "8.3" in by_key["lambdaLT"].where and "B.6.3.1" in by_key["lambdaLT"].why
+    # bending k_sigma: EN 1993-1-5:2024, 6.4.1, by the stress ratio psi in bending
+    assert by_key["kSigmaBending"].source == OUTSIDE_STANDARD
+    assert "6.4.1" in by_key["kSigmaBending"].where and "ψ" in by_key["kSigmaBending"].where
+    assert "bending" in by_key["kSigmaBending"].name
+    assert by_key["sigmaCrBending"].source == OUTSIDE_STANDARD
+    assert "B.5.2(2)" in by_key["sigmaCrBending"].where
+    # the compression k_sigma says it is for compression
+    assert "compression" in by_key["kSigma"].why
 
 
 def test_api_serves_the_help() -> None:

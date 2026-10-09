@@ -3,6 +3,7 @@ import { Sym } from "../components/Symbols";
 import { Collapsible } from "../components/ui";
 import {
   BaseCurveDiagram,
+  BendingDiagram,
   CompressionDiagram,
   CsmCurveDiagram,
   PlateDiagram,
@@ -273,6 +274,70 @@ export function Modules() {
           ]}
         />
         <CompressionDiagram />
+      </section>
+
+      <section className="help-card" aria-labelledby="mod-bending">
+        <h2 id="mod-bending">5 · Bending (B.6.3)</h2>
+        <p className="lead">How much moment can a beam section take about an axis of symmetry, counting the hardening?</p>
+        <Facts
+          rows={[
+            [
+              "What it does",
+              <>
+                Finds the strain limit <Sym text="ε_csm/ε_y" /> of the section in bending (B.5.1), reads
+                the bending parameter <Sym text="α" /> from Table B.2, and turns them into a moment.
+                Below 1.0 it uses Formula B.19, which scales the elastic resistance{" "}
+                <Sym text="W_el f_y / γ_M0" /> by the ratio. From 1.0 it uses Formula B.20, which adds
+                the strain hardening and the plastic reserve between <Sym text="W_el" /> and{" "}
+                <Sym text="W_pl" />. The result is <Sym text="M_csm,c,Rd" />.
+              </>,
+            ],
+            [
+              "Why it is needed",
+              <>
+                A stocky section bent past first yield keeps gaining moment; a slender one is held
+                below it by local buckling. The CSM follows that gain smoothly instead of jumping at
+                a class boundary.
+              </>,
+            ],
+            [
+              "You give",
+              <>
+                The axis of bending, <Sym text="W_el" /> and <Sym text="W_pl" /> about it (the Use
+                buttons in the Section geometry window copy them), <Sym text="λ_LT" />, and a{" "}
+                <Sym text="k_σ" /> for each plate in bending. These differ from the compression ones
+                because the stress pattern differs: a web in pure bending is held back less than one in
+                uniform compression.
+              </>,
+            ],
+            [
+              "You get",
+              <>
+                <Sym text="ε_csm/ε_y" />, <Sym text="α" />, which formula applied and{" "}
+                <Sym text="M_csm,c,Rd" /> in kN m, each with its working, and Table B.2 with your row lit.
+              </>,
+            ],
+            [
+              "Reading the charts",
+              <>
+                The first chart plots the resistance against the strain limit, with the elastic and
+                plastic moments as dotted lines and your section as a dot. The second shows strain and
+                stress across the depth of a symmetric section when its compression edge reaches the
+                strain limit; it is an illustration, and the moment itself comes from B.19 or B.20.
+              </>,
+            ],
+            [
+              "Watch for",
+              <>
+                Only <Sym text="λ_LT" /> up to 0.2 is calculated: between 0.2 and 0.4 Formula B.18 will
+                interpolate (a later phase) and above 0.4 B.6.3 does not apply, so use 8.2.4. Bending
+                about an axis that is not one of symmetry (channel minor axis, T-section major axis,
+                angles) follows B.6.3.3 and arrives in a later phase.
+              </>,
+            ],
+          ]}
+        />
+        <BendingDiagram />
       </section>
     </div>
   );

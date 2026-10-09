@@ -1,4 +1,6 @@
 import type {
+  BendingRequest,
+  BendingResponse,
   CoefficientsOut,
   CompressionRequest,
   CompressionResponse,
@@ -96,6 +98,8 @@ export const api = {
     post<DeformationResponse>("/api/v1/deformation-capacity", body, signal),
   compression: (body: CompressionRequest, signal?: AbortSignal) =>
     post<CompressionResponse>("/api/v1/compression", body, signal),
+  bending: (body: BendingRequest, signal?: AbortSignal) =>
+    post<BendingResponse>("/api/v1/bending", body, signal),
   sectionProperties: (body: SectionPropertiesRequest, signal?: AbortSignal) =>
     post<SectionPropertiesResponse>("/api/v1/section-properties", body, signal),
   sectionComparison: (body: ComparisonRequest, signal?: AbortSignal) =>

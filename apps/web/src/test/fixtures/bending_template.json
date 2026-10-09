@@ -1,0 +1,3033 @@
+{
+  "material": {
+    "family": "austenitic",
+    "fy": 210.0,
+    "fu": 500.0,
+    "elastic_modulus": 200000.0,
+    "source": "Table 5.1 – 1.4301",
+    "note": "Table 5.1 footnote a: fy = 180 N/mm² for bars, hot rolled open sections and seamless tubes."
+  },
+  "family": "flat_plates",
+  "slenderness": {
+    "source": "plate_b9",
+    "source_label": "most slender plate (B.9)",
+    "sigma_cr_cs": 4532.3984539791945,
+    "value": 0.2152512122552449,
+    "governing_label": "flange",
+    "plates": [
+      {
+        "label": "web",
+        "width": 159.0,
+        "thickness": 5.6,
+        "width_to_thickness": 28.392857142857146,
+        "k_sigma": 23.9,
+        "sigma_cr": 5359.037659950563,
+        "slenderness": 0.19795489384829423,
+        "governing": false,
+        "role": "web",
+        "plate_type": "internal",
+        "c_source": "c as drawn in Table 7.2 (between the fillet toes)"
+      },
+      {
+        "label": "flange",
+        "width": 35.2,
+        "thickness": 8.5,
+        "width_to_thickness": 4.141176470588236,
+        "k_sigma": 0.43,
+        "sigma_cr": 4532.3984539791945,
+        "slenderness": 0.2152512122552449,
+        "governing": true,
+        "role": "flange",
+        "plate_type": "outstand",
+        "c_source": "c as drawn in Table 7.3 (from the fillet toe to the free edge)"
+      }
+    ]
+  },
+  "strain_limit": {
+    "zone": "stocky",
+    "allowed": true,
+    "message": null,
+    "cap": 15.0,
+    "cap_source": "omega",
+    "cap_label": "Ω",
+    "raw_ratio": 62.99931496194477,
+    "capped": true,
+    "strain_ratio": 15.0,
+    "strain": 0.01575,
+    "switch": 0.68,
+    "upper": 1.6
+  },
+  "strain_ratio": 15.0,
+  "formula": "b20",
+  "formula_label": "B.20",
+  "alpha": 2.0,
+  "table_b2": [
+    {
+      "section": "Rectangular hollow section",
+      "section_type": "rectangular hollow section",
+      "axis": "any",
+      "aspect_ratio": "Any",
+      "alpha": 2.0,
+      "selected": false
+    },
+    {
+      "section": "Circular hollow section",
+      "section_type": "circular hollow section",
+      "axis": "any",
+      "aspect_ratio": "-",
+      "alpha": 2.0,
+      "selected": false
+    },
+    {
+      "section": "I-section",
+      "section_type": "I-section",
+      "axis": "major",
+      "aspect_ratio": "Any",
+      "alpha": 2.0,
+      "selected": true
+    },
+    {
+      "section": "I-section",
+      "section_type": "I-section",
+      "axis": "minor",
+      "aspect_ratio": "Any",
+      "alpha": 1.2,
+      "selected": false
+    },
+    {
+      "section": "Channel section",
+      "section_type": "channel",
+      "axis": "major",
+      "aspect_ratio": "Any",
+      "alpha": 2.0,
+      "selected": false
+    },
+    {
+      "section": "Channel section",
+      "section_type": "channel",
+      "axis": "minor",
+      "aspect_ratio": "h/b < 2",
+      "alpha": 1.5,
+      "selected": false
+    },
+    {
+      "section": "Channel section",
+      "section_type": "channel",
+      "axis": "minor",
+      "aspect_ratio": "h/b ≥ 2",
+      "alpha": 1.0,
+      "selected": false
+    },
+    {
+      "section": "T-section",
+      "section_type": "T-section",
+      "axis": "major",
+      "aspect_ratio": "h/b < 1",
+      "alpha": 1.0,
+      "selected": false
+    },
+    {
+      "section": "T-section",
+      "section_type": "T-section",
+      "axis": "major",
+      "aspect_ratio": "h/b ≥ 1",
+      "alpha": 1.5,
+      "selected": false
+    },
+    {
+      "section": "T-section",
+      "section_type": "T-section",
+      "axis": "minor",
+      "aspect_ratio": "Any",
+      "alpha": 1.2,
+      "selected": false
+    },
+    {
+      "section": "Equal angle",
+      "section_type": "angle",
+      "axis": "any",
+      "aspect_ratio": "-",
+      "alpha": 1.0,
+      "selected": false
+    },
+    {
+      "section": "Unequal angle",
+      "section_type": "angle",
+      "axis": "major",
+      "aspect_ratio": "Any",
+      "alpha": 1.5,
+      "selected": false
+    },
+    {
+      "section": "Unequal angle",
+      "section_type": "angle",
+      "axis": "minor",
+      "aspect_ratio": "Any",
+      "alpha": 1.0,
+      "selected": false
+    }
+  ],
+  "elastic_moment": 37093636.36363636,
+  "plastic_moment": 42114545.45454545,
+  "resistance": 50299323.68920816,
+  "notes": [
+    "The flat width c of each plate is derived from the section dimensions as 8.2.2(5) and Tables 7.2 to 7.4 draw it; the working names the source of each. The buckling factor k_σ of each plate is your input.",
+    "σ_cr,cs is taken as the critical stress of the most slender plate, which is conservative (B.5.2(3)); a numerical value is usually higher. The buckling factor k_σ of each plate is your input.",
+    "This is the cross-section resistance of B.6.3.2. Lateral-torsional buckling (8.3) is outside Annex B and is not checked: λ_LT is the value you give."
+  ],
+  "trace": [
+    {
+      "symbol": "E",
+      "description": "modulus of elasticity (input)",
+      "clause": "input",
+      "formula": "input",
+      "substituted": "200000",
+      "value": 200000.0,
+      "unit": "N/mm²",
+      "line": "E = 200 000.0 N/mm²   (input)",
+      "latex": "E = 200000\\,\\mathrm{N/mm^2}\\quad(\\text{input})"
+    },
+    {
+      "symbol": "C₁",
+      "description": "CSM coefficient C₁",
+      "clause": "B.4",
+      "formula": "Table B.1",
+      "substituted": "austenitic",
+      "value": 0.1,
+      "unit": "–",
+      "line": "C₁ = 0.1   (Table B.1: austenitic)",
+      "latex": "C_1 = 0.1\\quad(\\text{Table B.1, austenitic})"
+    },
+    {
+      "symbol": "C₂",
+      "description": "CSM coefficient C₂",
+      "clause": "B.4",
+      "formula": "Table B.1",
+      "substituted": "austenitic",
+      "value": 0.16,
+      "unit": "–",
+      "line": "C₂ = 0.16   (Table B.1: austenitic)",
+      "latex": "C_2 = 0.16\\quad(\\text{Table B.1, austenitic})"
+    },
+    {
+      "symbol": "C₃",
+      "description": "CSM coefficient C₃",
+      "clause": "B.4",
+      "formula": "Table B.1",
+      "substituted": "austenitic",
+      "value": 1.0,
+      "unit": "–",
+      "line": "C₃ = 1   (Table B.1: austenitic)",
+      "latex": "C_3 = 1\\quad(\\text{Table B.1, austenitic})"
+    },
+    {
+      "symbol": "ε_y",
+      "description": "elastic strain at yield",
+      "clause": "B.4",
+      "formula": "f_y / E",
+      "substituted": "210 / 200000",
+      "value": 0.00105,
+      "unit": "–",
+      "line": "ε_y = f_y / E = 210 / 200000 = 0.00105",
+      "latex": "\\varepsilon_y = \\frac{f_y}{E} = \\frac{210}{200000} = 0.00105"
+    },
+    {
+      "symbol": "ε_u",
+      "description": "strain at ultimate strength (Formula B.5)",
+      "clause": "B.4",
+      "formula": "C₃ (1 − f_y / f_u)",
+      "substituted": "1 × (1 − 210 / 500)",
+      "value": 0.5800000000000001,
+      "unit": "–",
+      "line": "ε_u = C₃ (1 − f_y / f_u) = 1 × (1 − 210 / 500) = 0.58",
+      "latex": "\\varepsilon_u = C_3\\left(1 - \\frac{f_y}{f_u}\\right) = 1 \\times \\left(1 - \\frac{210}{500}\\right) = 0.58"
+    },
+    {
+      "symbol": "E_sh",
+      "description": "strain hardening modulus (Formula B.4)",
+      "clause": "B.4",
+      "formula": "(f_u − f_y) / (C₂ε_u − ε_y)",
+      "substituted": "(500 − 210) / (0.16 × 0.58 − 0.00105)",
+      "value": 3160.7629427792913,
+      "unit": "N/mm²",
+      "line": "E_sh = (f_u − f_y) / (C₂ε_u − ε_y) = (500 − 210) / (0.16 × 0.58 − 0.00105) = 3 160.8 N/mm²",
+      "latex": "E_{sh} = \\frac{f_u - f_y}{C_2\\varepsilon_u - \\varepsilon_y} = \\frac{500 - 210}{0.16 \\times 0.58 - 0.00105} = 3160.76\\,\\mathrm{N/mm^2}"
+    },
+    {
+      "symbol": "C₁ε_u",
+      "description": "strain limit marker used by B.5 and B.6.1",
+      "clause": "B.4",
+      "formula": "C₁ × ε_u",
+      "substituted": "0.1 × 0.58",
+      "value": 0.05800000000000001,
+      "unit": "–",
+      "line": "C₁ε_u = C₁ × ε_u = 0.1 × 0.58 = 0.058",
+      "latex": "C_1\\varepsilon_u = 0.1 \\times 0.58 = 0.058"
+    },
+    {
+      "symbol": "C₂ε_u",
+      "description": "last strain of the curve",
+      "clause": "B.4",
+      "formula": "C₂ × ε_u",
+      "substituted": "0.16 × 0.58",
+      "value": 0.09280000000000001,
+      "unit": "–",
+      "line": "C₂ε_u = C₂ × ε_u = 0.16 × 0.58 = 0.0928",
+      "latex": "C_2\\varepsilon_u = 0.16 \\times 0.58 = 0.0928"
+    },
+    {
+      "symbol": "σ(C₁ε_u)",
+      "description": "stress at C₁ε_u on the hardening line",
+      "clause": "B.4",
+      "formula": "f_y + E_sh (C₁ε_u − ε_y)",
+      "substituted": "210 + 3160.76 × (0.058 − 0.00105)",
+      "value": 390.0054495912807,
+      "unit": "N/mm²",
+      "line": "σ(C₁ε_u) = f_y + E_sh (C₁ε_u − ε_y) = 210 + 3160.76 × (0.058 − 0.00105) = 390.01 N/mm²",
+      "latex": "\\sigma(C_1\\varepsilon_u) = f_y + E_{sh}\\left(C_1\\varepsilon_u - \\varepsilon_y\\right) = 210 + 3160.76 \\times (0.058 - 0.00105) = 390.005\\,\\mathrm{N/mm^2}"
+    },
+    {
+      "symbol": "E_sh/E",
+      "description": "hardening modulus relative to the elastic modulus",
+      "clause": "B.4",
+      "formula": "E_sh / E",
+      "substituted": "3160.76 / 200000",
+      "value": 0.015803814713896455,
+      "unit": "–",
+      "line": "E_sh/E = E_sh / E = 3160.76 / 200000 = 0.015804",
+      "latex": "\\frac{E_{sh}}{E} = \\frac{3160.76}{200000} = 0.0158038"
+    },
+    {
+      "symbol": "C₁ε_u/ε_y",
+      "description": "strain limit marker relative to yield strain (compare with 15 in B.14)",
+      "clause": "B.4",
+      "formula": "C₁ε_u / ε_y",
+      "substituted": "0.058 / 0.00105",
+      "value": 55.23809523809525,
+      "unit": "–",
+      "line": "C₁ε_u/ε_y = C₁ε_u / ε_y = 0.058 / 0.00105 = 55.238",
+      "latex": "\\frac{C_1\\varepsilon_u}{\\varepsilon_y} = \\frac{0.058}{0.00105} = 55.2381"
+    },
+    {
+      "symbol": "c_w",
+      "description": "flat width of the web, an internal plate: c as drawn in Table 7.2 (between the fillet toes)",
+      "clause": "8.2.2(5)",
+      "formula": "h − 2 t_f − 2 r",
+      "substituted": "200 − 2 × 8.5 − 2 × 12",
+      "value": 159.0,
+      "unit": "mm",
+      "line": "c_w = h − 2 t_f − 2 r = 200 − 2 × 8.5 − 2 × 12 = 159 mm",
+      "latex": "c_w = h - 2t_f - 2r = 200 - 2 \\times 8.5 - 2 \\times 12 = 159\\,\\mathrm{mm}"
+    },
+    {
+      "symbol": "c_f",
+      "description": "flat width of the flange outstand: c as drawn in Table 7.3 (from the fillet toe to the free edge)",
+      "clause": "8.2.2(5)",
+      "formula": "(b − t_w − 2 r) / 2",
+      "substituted": "(100 − 5.6 − 2 × 12) / 2",
+      "value": 35.2,
+      "unit": "mm",
+      "line": "c_f = (b − t_w − 2 r) / 2 = (100 − 5.6 − 2 × 12) / 2 = 35.2 mm",
+      "latex": "c_f = \\frac{b - t_w - 2r}{2} = \\frac{100 - 5.6 - 2 \\times 12}{2} = 35.2\\,\\mathrm{mm}"
+    },
+    {
+      "symbol": "σ_cr,p [web]",
+      "description": "elastic critical plate buckling stress of 'web' (Formula B.9)",
+      "clause": "B.5.2",
+      "formula": "k_σ π² E t² / (12 (1 − ν²) b²)",
+      "substituted": "5359.04",
+      "value": 5359.037659950563,
+      "unit": "N/mm²",
+      "line": "σ_cr,p [web] = k_σ π² E t² / (12 (1 − ν²) b²) = 5359.04 = 5 359.0 N/mm²",
+      "latex": "\\sigma_{cr,p}\\ (\\text{web}) = \\frac{k_\\sigma \\pi^2 E t^2}{12(1-\\nu^2)\\,\\bar b^2} = \\frac{23.9 \\times \\pi^2 \\times 200000 \\times 5.6^2}{12 \\times (1-0.3^2) \\times 159^2} = 5359.04\\,\\mathrm{N/mm^2}"
+    },
+    {
+      "symbol": "λ_p [web]",
+      "description": "relative slenderness of 'web'",
+      "clause": "B.5.2",
+      "formula": "√(f_y / σ_cr,p)",
+      "substituted": "0.197955",
+      "value": 0.19795489384829423,
+      "unit": "–",
+      "line": "λ_p [web] = √(f_y / σ_cr,p) = 0.197955 = 0.19795",
+      "latex": "\\bar\\lambda_p\\ (\\text{web}) = \\sqrt{\\frac{f_y}{\\sigma_{cr,p}}} = \\sqrt{\\frac{210}{5359.04}} = 0.197955"
+    },
+    {
+      "symbol": "σ_cr,p [flange]",
+      "description": "elastic critical plate buckling stress of 'flange' (Formula B.9)",
+      "clause": "B.5.2",
+      "formula": "k_σ π² E t² / (12 (1 − ν²) b²)",
+      "substituted": "4532.4",
+      "value": 4532.3984539791945,
+      "unit": "N/mm²",
+      "line": "σ_cr,p [flange] = k_σ π² E t² / (12 (1 − ν²) b²) = 4532.4 = 4 532.4 N/mm²",
+      "latex": "\\sigma_{cr,p}\\ (\\text{flange}) = \\frac{k_\\sigma \\pi^2 E t^2}{12(1-\\nu^2)\\,\\bar b^2} = \\frac{0.43 \\times \\pi^2 \\times 200000 \\times 8.5^2}{12 \\times (1-0.3^2) \\times 35.2^2} = 4532.4\\,\\mathrm{N/mm^2}"
+    },
+    {
+      "symbol": "λ_p [flange]",
+      "description": "relative slenderness of 'flange'",
+      "clause": "B.5.2",
+      "formula": "√(f_y / σ_cr,p)",
+      "substituted": "0.215251",
+      "value": 0.2152512122552449,
+      "unit": "–",
+      "line": "λ_p [flange] = √(f_y / σ_cr,p) = 0.215251 = 0.21525",
+      "latex": "\\bar\\lambda_p\\ (\\text{flange}) = \\sqrt{\\frac{f_y}{\\sigma_{cr,p}}} = \\sqrt{\\frac{210}{4532.4}} = 0.215251"
+    },
+    {
+      "symbol": "σ_cr,cs",
+      "description": "critical stress of the full cross-section, taken as the most slender plate ('flange')",
+      "clause": "B.5.2",
+      "formula": "min σ_cr,p",
+      "substituted": "4532.4",
+      "value": 4532.3984539791945,
+      "unit": "N/mm²",
+      "line": "σ_cr,cs = min σ_cr,p = 4532.4 = 4 532.4 N/mm²",
+      "latex": "\\sigma_{cr,cs} = \\min\\sigma_{cr,p} = 4532.4\\,\\mathrm{N/mm^2}\\quad(\\text{flange})"
+    },
+    {
+      "symbol": "λ_p,cs",
+      "description": "relative cross-section slenderness (Formula B.8)",
+      "clause": "B.5.2",
+      "formula": "√(f_y / σ_cr,cs)",
+      "substituted": "0.215251",
+      "value": 0.2152512122552449,
+      "unit": "–",
+      "line": "λ_p,cs = √(f_y / σ_cr,cs) = 0.215251 = 0.21525",
+      "latex": "\\bar\\lambda_{p,cs} = \\sqrt{\\frac{f_y}{\\sigma_{cr,cs}}} = \\sqrt{\\frac{210}{4532.4}} = 0.215251"
+    },
+    {
+      "symbol": "λ_cs",
+      "description": "relative cross-section slenderness",
+      "clause": "B.5.1",
+      "formula": "B.5.2",
+      "substituted": "0.215251",
+      "value": 0.2152512122552449,
+      "unit": "–",
+      "line": "λ_cs = B.5.2 = 0.215251 = 0.21525",
+      "latex": "\\bar\\lambda_{p,cs} = 0.215251"
+    },
+    {
+      "symbol": "min(Ω, C₁ε_u/ε_y)",
+      "description": "cap on the strain ratio, the smaller of the project parameter Ω and the material ductility limit",
+      "clause": "B.5.1",
+      "formula": "min{Ω ; C₁ε_u / ε_y}",
+      "substituted": "min{15 ; 55.2381}",
+      "value": 15.0,
+      "unit": "–",
+      "line": "min(Ω, C₁ε_u/ε_y) = min{Ω ; C₁ε_u / ε_y} = min{15 ; 55.2381} = 15",
+      "latex": "\\min\\left\\{\\Omega;\\ \\frac{C_1\\varepsilon_u}{\\varepsilon_y}\\right\\} = \\min\\{15;\\ 55.2381\\} = 15"
+    },
+    {
+      "symbol": "(ε_csm/ε_y) base curve",
+      "description": "base curve value, B.6, stocky branch (λ ≤ 0.68)",
+      "clause": "B.5.1",
+      "formula": "0.25 / λ^3.6",
+      "substituted": "λ = 0.215251",
+      "value": 62.99931496194477,
+      "unit": "–",
+      "line": "(ε_csm/ε_y) base curve = 0.25 / λ^3.6 = λ = 0.215251 = 62.999",
+      "latex": "\\frac{\\varepsilon_{csm}}{\\varepsilon_y} = \\frac{0.25}{\\bar\\lambda_{p,cs}^{3.6}} = \\frac{0.25}{0.215251^{3.6}} = 62.9993"
+    },
+    {
+      "symbol": "ε_csm/ε_y",
+      "description": "strain limit ratio: the base-curve value, held to the cap",
+      "clause": "B.5.1",
+      "formula": "min{base curve ; cap}",
+      "substituted": "min{62.9993 ; 15}",
+      "value": 15.0,
+      "unit": "–",
+      "line": "ε_csm/ε_y = min{base curve ; cap} = min{62.9993 ; 15} = 15",
+      "latex": "\\frac{\\varepsilon_{csm}}{\\varepsilon_y} = \\min\\{62.9993;\\ 15\\} = 15"
+    },
+    {
+      "symbol": "ε_csm",
+      "description": "limiting CSM strain",
+      "clause": "B.5.1",
+      "formula": "(ε_csm / ε_y) × ε_y",
+      "substituted": "15 × 0.00105",
+      "value": 0.01575,
+      "unit": "–",
+      "line": "ε_csm = (ε_csm / ε_y) × ε_y = 15 × 0.00105 = 0.01575",
+      "latex": "\\varepsilon_{csm} = \\frac{\\varepsilon_{csm}}{\\varepsilon_y}\\,\\varepsilon_y = 15 \\times 0.00105 = 0.01575"
+    },
+    {
+      "symbol": "λ_LT",
+      "description": "relative slenderness for lateral-torsional buckling (your input): B.19 and B.20 apply for λ_LT ≤ 0.2",
+      "clause": "B.6.3.1",
+      "formula": "λ_LT ≤ 0.2: B.19 or B.20",
+      "substituted": "0.15 ≤ 0.2",
+      "value": 0.15,
+      "unit": "–",
+      "line": "λ_LT = λ_LT ≤ 0.2: B.19 or B.20 = 0.15 ≤ 0.2 = 0.15",
+      "latex": "\\bar{\\lambda}_{LT} = 0.15 \\le 0.2 \\;\\Rightarrow\\; \\text{Formulas B.19 or B.20}"
+    },
+    {
+      "symbol": "α",
+      "description": "CSM bending parameter, Table B.2: i-section, major axis",
+      "clause": "B.6.3.2",
+      "formula": "Table B.2",
+      "substituted": "I-section, major axis: α = 2",
+      "value": 2.0,
+      "unit": "–",
+      "line": "α = 2   (Table B.2: I-section, major axis: α = 2)",
+      "latex": "\\alpha = 2 \\quad \\text{(Table B.2)}"
+    },
+    {
+      "symbol": "M_el",
+      "description": "elastic moment W_el f_y / γM0: what Formula B.19 gives at ε_csm/ε_y = 1.0 (reference line on the chart)",
+      "clause": "B.6.3.2",
+      "formula": "W_el f_y / γ_M0",
+      "substituted": "194300 × 210 / 1.1",
+      "value": 37093636.36363636,
+      "unit": "N mm",
+      "line": "M_el = W_el f_y / γ_M0 = 194300 × 210 / 1.1 = 3.709e+07 N mm",
+      "latex": "M_{el} = \\frac{W_{el}\\,f_y}{\\gamma_{M0}} = \\frac{194300 \\times 210}{1.1} = 3.70936 \\times 10^{7}\\,\\mathrm{N\\,mm}"
+    },
+    {
+      "symbol": "M_pl",
+      "description": "plastic moment W_pl f_y / γM0: the factor in front of the bracket of Formula B.20 (reference line on the chart)",
+      "clause": "B.6.3.2",
+      "formula": "W_pl f_y / γ_M0",
+      "substituted": "220600 × 210 / 1.1",
+      "value": 42114545.45454545,
+      "unit": "N mm",
+      "line": "M_pl = W_pl f_y / γ_M0 = 220600 × 210 / 1.1 = 4.211e+07 N mm",
+      "latex": "M_{pl} = \\frac{W_{pl}\\,f_y}{\\gamma_{M0}} = \\frac{220600 \\times 210}{1.1} = 4.21145 \\times 10^{7}\\,\\mathrm{N\\,mm}"
+    },
+    {
+      "symbol": "ε_csm/ε_y vs 1",
+      "description": "which formula applies: B.19 below 1.0, B.20 from 1.0",
+      "clause": "B.6.3.2",
+      "formula": "ε_csm/ε_y < 1.0: B.19;  ε_csm/ε_y ≥ 1.0: B.20",
+      "substituted": "15 ≥ 1.0, so B.20",
+      "value": 15.0,
+      "unit": "–",
+      "line": "ε_csm/ε_y vs 1 = ε_csm/ε_y < 1.0: B.19;  ε_csm/ε_y ≥ 1.0: B.20 = 15 ≥ 1.0, so B.20 = 15",
+      "latex": "\\frac{\\varepsilon_{csm}}{\\varepsilon_y} = 15 \\ge 1.0 \\;\\Rightarrow\\; \\text{Formula B.20}"
+    },
+    {
+      "symbol": "M_csm,c,Rd",
+      "description": "CSM design bending moment resistance (Formula B.20)",
+      "clause": "B.6.3.2",
+      "formula": "(W_pl f_y / γ_M0) [1 + (E_sh/E)(W_el/W_pl)(ε_csm/ε_y − 1) − (1 − W_el/W_pl)(ε_csm/ε_y)^−α]",
+      "substituted": "(220600 × 210 / 1.1) [1 + 0.0158038 × 0.88078 × (15 − 1) − (1 − 0.88078) / 15^2]",
+      "value": 50299323.68920816,
+      "unit": "N mm",
+      "line": "M_csm,c,Rd = (W_pl f_y / γ_M0) [1 + (E_sh/E)(W_el/W_pl)(ε_csm/ε_y − 1) − (1 − W_el/W_pl)(ε_csm/ε_y)^−α] = (220600 × 210 / 1.1) [1 + 0.0158038 × 0.88078 × (15 − 1) − (1 − 0.88078) / 15^2] = 5.03e+07 N mm",
+      "latex": "M_{csm,c,Rd} = \\frac{W_{pl}\\,f_y}{\\gamma_{M0}}\\left[1 + \\frac{E_{sh}}{E}\\frac{W_{el}}{W_{pl}}\\left(\\frac{\\varepsilon_{csm}}{\\varepsilon_y} - 1\\right) - \\left(1 - \\frac{W_{el}}{W_{pl}}\\right)\\left(\\frac{\\varepsilon_{csm}}{\\varepsilon_y}\\right)^{-\\alpha}\\right] = 4.21145 \\times 10^{7} \\left[1 + 0.0158038 \\times 0.88078 \\times (15 - 1) - (1 - 0.88078) \\times 15^{-2}\\right] = 5.02993 \\times 10^{7}\\,\\mathrm{N\\,mm}"
+    }
+  ],
+  "moment_figure": {
+    "data": [
+      {
+        "hovertemplate": "ε<sub>csm</sub> / ε<sub>y</sub> = %{x:.3f}<br>M<sub>csm,c,Rd</sub> = %{y:.2f} kN m<extra></extra>",
+        "line": {
+          "color": "#2a78d6",
+          "dash": "solid",
+          "width": 3
+        },
+        "mode": "lines",
+        "name": "Formula B.20 (ε<sub>csm</sub>/ε<sub>y</sub> ≥ 1)",
+        "x": [
+          1.0,
+          1.0228451882845189,
+          1.0855230125523012,
+          1.1482008368200836,
+          1.2108786610878661,
+          1.2735564853556487,
+          1.3362343096234308,
+          1.3989121338912134,
+          1.461589958158996,
+          1.5242677824267783,
+          1.5869456066945606,
+          1.6496234309623432,
+          1.7123012552301258,
+          1.774979079497908,
+          1.8376569037656905,
+          1.900334728033473,
+          1.9630125523012552,
+          2.0256903765690377,
+          2.08836820083682,
+          2.1510460251046024,
+          2.213723849372385,
+          2.276401673640167,
+          2.33907949790795,
+          2.4017573221757322,
+          2.4644351464435146,
+          2.5271129707112974,
+          2.5897907949790797,
+          2.6524686192468616,
+          2.7151464435146444,
+          2.7778242677824267,
+          2.8405020920502095,
+          2.903179916317992,
+          2.9658577405857742,
+          3.0285355648535566,
+          3.091213389121339,
+          3.1538912133891213,
+          3.216569037656904,
+          3.2792468619246864,
+          3.3419246861924687,
+          3.4046025104602515,
+          3.4672803347280334,
+          3.5299581589958158,
+          3.5926359832635986,
+          3.655313807531381,
+          3.7179916317991633,
+          3.780669456066946,
+          3.843347280334728,
+          3.9060251046025103,
+          3.968702928870293,
+          4.031380753138075,
+          4.094058577405858,
+          4.15673640167364,
+          4.2194142259414225,
+          4.282092050209204,
+          4.344769874476987,
+          4.40744769874477,
+          4.470125523012552,
+          4.532803347280334,
+          4.5954811715481165,
+          4.658158995815899,
+          4.720836820083681,
+          4.783514644351464,
+          4.846192468619247,
+          4.908870292887029,
+          4.9715481171548115,
+          5.034225941422594,
+          5.096903765690376,
+          5.159581589958159,
+          5.222259414225942,
+          5.284937238493723,
+          5.3476150627615056,
+          5.410292887029288,
+          5.47297071129707,
+          5.535648535564853,
+          5.598326359832636,
+          5.661004184100419,
+          5.7236820083682005,
+          5.786359832635983,
+          5.849037656903766,
+          5.911715481171548,
+          5.974393305439331,
+          6.037071129707113,
+          6.099748953974895,
+          6.162426778242677,
+          6.22510460251046,
+          6.287782426778242,
+          6.350460251046025,
+          6.413138075313808,
+          6.4758158995815895,
+          6.538493723849372,
+          6.601171548117155,
+          6.663849372384937,
+          6.72652719665272,
+          6.789205020920503,
+          6.851882845188284,
+          6.914560669456066,
+          6.977238493723849,
+          7.039916317991631,
+          7.102594142259414,
+          7.165271966527197,
+          7.227949790794979,
+          7.290627615062761,
+          7.353305439330544,
+          7.415983263598326,
+          7.478661087866109,
+          7.541338912133892,
+          7.6040167364016735,
+          7.666694560669455,
+          7.729372384937238,
+          7.79205020920502,
+          7.854728033472803,
+          7.917405857740586,
+          7.980083682008368,
+          8.04276150627615,
+          8.105439330543932,
+          8.168117154811716,
+          8.230794979079498,
+          8.29347280334728,
+          8.356150627615063,
+          8.418828451882845,
+          8.481506276150627,
+          8.54418410041841,
+          8.606861924686193,
+          8.669539748953975,
+          8.732217573221758,
+          8.79489539748954,
+          8.85757322175732,
+          8.920251046025104,
+          8.982928870292886,
+          9.045606694560668,
+          9.108284518828452,
+          9.170962343096233,
+          9.233640167364015,
+          9.296317991631799,
+          9.358995815899581,
+          9.421673640167363,
+          9.484351464435147,
+          9.547029288702928,
+          9.60970711297071,
+          9.672384937238494,
+          9.735062761506276,
+          9.797740585774058,
+          9.860418410041841,
+          9.923096234309623,
+          9.985774058577405,
+          10.048451882845189,
+          10.11112970711297,
+          10.173807531380753,
+          10.236485355648536,
+          10.299163179916318,
+          10.3618410041841,
+          10.424518828451884,
+          10.487196652719664,
+          10.549874476987446,
+          10.61255230125523,
+          10.675230125523012,
+          10.737907949790793,
+          10.800585774058577,
+          10.863263598326359,
+          10.925941422594141,
+          10.988619246861925,
+          11.051297071129706,
+          11.113974895397488,
+          11.176652719665272,
+          11.239330543933054,
+          11.302008368200838,
+          11.36468619246862,
+          11.427364016736401,
+          11.490041841004185,
+          11.552719665271967,
+          11.615397489539749,
+          11.678075313807533,
+          11.740753138075315,
+          11.803430962343096,
+          11.86610878661088,
+          11.928786610878662,
+          11.991464435146444,
+          12.054142259414226,
+          12.116820083682008,
+          12.17949790794979,
+          12.242175732217573,
+          12.304853556485355,
+          12.367531380753137,
+          12.43020920502092,
+          12.492887029288703,
+          12.555564853556485,
+          12.618242677824268,
+          12.68092050209205,
+          12.743598326359832,
+          12.806276150627616,
+          12.868953974895398,
+          12.93163179916318,
+          12.994309623430963,
+          13.056987447698745,
+          13.119665271966527,
+          13.18234309623431,
+          13.245020920502093,
+          13.307698744769874,
+          13.370376569037658,
+          13.43305439330544,
+          13.495732217573222,
+          13.558410041841006,
+          13.621087866108788,
+          13.683765690376568,
+          13.746443514644351,
+          13.809121338912133,
+          13.871799163179915,
+          13.934476987447699,
+          13.99715481171548,
+          14.059832635983263,
+          14.122510460251046,
+          14.185188284518828,
+          14.24786610878661,
+          14.310543933054394,
+          14.373221757322176,
+          14.435899581589958,
+          14.498577405857741,
+          14.561255230125523,
+          14.623933054393305,
+          14.686610878661089,
+          14.74928870292887,
+          14.811966527196653,
+          14.874644351464436,
+          14.937322175732218,
+          15.0
+        ],
+        "y": [
+          37.09363636363636,
+          37.32880744291825,
+          37.90375192470024,
+          38.3929880819226,
+          38.81379361161848,
+          39.17930218270726,
+          39.499641369750776,
+          39.78272204477101,
+          40.034796102564464,
+          40.26085708390992,
+          40.46493230920828,
+          40.65029884452537,
+          40.81964517878771,
+          40.9751936664866,
+          41.11879425159048,
+          41.2519969206743,
+          41.37610822864488,
+          41.49223577644348,
+          41.60132348859151,
+          41.70417980291543,
+          41.80150035443213,
+          41.89388634895091,
+          41.98185953762473,
+          42.065874492551174,
+          42.146328725380194,
+          42.2235710714586,
+          42.29790867115731,
+          42.36961281035425,
+          42.43892382826616,
+          42.506055259034596,
+          42.571197340800055,
+          42.63452000030128,
+          42.6961754007115,
+          42.756300124259425,
+          42.815017048262476,
+          42.87243696282024,
+          42.9286599700396,
+          42.983776697871,
+          43.03786935610557,
+          43.0910126575611,
+          43.14327462377297,
+          43.194717291447354,
+          43.24539733340427,
+          43.295366605637994,
+          43.34467263037339,
+          43.39335902353534,
+          43.44146587382313,
+          43.489030079551874,
+          43.53608564855368,
+          43.58266396569728,
+          43.62879403196078,
+          43.67450267846324,
+          43.7198147584079,
+          43.7647533195049,
+          43.80933975910931,
+          43.85359396402714,
+          43.89753443669652,
+          43.94117840924099,
+          43.98454194670888,
+          44.02764004065489,
+          44.070486694082824,
+          44.11309499864907,
+          44.15547720492202,
+          44.197644786402705,
+          44.239608497931265,
+          44.28137842903537,
+          44.32296405271477,
+          44.36437427010306,
+          44.405617451399884,
+          44.44670147342537,
+          44.487633754111705,
+          44.52842128421401,
+          44.56907065649369,
+          44.60958809260216,
+          44.64997946786941,
+          44.690250334182224,
+          44.730405941118335,
+          44.77045125548692,
+          44.810390979411174,
+          44.850229567076155,
+          44.889971240253054,
+          44.92962000270136,
+          44.969179653540266,
+          45.008653799673155,
+          45.048045867340605,
+          45.08735911287163,
+          45.12659663269549,
+          45.16576137267223,
+          45.204856136793914,
+          45.243883595305014,
+          45.28284629228546,
+          45.32174665273701,
+          45.360586989209324,
+          45.399369508000106,
+          45.438096314959814,
+          45.47676942092993,
+          45.51539074684061,
+          45.55396212849228,
+          45.59248532104296,
+          45.630962003222244,
+          45.66939378129038,
+          45.707782192760284,
+          45.74612870989841,
+          45.78443474301933,
+          45.82270164358788,
+          45.86093070714156,
+          45.89912317604506,
+          45.93728024208778,
+          45.97540304893447,
+          46.01349269443848,
+          46.05155023282633,
+          46.08957667676165,
+          46.127572999296184,
+          46.16554013571466,
+          46.20347898528027,
+          46.24139041288676,
+          46.27927525062273,
+          46.317134299253595,
+          46.35496832962586,
+          46.392778083998714,
+          46.43056427730676,
+          46.46832759835832,
+          46.50606871097283,
+          46.543788255060825,
+          46.581486847649906,
+          46.61916508385973,
+          46.65682353782882,
+          46.69446276359605,
+          46.73208329593901,
+          46.769685651172225,
+          46.807270327906586,
+          46.84483780777299,
+          46.88238855611148,
+          46.91992302262805,
+          46.957441642020676,
+          46.99494483457651,
+          47.03243300674121,
+          47.06990655166252,
+          47.10736584970888,
+          47.144811268964716,
+          47.18224316570342,
+          47.21966188483926,
+          47.25706776035918,
+          47.294461115735665,
+          47.3318422643214,
+          47.369211509726924,
+          47.40656914618174,
+          47.443915458880085,
+          47.48125072431178,
+          47.51857521057914,
+          47.55588917770045,
+          47.59319287790074,
+          47.630486555890336,
+          47.66777044913202,
+          47.70504478809704,
+          47.742309796510725,
+          47.77956569158798,
+          47.81681268425942,
+          47.85405097938816,
+          47.89128077597817,
+          47.92850226737416,
+          47.96571564145363,
+          48.00292108081131,
+          48.04011876293651,
+          48.077308860383305,
+          48.11449154093446,
+          48.15166696775877,
+          48.188835299562555,
+          48.22599669073524,
+          48.26315129148959,
+          48.30029924799646,
+          48.337440702514726,
+          48.37457579351615,
+          48.41170465580581,
+          48.44882742063788,
+          48.48594421582743,
+          48.523055165857855,
+          48.56016039198465,
+          48.59726001233527,
+          48.63435414200549,
+          48.67144289315233,
+          48.708526375083565,
+          48.74560469434418,
+          48.7826779547998,
+          48.81974625771703,
+          48.85680970184121,
+          48.8938683834713,
+          48.93092239653231,
+          48.96797183264512,
+          49.00501678119403,
+          49.04205732939191,
+          49.07909356234326,
+          49.116125563105,
+          49.15315341274538,
+          49.19017719040079,
+          49.22719697333077,
+          49.26421283697116,
+          49.301224854985534,
+          49.33823309931489,
+          49.375237640225826,
+          49.412238546357,
+          49.44923588476431,
+          49.48622972096433,
+          49.52322011897667,
+          49.5602071413647,
+          49.59719084927525,
+          49.634171302476815,
+          49.671148559396734,
+          49.70812267715711,
+          49.745093711609684,
+          49.78206171736952,
+          49.81902674784782,
+          49.855988855283506,
+          49.89294809077405,
+          49.929904504305235,
+          49.96685814478009,
+          50.00380906004685,
+          50.04075729692622,
+          50.077702901237636,
+          50.11464591782497,
+          50.151586390581265,
+          50.18852436247285,
+          50.225459875562706,
+          50.26239297103323,
+          50.29932368920816
+        ],
+        "type": "scatter"
+      },
+      {
+        "hovertemplate": "ε<sub>csm</sub> / ε<sub>y</sub> = %{x:.3f}<br>M<sub>csm,c,Rd</sub> = %{y:.2f} kN m<extra></extra>",
+        "line": {
+          "color": "#2a78d6",
+          "dash": "dash",
+          "width": 2.5
+        },
+        "mode": "lines",
+        "name": "Formula B.19 (ε<sub>csm</sub>/ε<sub>y</sub> &lt; 1)",
+        "x": [
+          0.02,
+          0.08267782426778243,
+          0.14535564853556485,
+          0.20803347280334727,
+          0.27071129707112973,
+          0.3333891213389122,
+          0.3960669456066946,
+          0.458744769874477,
+          0.5214225941422594,
+          0.5841004184100418,
+          0.6467782426778244,
+          0.7094560669456067,
+          0.7721338912133892,
+          0.8348117154811716,
+          0.897489539748954,
+          0.9601673640167365,
+          1.0
+        ],
+        "y": [
+          0.7418727272727271,
+          3.0668211487257513,
+          5.391769570178774,
+          7.716717991631797,
+          10.041666413084823,
+          12.366614834537847,
+          14.69156325599087,
+          17.01651167744389,
+          19.34146009889692,
+          21.666408520349936,
+          23.991356941802966,
+          26.31630536325599,
+          28.641253784709008,
+          30.96620220616204,
+          33.29115062761505,
+          35.61609904906808,
+          37.09363636363636
+        ],
+        "type": "scatter"
+      },
+      {
+        "hovertemplate": "ε<sub>csm</sub> / ε<sub>y</sub> = 15.000<br>M<sub>csm,c,Rd</sub> = 50.30 kN m (B.20)<extra></extra>",
+        "marker": {
+          "color": "#eb6834",
+          "line": {
+            "color": "white",
+            "width": 2
+          },
+          "size": 13,
+          "symbol": "diamond"
+        },
+        "mode": "markers+text",
+        "name": "Your section",
+        "text": [
+          "your section: 50.30 kN m"
+        ],
+        "textposition": "bottom left",
+        "x": [
+          15.0
+        ],
+        "y": [
+          50.29932368920816
+        ],
+        "type": "scatter"
+      }
+    ],
+    "layout": {
+      "template": {
+        "data": {
+          "histogram2dcontour": [
+            {
+              "type": "histogram2dcontour",
+              "colorbar": {
+                "outlinewidth": 0,
+                "ticks": ""
+              },
+              "colorscale": [
+                [
+                  0.0,
+                  "#0d0887"
+                ],
+                [
+                  0.1111111111111111,
+                  "#46039f"
+                ],
+                [
+                  0.2222222222222222,
+                  "#7201a8"
+                ],
+                [
+                  0.3333333333333333,
+                  "#9c179e"
+                ],
+                [
+                  0.4444444444444444,
+                  "#bd3786"
+                ],
+                [
+                  0.5555555555555556,
+                  "#d8576b"
+                ],
+                [
+                  0.6666666666666666,
+                  "#ed7953"
+                ],
+                [
+                  0.7777777777777778,
+                  "#fb9f3a"
+                ],
+                [
+                  0.8888888888888888,
+                  "#fdca26"
+                ],
+                [
+                  1.0,
+                  "#f0f921"
+                ]
+              ]
+            }
+          ],
+          "choropleth": [
+            {
+              "type": "choropleth",
+              "colorbar": {
+                "outlinewidth": 0,
+                "ticks": ""
+              }
+            }
+          ],
+          "histogram2d": [
+            {
+              "type": "histogram2d",
+              "colorbar": {
+                "outlinewidth": 0,
+                "ticks": ""
+              },
+              "colorscale": [
+                [
+                  0.0,
+                  "#0d0887"
+                ],
+                [
+                  0.1111111111111111,
+                  "#46039f"
+                ],
+                [
+                  0.2222222222222222,
+                  "#7201a8"
+                ],
+                [
+                  0.3333333333333333,
+                  "#9c179e"
+                ],
+                [
+                  0.4444444444444444,
+                  "#bd3786"
+                ],
+                [
+                  0.5555555555555556,
+                  "#d8576b"
+                ],
+                [
+                  0.6666666666666666,
+                  "#ed7953"
+                ],
+                [
+                  0.7777777777777778,
+                  "#fb9f3a"
+                ],
+                [
+                  0.8888888888888888,
+                  "#fdca26"
+                ],
+                [
+                  1.0,
+                  "#f0f921"
+                ]
+              ]
+            }
+          ],
+          "heatmap": [
+            {
+              "type": "heatmap",
+              "colorbar": {
+                "outlinewidth": 0,
+                "ticks": ""
+              },
+              "colorscale": [
+                [
+                  0.0,
+                  "#0d0887"
+                ],
+                [
+                  0.1111111111111111,
+                  "#46039f"
+                ],
+                [
+                  0.2222222222222222,
+                  "#7201a8"
+                ],
+                [
+                  0.3333333333333333,
+                  "#9c179e"
+                ],
+                [
+                  0.4444444444444444,
+                  "#bd3786"
+                ],
+                [
+                  0.5555555555555556,
+                  "#d8576b"
+                ],
+                [
+                  0.6666666666666666,
+                  "#ed7953"
+                ],
+                [
+                  0.7777777777777778,
+                  "#fb9f3a"
+                ],
+                [
+                  0.8888888888888888,
+                  "#fdca26"
+                ],
+                [
+                  1.0,
+                  "#f0f921"
+                ]
+              ]
+            }
+          ],
+          "contourcarpet": [
+            {
+              "type": "contourcarpet",
+              "colorbar": {
+                "outlinewidth": 0,
+                "ticks": ""
+              }
+            }
+          ],
+          "contour": [
+            {
+              "type": "contour",
+              "colorbar": {
+                "outlinewidth": 0,
+                "ticks": ""
+              },
+              "colorscale": [
+                [
+                  0.0,
+                  "#0d0887"
+                ],
+                [
+                  0.1111111111111111,
+                  "#46039f"
+                ],
+                [
+                  0.2222222222222222,
+                  "#7201a8"
+                ],
+                [
+                  0.3333333333333333,
+                  "#9c179e"
+                ],
+                [
+                  0.4444444444444444,
+                  "#bd3786"
+                ],
+                [
+                  0.5555555555555556,
+                  "#d8576b"
+                ],
+                [
+                  0.6666666666666666,
+                  "#ed7953"
+                ],
+                [
+                  0.7777777777777778,
+                  "#fb9f3a"
+                ],
+                [
+                  0.8888888888888888,
+                  "#fdca26"
+                ],
+                [
+                  1.0,
+                  "#f0f921"
+                ]
+              ]
+            }
+          ],
+          "surface": [
+            {
+              "type": "surface",
+              "colorbar": {
+                "outlinewidth": 0,
+                "ticks": ""
+              },
+              "colorscale": [
+                [
+                  0.0,
+                  "#0d0887"
+                ],
+                [
+                  0.1111111111111111,
+                  "#46039f"
+                ],
+                [
+                  0.2222222222222222,
+                  "#7201a8"
+                ],
+                [
+                  0.3333333333333333,
+                  "#9c179e"
+                ],
+                [
+                  0.4444444444444444,
+                  "#bd3786"
+                ],
+                [
+                  0.5555555555555556,
+                  "#d8576b"
+                ],
+                [
+                  0.6666666666666666,
+                  "#ed7953"
+                ],
+                [
+                  0.7777777777777778,
+                  "#fb9f3a"
+                ],
+                [
+                  0.8888888888888888,
+                  "#fdca26"
+                ],
+                [
+                  1.0,
+                  "#f0f921"
+                ]
+              ]
+            }
+          ],
+          "mesh3d": [
+            {
+              "type": "mesh3d",
+              "colorbar": {
+                "outlinewidth": 0,
+                "ticks": ""
+              }
+            }
+          ],
+          "scatter": [
+            {
+              "fillpattern": {
+                "fillmode": "overlay",
+                "size": 10,
+                "solidity": 0.2
+              },
+              "type": "scatter"
+            }
+          ],
+          "parcoords": [
+            {
+              "type": "parcoords",
+              "line": {
+                "colorbar": {
+                  "outlinewidth": 0,
+                  "ticks": ""
+                }
+              }
+            }
+          ],
+          "scatterpolargl": [
+            {
+              "type": "scatterpolargl",
+              "marker": {
+                "colorbar": {
+                  "outlinewidth": 0,
+                  "ticks": ""
+                }
+              }
+            }
+          ],
+          "bar": [
+            {
+              "error_x": {
+                "color": "#2a3f5f"
+              },
+              "error_y": {
+                "color": "#2a3f5f"
+              },
+              "marker": {
+                "line": {
+                  "color": "#E5ECF6",
+                  "width": 0.5
+                },
+                "pattern": {
+                  "fillmode": "overlay",
+                  "size": 10,
+                  "solidity": 0.2
+                }
+              },
+              "type": "bar"
+            }
+          ],
+          "scattergeo": [
+            {
+              "type": "scattergeo",
+              "marker": {
+                "colorbar": {
+                  "outlinewidth": 0,
+                  "ticks": ""
+                }
+              }
+            }
+          ],
+          "scatterpolar": [
+            {
+              "type": "scatterpolar",
+              "marker": {
+                "colorbar": {
+                  "outlinewidth": 0,
+                  "ticks": ""
+                }
+              }
+            }
+          ],
+          "histogram": [
+            {
+              "marker": {
+                "pattern": {
+                  "fillmode": "overlay",
+                  "size": 10,
+                  "solidity": 0.2
+                }
+              },
+              "type": "histogram"
+            }
+          ],
+          "scattergl": [
+            {
+              "type": "scattergl",
+              "marker": {
+                "colorbar": {
+                  "outlinewidth": 0,
+                  "ticks": ""
+                }
+              }
+            }
+          ],
+          "scatter3d": [
+            {
+              "type": "scatter3d",
+              "line": {
+                "colorbar": {
+                  "outlinewidth": 0,
+                  "ticks": ""
+                }
+              },
+              "marker": {
+                "colorbar": {
+                  "outlinewidth": 0,
+                  "ticks": ""
+                }
+              }
+            }
+          ],
+          "scattermap": [
+            {
+              "type": "scattermap",
+              "marker": {
+                "colorbar": {
+                  "outlinewidth": 0,
+                  "ticks": ""
+                }
+              }
+            }
+          ],
+          "scatterternary": [
+            {
+              "type": "scatterternary",
+              "marker": {
+                "colorbar": {
+                  "outlinewidth": 0,
+                  "ticks": ""
+                }
+              }
+            }
+          ],
+          "scattercarpet": [
+            {
+              "type": "scattercarpet",
+              "marker": {
+                "colorbar": {
+                  "outlinewidth": 0,
+                  "ticks": ""
+                }
+              }
+            }
+          ],
+          "carpet": [
+            {
+              "aaxis": {
+                "endlinecolor": "#2a3f5f",
+                "gridcolor": "white",
+                "linecolor": "white",
+                "minorgridcolor": "white",
+                "startlinecolor": "#2a3f5f"
+              },
+              "baxis": {
+                "endlinecolor": "#2a3f5f",
+                "gridcolor": "white",
+                "linecolor": "white",
+                "minorgridcolor": "white",
+                "startlinecolor": "#2a3f5f"
+              },
+              "type": "carpet"
+            }
+          ],
+          "table": [
+            {
+              "cells": {
+                "fill": {
+                  "color": "#EBF0F8"
+                },
+                "line": {
+                  "color": "white"
+                }
+              },
+              "header": {
+                "fill": {
+                  "color": "#C8D4E3"
+                },
+                "line": {
+                  "color": "white"
+                }
+              },
+              "type": "table"
+            }
+          ],
+          "barpolar": [
+            {
+              "marker": {
+                "line": {
+                  "color": "#E5ECF6",
+                  "width": 0.5
+                },
+                "pattern": {
+                  "fillmode": "overlay",
+                  "size": 10,
+                  "solidity": 0.2
+                }
+              },
+              "type": "barpolar"
+            }
+          ],
+          "pie": [
+            {
+              "automargin": true,
+              "type": "pie"
+            }
+          ]
+        },
+        "layout": {
+          "autotypenumbers": "strict",
+          "colorway": [
+            "#636efa",
+            "#EF553B",
+            "#00cc96",
+            "#ab63fa",
+            "#FFA15A",
+            "#19d3f3",
+            "#FF6692",
+            "#B6E880",
+            "#FF97FF",
+            "#FECB52"
+          ],
+          "font": {
+            "color": "#2a3f5f"
+          },
+          "hovermode": "closest",
+          "hoverlabel": {
+            "align": "left"
+          },
+          "paper_bgcolor": "white",
+          "plot_bgcolor": "#E5ECF6",
+          "polar": {
+            "bgcolor": "#E5ECF6",
+            "angularaxis": {
+              "gridcolor": "white",
+              "linecolor": "white",
+              "ticks": ""
+            },
+            "radialaxis": {
+              "gridcolor": "white",
+              "linecolor": "white",
+              "ticks": ""
+            }
+          },
+          "ternary": {
+            "bgcolor": "#E5ECF6",
+            "aaxis": {
+              "gridcolor": "white",
+              "linecolor": "white",
+              "ticks": ""
+            },
+            "baxis": {
+              "gridcolor": "white",
+              "linecolor": "white",
+              "ticks": ""
+            },
+            "caxis": {
+              "gridcolor": "white",
+              "linecolor": "white",
+              "ticks": ""
+            }
+          },
+          "coloraxis": {
+            "colorbar": {
+              "outlinewidth": 0,
+              "ticks": ""
+            }
+          },
+          "colorscale": {
+            "sequential": [
+              [
+                0.0,
+                "#0d0887"
+              ],
+              [
+                0.1111111111111111,
+                "#46039f"
+              ],
+              [
+                0.2222222222222222,
+                "#7201a8"
+              ],
+              [
+                0.3333333333333333,
+                "#9c179e"
+              ],
+              [
+                0.4444444444444444,
+                "#bd3786"
+              ],
+              [
+                0.5555555555555556,
+                "#d8576b"
+              ],
+              [
+                0.6666666666666666,
+                "#ed7953"
+              ],
+              [
+                0.7777777777777778,
+                "#fb9f3a"
+              ],
+              [
+                0.8888888888888888,
+                "#fdca26"
+              ],
+              [
+                1.0,
+                "#f0f921"
+              ]
+            ],
+            "sequentialminus": [
+              [
+                0.0,
+                "#0d0887"
+              ],
+              [
+                0.1111111111111111,
+                "#46039f"
+              ],
+              [
+                0.2222222222222222,
+                "#7201a8"
+              ],
+              [
+                0.3333333333333333,
+                "#9c179e"
+              ],
+              [
+                0.4444444444444444,
+                "#bd3786"
+              ],
+              [
+                0.5555555555555556,
+                "#d8576b"
+              ],
+              [
+                0.6666666666666666,
+                "#ed7953"
+              ],
+              [
+                0.7777777777777778,
+                "#fb9f3a"
+              ],
+              [
+                0.8888888888888888,
+                "#fdca26"
+              ],
+              [
+                1.0,
+                "#f0f921"
+              ]
+            ],
+            "diverging": [
+              [
+                0,
+                "#8e0152"
+              ],
+              [
+                0.1,
+                "#c51b7d"
+              ],
+              [
+                0.2,
+                "#de77ae"
+              ],
+              [
+                0.3,
+                "#f1b6da"
+              ],
+              [
+                0.4,
+                "#fde0ef"
+              ],
+              [
+                0.5,
+                "#f7f7f7"
+              ],
+              [
+                0.6,
+                "#e6f5d0"
+              ],
+              [
+                0.7,
+                "#b8e186"
+              ],
+              [
+                0.8,
+                "#7fbc41"
+              ],
+              [
+                0.9,
+                "#4d9221"
+              ],
+              [
+                1,
+                "#276419"
+              ]
+            ]
+          },
+          "xaxis": {
+            "gridcolor": "white",
+            "linecolor": "white",
+            "ticks": "",
+            "title": {
+              "standoff": 15
+            },
+            "zerolinecolor": "white",
+            "automargin": true,
+            "zerolinewidth": 2
+          },
+          "yaxis": {
+            "gridcolor": "white",
+            "linecolor": "white",
+            "ticks": "",
+            "title": {
+              "standoff": 15
+            },
+            "zerolinecolor": "white",
+            "automargin": true,
+            "zerolinewidth": 2
+          },
+          "scene": {
+            "xaxis": {
+              "backgroundcolor": "#E5ECF6",
+              "gridcolor": "white",
+              "linecolor": "white",
+              "showbackground": true,
+              "ticks": "",
+              "zerolinecolor": "white",
+              "gridwidth": 2
+            },
+            "yaxis": {
+              "backgroundcolor": "#E5ECF6",
+              "gridcolor": "white",
+              "linecolor": "white",
+              "showbackground": true,
+              "ticks": "",
+              "zerolinecolor": "white",
+              "gridwidth": 2
+            },
+            "zaxis": {
+              "backgroundcolor": "#E5ECF6",
+              "gridcolor": "white",
+              "linecolor": "white",
+              "showbackground": true,
+              "ticks": "",
+              "zerolinecolor": "white",
+              "gridwidth": 2
+            }
+          },
+          "shapedefaults": {
+            "line": {
+              "color": "#2a3f5f"
+            }
+          },
+          "annotationdefaults": {
+            "arrowcolor": "#2a3f5f",
+            "arrowhead": 0,
+            "arrowwidth": 1
+          },
+          "geo": {
+            "bgcolor": "white",
+            "landcolor": "#E5ECF6",
+            "subunitcolor": "white",
+            "showland": true,
+            "showlakes": true,
+            "lakecolor": "white"
+          },
+          "title": {
+            "x": 0.05
+          }
+        }
+      },
+      "margin": {
+        "l": 10,
+        "r": 10,
+        "t": 20,
+        "b": 10
+      },
+      "legend": {
+        "orientation": "h",
+        "y": -0.25
+      },
+      "xaxis": {
+        "title": {
+          "text": "strain limit ε<sub>csm</sub> / ε<sub>y</sub>"
+        },
+        "range": [
+          0,
+          15.600000000000001
+        ],
+        "gridcolor": "rgba(137, 135, 129, 0.25)",
+        "zeroline": false
+      },
+      "yaxis": {
+        "title": {
+          "text": "M<sub>csm,c,Rd</sub> [kN m]"
+        },
+        "range": [
+          0,
+          57.844222242589375
+        ],
+        "gridcolor": "rgba(137, 135, 129, 0.25)",
+        "zeroline": false
+      },
+      "shapes": [
+        {
+          "line": {
+            "color": "#898781",
+            "dash": "dot",
+            "width": 1.5
+          },
+          "type": "line",
+          "x0": 0,
+          "x1": 15.600000000000001,
+          "y0": 37.09363636363636,
+          "y1": 37.09363636363636
+        },
+        {
+          "line": {
+            "color": "#898781",
+            "dash": "dot",
+            "width": 1.5
+          },
+          "type": "line",
+          "x0": 0,
+          "x1": 15.600000000000001,
+          "y0": 42.11454545454545,
+          "y1": 42.11454545454545
+        },
+        {
+          "line": {
+            "color": "#eb6834",
+            "dash": "dash",
+            "width": 1.5
+          },
+          "type": "line",
+          "x0": 15.0,
+          "x1": 15.0,
+          "y0": 0,
+          "y1": 1,
+          "yref": "paper"
+        },
+        {
+          "line": {
+            "color": "#eb6834",
+            "dash": "dot",
+            "width": 1
+          },
+          "type": "line",
+          "x0": 15.0,
+          "x1": 15.0,
+          "y0": 0,
+          "y1": 50.29932368920816
+        }
+      ],
+      "annotations": [
+        {
+          "showarrow": false,
+          "text": "M<sub>el</sub> = W<sub>el</sub> f<sub>y</sub> / γ<sub>M0</sub> = 37.09 kN m",
+          "x": 15.600000000000001,
+          "xanchor": "right",
+          "y": 37.09363636363636,
+          "yanchor": "top"
+        },
+        {
+          "showarrow": false,
+          "text": "M<sub>pl</sub> = W<sub>pl</sub> f<sub>y</sub> / γ<sub>M0</sub> = 42.11 kN m",
+          "x": 15.600000000000001,
+          "xanchor": "right",
+          "y": 42.11454545454545,
+          "yanchor": "bottom"
+        },
+        {
+          "showarrow": false,
+          "text": "cap 15: Ω",
+          "textangle": -90,
+          "x": 15.0,
+          "xanchor": "right",
+          "y": 0.02,
+          "yref": "paper"
+        }
+      ],
+      "height": 450,
+      "paper_bgcolor": "rgba(0,0,0,0)",
+      "plot_bgcolor": "rgba(0,0,0,0)"
+    }
+  },
+  "blocks_figure": {
+    "data": [
+      {
+        "fill": "toself",
+        "fillcolor": "rgba(235, 104, 52, 0.18)",
+        "hovertemplate": "depth = %{y:.2f}<br>strain = %{x:.4g}<extra></extra>",
+        "line": {
+          "color": "#eb6834",
+          "width": 2.5
+        },
+        "mode": "lines",
+        "name": "Strain",
+        "x": [
+          0,
+          -15.0,
+          -1.0,
+          1.0,
+          15.0,
+          0
+        ],
+        "y": [
+          -1,
+          -1.0,
+          -0.06666666666666667,
+          0.06666666666666667,
+          1.0,
+          1
+        ],
+        "type": "scatter",
+        "xaxis": "x",
+        "yaxis": "y"
+      },
+      {
+        "fill": "toself",
+        "fillcolor": "rgba(42, 120, 214, 0.20)",
+        "hovertemplate": "depth = %{y:.2f}<br>stress = %{x:.4g} N/mm²<extra></extra>",
+        "line": {
+          "color": "#2a78d6",
+          "width": 2.5
+        },
+        "mode": "lines",
+        "name": "Stress",
+        "x": [
+          0,
+          -256.4632152588556,
+          -210.0,
+          210.0,
+          256.4632152588556,
+          0
+        ],
+        "y": [
+          -1,
+          -1.0,
+          -0.06666666666666667,
+          0.06666666666666667,
+          1.0,
+          1
+        ],
+        "type": "scatter",
+        "xaxis": "x2",
+        "yaxis": "y2"
+      }
+    ],
+    "layout": {
+      "template": {
+        "data": {
+          "histogram2dcontour": [
+            {
+              "type": "histogram2dcontour",
+              "colorbar": {
+                "outlinewidth": 0,
+                "ticks": ""
+              },
+              "colorscale": [
+                [
+                  0.0,
+                  "#0d0887"
+                ],
+                [
+                  0.1111111111111111,
+                  "#46039f"
+                ],
+                [
+                  0.2222222222222222,
+                  "#7201a8"
+                ],
+                [
+                  0.3333333333333333,
+                  "#9c179e"
+                ],
+                [
+                  0.4444444444444444,
+                  "#bd3786"
+                ],
+                [
+                  0.5555555555555556,
+                  "#d8576b"
+                ],
+                [
+                  0.6666666666666666,
+                  "#ed7953"
+                ],
+                [
+                  0.7777777777777778,
+                  "#fb9f3a"
+                ],
+                [
+                  0.8888888888888888,
+                  "#fdca26"
+                ],
+                [
+                  1.0,
+                  "#f0f921"
+                ]
+              ]
+            }
+          ],
+          "choropleth": [
+            {
+              "type": "choropleth",
+              "colorbar": {
+                "outlinewidth": 0,
+                "ticks": ""
+              }
+            }
+          ],
+          "histogram2d": [
+            {
+              "type": "histogram2d",
+              "colorbar": {
+                "outlinewidth": 0,
+                "ticks": ""
+              },
+              "colorscale": [
+                [
+                  0.0,
+                  "#0d0887"
+                ],
+                [
+                  0.1111111111111111,
+                  "#46039f"
+                ],
+                [
+                  0.2222222222222222,
+                  "#7201a8"
+                ],
+                [
+                  0.3333333333333333,
+                  "#9c179e"
+                ],
+                [
+                  0.4444444444444444,
+                  "#bd3786"
+                ],
+                [
+                  0.5555555555555556,
+                  "#d8576b"
+                ],
+                [
+                  0.6666666666666666,
+                  "#ed7953"
+                ],
+                [
+                  0.7777777777777778,
+                  "#fb9f3a"
+                ],
+                [
+                  0.8888888888888888,
+                  "#fdca26"
+                ],
+                [
+                  1.0,
+                  "#f0f921"
+                ]
+              ]
+            }
+          ],
+          "heatmap": [
+            {
+              "type": "heatmap",
+              "colorbar": {
+                "outlinewidth": 0,
+                "ticks": ""
+              },
+              "colorscale": [
+                [
+                  0.0,
+                  "#0d0887"
+                ],
+                [
+                  0.1111111111111111,
+                  "#46039f"
+                ],
+                [
+                  0.2222222222222222,
+                  "#7201a8"
+                ],
+                [
+                  0.3333333333333333,
+                  "#9c179e"
+                ],
+                [
+                  0.4444444444444444,
+                  "#bd3786"
+                ],
+                [
+                  0.5555555555555556,
+                  "#d8576b"
+                ],
+                [
+                  0.6666666666666666,
+                  "#ed7953"
+                ],
+                [
+                  0.7777777777777778,
+                  "#fb9f3a"
+                ],
+                [
+                  0.8888888888888888,
+                  "#fdca26"
+                ],
+                [
+                  1.0,
+                  "#f0f921"
+                ]
+              ]
+            }
+          ],
+          "contourcarpet": [
+            {
+              "type": "contourcarpet",
+              "colorbar": {
+                "outlinewidth": 0,
+                "ticks": ""
+              }
+            }
+          ],
+          "contour": [
+            {
+              "type": "contour",
+              "colorbar": {
+                "outlinewidth": 0,
+                "ticks": ""
+              },
+              "colorscale": [
+                [
+                  0.0,
+                  "#0d0887"
+                ],
+                [
+                  0.1111111111111111,
+                  "#46039f"
+                ],
+                [
+                  0.2222222222222222,
+                  "#7201a8"
+                ],
+                [
+                  0.3333333333333333,
+                  "#9c179e"
+                ],
+                [
+                  0.4444444444444444,
+                  "#bd3786"
+                ],
+                [
+                  0.5555555555555556,
+                  "#d8576b"
+                ],
+                [
+                  0.6666666666666666,
+                  "#ed7953"
+                ],
+                [
+                  0.7777777777777778,
+                  "#fb9f3a"
+                ],
+                [
+                  0.8888888888888888,
+                  "#fdca26"
+                ],
+                [
+                  1.0,
+                  "#f0f921"
+                ]
+              ]
+            }
+          ],
+          "surface": [
+            {
+              "type": "surface",
+              "colorbar": {
+                "outlinewidth": 0,
+                "ticks": ""
+              },
+              "colorscale": [
+                [
+                  0.0,
+                  "#0d0887"
+                ],
+                [
+                  0.1111111111111111,
+                  "#46039f"
+                ],
+                [
+                  0.2222222222222222,
+                  "#7201a8"
+                ],
+                [
+                  0.3333333333333333,
+                  "#9c179e"
+                ],
+                [
+                  0.4444444444444444,
+                  "#bd3786"
+                ],
+                [
+                  0.5555555555555556,
+                  "#d8576b"
+                ],
+                [
+                  0.6666666666666666,
+                  "#ed7953"
+                ],
+                [
+                  0.7777777777777778,
+                  "#fb9f3a"
+                ],
+                [
+                  0.8888888888888888,
+                  "#fdca26"
+                ],
+                [
+                  1.0,
+                  "#f0f921"
+                ]
+              ]
+            }
+          ],
+          "mesh3d": [
+            {
+              "type": "mesh3d",
+              "colorbar": {
+                "outlinewidth": 0,
+                "ticks": ""
+              }
+            }
+          ],
+          "scatter": [
+            {
+              "fillpattern": {
+                "fillmode": "overlay",
+                "size": 10,
+                "solidity": 0.2
+              },
+              "type": "scatter"
+            }
+          ],
+          "parcoords": [
+            {
+              "type": "parcoords",
+              "line": {
+                "colorbar": {
+                  "outlinewidth": 0,
+                  "ticks": ""
+                }
+              }
+            }
+          ],
+          "scatterpolargl": [
+            {
+              "type": "scatterpolargl",
+              "marker": {
+                "colorbar": {
+                  "outlinewidth": 0,
+                  "ticks": ""
+                }
+              }
+            }
+          ],
+          "bar": [
+            {
+              "error_x": {
+                "color": "#2a3f5f"
+              },
+              "error_y": {
+                "color": "#2a3f5f"
+              },
+              "marker": {
+                "line": {
+                  "color": "#E5ECF6",
+                  "width": 0.5
+                },
+                "pattern": {
+                  "fillmode": "overlay",
+                  "size": 10,
+                  "solidity": 0.2
+                }
+              },
+              "type": "bar"
+            }
+          ],
+          "scattergeo": [
+            {
+              "type": "scattergeo",
+              "marker": {
+                "colorbar": {
+                  "outlinewidth": 0,
+                  "ticks": ""
+                }
+              }
+            }
+          ],
+          "scatterpolar": [
+            {
+              "type": "scatterpolar",
+              "marker": {
+                "colorbar": {
+                  "outlinewidth": 0,
+                  "ticks": ""
+                }
+              }
+            }
+          ],
+          "histogram": [
+            {
+              "marker": {
+                "pattern": {
+                  "fillmode": "overlay",
+                  "size": 10,
+                  "solidity": 0.2
+                }
+              },
+              "type": "histogram"
+            }
+          ],
+          "scattergl": [
+            {
+              "type": "scattergl",
+              "marker": {
+                "colorbar": {
+                  "outlinewidth": 0,
+                  "ticks": ""
+                }
+              }
+            }
+          ],
+          "scatter3d": [
+            {
+              "type": "scatter3d",
+              "line": {
+                "colorbar": {
+                  "outlinewidth": 0,
+                  "ticks": ""
+                }
+              },
+              "marker": {
+                "colorbar": {
+                  "outlinewidth": 0,
+                  "ticks": ""
+                }
+              }
+            }
+          ],
+          "scattermap": [
+            {
+              "type": "scattermap",
+              "marker": {
+                "colorbar": {
+                  "outlinewidth": 0,
+                  "ticks": ""
+                }
+              }
+            }
+          ],
+          "scatterternary": [
+            {
+              "type": "scatterternary",
+              "marker": {
+                "colorbar": {
+                  "outlinewidth": 0,
+                  "ticks": ""
+                }
+              }
+            }
+          ],
+          "scattercarpet": [
+            {
+              "type": "scattercarpet",
+              "marker": {
+                "colorbar": {
+                  "outlinewidth": 0,
+                  "ticks": ""
+                }
+              }
+            }
+          ],
+          "carpet": [
+            {
+              "aaxis": {
+                "endlinecolor": "#2a3f5f",
+                "gridcolor": "white",
+                "linecolor": "white",
+                "minorgridcolor": "white",
+                "startlinecolor": "#2a3f5f"
+              },
+              "baxis": {
+                "endlinecolor": "#2a3f5f",
+                "gridcolor": "white",
+                "linecolor": "white",
+                "minorgridcolor": "white",
+                "startlinecolor": "#2a3f5f"
+              },
+              "type": "carpet"
+            }
+          ],
+          "table": [
+            {
+              "cells": {
+                "fill": {
+                  "color": "#EBF0F8"
+                },
+                "line": {
+                  "color": "white"
+                }
+              },
+              "header": {
+                "fill": {
+                  "color": "#C8D4E3"
+                },
+                "line": {
+                  "color": "white"
+                }
+              },
+              "type": "table"
+            }
+          ],
+          "barpolar": [
+            {
+              "marker": {
+                "line": {
+                  "color": "#E5ECF6",
+                  "width": 0.5
+                },
+                "pattern": {
+                  "fillmode": "overlay",
+                  "size": 10,
+                  "solidity": 0.2
+                }
+              },
+              "type": "barpolar"
+            }
+          ],
+          "pie": [
+            {
+              "automargin": true,
+              "type": "pie"
+            }
+          ]
+        },
+        "layout": {
+          "autotypenumbers": "strict",
+          "colorway": [
+            "#636efa",
+            "#EF553B",
+            "#00cc96",
+            "#ab63fa",
+            "#FFA15A",
+            "#19d3f3",
+            "#FF6692",
+            "#B6E880",
+            "#FF97FF",
+            "#FECB52"
+          ],
+          "font": {
+            "color": "#2a3f5f"
+          },
+          "hovermode": "closest",
+          "hoverlabel": {
+            "align": "left"
+          },
+          "paper_bgcolor": "white",
+          "plot_bgcolor": "#E5ECF6",
+          "polar": {
+            "bgcolor": "#E5ECF6",
+            "angularaxis": {
+              "gridcolor": "white",
+              "linecolor": "white",
+              "ticks": ""
+            },
+            "radialaxis": {
+              "gridcolor": "white",
+              "linecolor": "white",
+              "ticks": ""
+            }
+          },
+          "ternary": {
+            "bgcolor": "#E5ECF6",
+            "aaxis": {
+              "gridcolor": "white",
+              "linecolor": "white",
+              "ticks": ""
+            },
+            "baxis": {
+              "gridcolor": "white",
+              "linecolor": "white",
+              "ticks": ""
+            },
+            "caxis": {
+              "gridcolor": "white",
+              "linecolor": "white",
+              "ticks": ""
+            }
+          },
+          "coloraxis": {
+            "colorbar": {
+              "outlinewidth": 0,
+              "ticks": ""
+            }
+          },
+          "colorscale": {
+            "sequential": [
+              [
+                0.0,
+                "#0d0887"
+              ],
+              [
+                0.1111111111111111,
+                "#46039f"
+              ],
+              [
+                0.2222222222222222,
+                "#7201a8"
+              ],
+              [
+                0.3333333333333333,
+                "#9c179e"
+              ],
+              [
+                0.4444444444444444,
+                "#bd3786"
+              ],
+              [
+                0.5555555555555556,
+                "#d8576b"
+              ],
+              [
+                0.6666666666666666,
+                "#ed7953"
+              ],
+              [
+                0.7777777777777778,
+                "#fb9f3a"
+              ],
+              [
+                0.8888888888888888,
+                "#fdca26"
+              ],
+              [
+                1.0,
+                "#f0f921"
+              ]
+            ],
+            "sequentialminus": [
+              [
+                0.0,
+                "#0d0887"
+              ],
+              [
+                0.1111111111111111,
+                "#46039f"
+              ],
+              [
+                0.2222222222222222,
+                "#7201a8"
+              ],
+              [
+                0.3333333333333333,
+                "#9c179e"
+              ],
+              [
+                0.4444444444444444,
+                "#bd3786"
+              ],
+              [
+                0.5555555555555556,
+                "#d8576b"
+              ],
+              [
+                0.6666666666666666,
+                "#ed7953"
+              ],
+              [
+                0.7777777777777778,
+                "#fb9f3a"
+              ],
+              [
+                0.8888888888888888,
+                "#fdca26"
+              ],
+              [
+                1.0,
+                "#f0f921"
+              ]
+            ],
+            "diverging": [
+              [
+                0,
+                "#8e0152"
+              ],
+              [
+                0.1,
+                "#c51b7d"
+              ],
+              [
+                0.2,
+                "#de77ae"
+              ],
+              [
+                0.3,
+                "#f1b6da"
+              ],
+              [
+                0.4,
+                "#fde0ef"
+              ],
+              [
+                0.5,
+                "#f7f7f7"
+              ],
+              [
+                0.6,
+                "#e6f5d0"
+              ],
+              [
+                0.7,
+                "#b8e186"
+              ],
+              [
+                0.8,
+                "#7fbc41"
+              ],
+              [
+                0.9,
+                "#4d9221"
+              ],
+              [
+                1,
+                "#276419"
+              ]
+            ]
+          },
+          "xaxis": {
+            "gridcolor": "white",
+            "linecolor": "white",
+            "ticks": "",
+            "title": {
+              "standoff": 15
+            },
+            "zerolinecolor": "white",
+            "automargin": true,
+            "zerolinewidth": 2
+          },
+          "yaxis": {
+            "gridcolor": "white",
+            "linecolor": "white",
+            "ticks": "",
+            "title": {
+              "standoff": 15
+            },
+            "zerolinecolor": "white",
+            "automargin": true,
+            "zerolinewidth": 2
+          },
+          "scene": {
+            "xaxis": {
+              "backgroundcolor": "#E5ECF6",
+              "gridcolor": "white",
+              "linecolor": "white",
+              "showbackground": true,
+              "ticks": "",
+              "zerolinecolor": "white",
+              "gridwidth": 2
+            },
+            "yaxis": {
+              "backgroundcolor": "#E5ECF6",
+              "gridcolor": "white",
+              "linecolor": "white",
+              "showbackground": true,
+              "ticks": "",
+              "zerolinecolor": "white",
+              "gridwidth": 2
+            },
+            "zaxis": {
+              "backgroundcolor": "#E5ECF6",
+              "gridcolor": "white",
+              "linecolor": "white",
+              "showbackground": true,
+              "ticks": "",
+              "zerolinecolor": "white",
+              "gridwidth": 2
+            }
+          },
+          "shapedefaults": {
+            "line": {
+              "color": "#2a3f5f"
+            }
+          },
+          "annotationdefaults": {
+            "arrowcolor": "#2a3f5f",
+            "arrowhead": 0,
+            "arrowwidth": 1
+          },
+          "geo": {
+            "bgcolor": "white",
+            "landcolor": "#E5ECF6",
+            "subunitcolor": "white",
+            "showland": true,
+            "showlakes": true,
+            "lakecolor": "white"
+          },
+          "title": {
+            "x": 0.05
+          }
+        }
+      },
+      "xaxis": {
+        "anchor": "y",
+        "domain": [
+          0.0,
+          0.475
+        ],
+        "gridcolor": "rgba(137, 135, 129, 0.25)",
+        "zeroline": false,
+        "range": [
+          -20.25,
+          20.25
+        ]
+      },
+      "yaxis": {
+        "anchor": "x",
+        "domain": [
+          0.0,
+          1.0
+        ],
+        "range": [
+          -1.15,
+          1.15
+        ],
+        "tickvals": [
+          -1,
+          0,
+          1
+        ],
+        "ticktext": [
+          "tension edge",
+          "neutral axis",
+          "compression edge"
+        ],
+        "gridcolor": "rgba(137, 135, 129, 0.25)",
+        "zeroline": false
+      },
+      "xaxis2": {
+        "anchor": "y2",
+        "domain": [
+          0.525,
+          1.0
+        ],
+        "gridcolor": "rgba(137, 135, 129, 0.25)",
+        "zeroline": false,
+        "range": [
+          -346.2253405994551,
+          346.2253405994551
+        ]
+      },
+      "yaxis2": {
+        "anchor": "x2",
+        "domain": [
+          0.0,
+          1.0
+        ],
+        "matches": "y",
+        "showticklabels": false,
+        "range": [
+          -1.15,
+          1.15
+        ],
+        "tickvals": [
+          -1,
+          0,
+          1
+        ],
+        "ticktext": [
+          "tension edge",
+          "neutral axis",
+          "compression edge"
+        ],
+        "gridcolor": "rgba(137, 135, 129, 0.25)",
+        "zeroline": false
+      },
+      "annotations": [
+        {
+          "font": {
+            "size": 16
+          },
+          "showarrow": false,
+          "text": "strain ε / ε<sub>y</sub>",
+          "x": 0.2375,
+          "xanchor": "center",
+          "xref": "paper",
+          "y": 1.0,
+          "yanchor": "bottom",
+          "yref": "paper"
+        },
+        {
+          "font": {
+            "size": 16
+          },
+          "showarrow": false,
+          "text": "stress σ [N/mm²]",
+          "x": 0.7625,
+          "xanchor": "center",
+          "xref": "paper",
+          "y": 1.0,
+          "yanchor": "bottom",
+          "yref": "paper"
+        },
+        {
+          "showarrow": false,
+          "text": "ε<sub>csm</sub>",
+          "x": 15.0,
+          "xanchor": "left",
+          "xref": "x",
+          "y": 1,
+          "yanchor": "bottom",
+          "yref": "y"
+        },
+        {
+          "showarrow": false,
+          "text": "σ = 256.5",
+          "x": 256.4632152588556,
+          "xanchor": "left",
+          "xref": "x2",
+          "y": 1,
+          "yanchor": "bottom",
+          "yref": "y2"
+        },
+        {
+          "showarrow": false,
+          "text": "ε<sub>y</sub>",
+          "x": 1.0,
+          "xanchor": "left",
+          "xref": "x",
+          "y": 0,
+          "yanchor": "top",
+          "yref": "y"
+        },
+        {
+          "showarrow": false,
+          "text": "f<sub>y</sub>",
+          "x": 210.0,
+          "xanchor": "left",
+          "xref": "x2",
+          "y": 0,
+          "yanchor": "top",
+          "yref": "y2"
+        }
+      ],
+      "shapes": [
+        {
+          "line": {
+            "color": "#898781",
+            "width": 1
+          },
+          "type": "line",
+          "x0": 0,
+          "x1": 0,
+          "xref": "x",
+          "y0": 0,
+          "y1": 1,
+          "yref": "y domain"
+        },
+        {
+          "line": {
+            "color": "#898781",
+            "width": 1
+          },
+          "type": "line",
+          "x0": 0,
+          "x1": 0,
+          "xref": "x2",
+          "y0": 0,
+          "y1": 1,
+          "yref": "y2 domain"
+        },
+        {
+          "line": {
+            "color": "#898781",
+            "dash": "dash",
+            "width": 1
+          },
+          "type": "line",
+          "x0": 0,
+          "x1": 1,
+          "xref": "x domain",
+          "y0": 0,
+          "y1": 0,
+          "yref": "y"
+        },
+        {
+          "line": {
+            "color": "#898781",
+            "dash": "dash",
+            "width": 1
+          },
+          "type": "line",
+          "x0": 0,
+          "x1": 1,
+          "xref": "x2 domain",
+          "y0": 0,
+          "y1": 0,
+          "yref": "y2"
+        },
+        {
+          "line": {
+            "color": "#898781",
+            "dash": "dot",
+            "width": 1
+          },
+          "type": "line",
+          "x0": -1.0,
+          "x1": -1.0,
+          "xref": "x",
+          "y0": 0,
+          "y1": 1,
+          "yref": "y domain"
+        },
+        {
+          "line": {
+            "color": "#898781",
+            "dash": "dot",
+            "width": 1
+          },
+          "type": "line",
+          "x0": -210.0,
+          "x1": -210.0,
+          "xref": "x2",
+          "y0": 0,
+          "y1": 1,
+          "yref": "y2 domain"
+        },
+        {
+          "line": {
+            "color": "#898781",
+            "dash": "dot",
+            "width": 1
+          },
+          "type": "line",
+          "x0": 1.0,
+          "x1": 1.0,
+          "xref": "x",
+          "y0": 0,
+          "y1": 1,
+          "yref": "y domain"
+        },
+        {
+          "line": {
+            "color": "#898781",
+            "dash": "dot",
+            "width": 1
+          },
+          "type": "line",
+          "x0": 210.0,
+          "x1": 210.0,
+          "xref": "x2",
+          "y0": 0,
+          "y1": 1,
+          "yref": "y2 domain"
+        }
+      ],
+      "margin": {
+        "l": 10,
+        "r": 10,
+        "t": 40,
+        "b": 10
+      },
+      "height": 380,
+      "paper_bgcolor": "rgba(0,0,0,0)",
+      "plot_bgcolor": "rgba(0,0,0,0)",
+      "showlegend": false
+    }
+  }
+}

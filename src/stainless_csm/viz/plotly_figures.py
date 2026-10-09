@@ -9,8 +9,10 @@ import re
 from typing import Any
 
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 from stainless_csm.config.national_annex import TENSION_STRAIN_RATIO_CAP
+from stainless_csm.csm.bending import BendingResult, moment_at
 from stainless_csm.csm.compression import CompressionFormula, CompressionResult, capacity_ratio
 from stainless_csm.csm.deformation_capacity import (
     LIMITS,
@@ -831,3 +833,255 @@ def compression_capacity_figure(
         },
     )
     return _to_dict(fig)
+
+
+# Moments are N mm in the engine; the chart is the screen edge, so it shows kN m.
+_KNM = 1e-6
+
+
+def bending_moment_figure(
+    model: CSMBilinearModel,
+    deformation: DeformationResult,
+    result: BendingResult,
+    w_el: float,
+    w_pl: float,
+    gamma_m0: float,
+) -> dict[str, Any]:
+    """M_csm,c,Rd against ε_csm/ε_y: the B.19 branch, the B.20 branch, W_el f_y/γM0 and
+    W_pl f_y/γM0 as reference lines, the cap, and the user's section.
+
+    Every point is the engine's own `moment_at` (B.19 below 1.0, B.20 from 1.0) with the α of
+    Table B.2 that the result used.
+    """
+    cap = deformation.cap
+    x_max = max(cap, result.strain_ratio) * 1.04
+    start = 0.02
+    grid = [start + (cap - start) * i / 239 for i in range(240)]
+
+    def at(ratio: float) -> tuple[float, float]:
+        return ratio, moment_at(model, ratio, w_el, w_pl, result.alpha, gamma_m0) * _KNM
+
+    below = [at(r) for r in grid if r < 1] + [at(1.0)]
+    above = [at(1.0)] + [at(r) for r in grid if r > 1]
+
+    fig = go.Figure()
+    shapes: list[dict[str, Any]] = []
+    annotations: list[dict[str, Any]] = []
+    hover = (
+        "ε<sub>csm</sub> / ε<sub>y</sub> = %{x:.3f}"
+        "<br>M<sub>csm,c,Rd</sub> = %{y:.2f} kN m<extra></extra>"
+    )
+    for name, branch, dash, width in (
+        ("Formula B.20 (ε<sub>csm</sub>/ε<sub>y</sub> ≥ 1)", above, "solid", 3),
+        ("Formula B.19 (ε<sub>csm</sub>/ε<sub>y</sub> &lt; 1)", below, "dash", 2.5),
+    ):
+        if len(branch) < 2:
+            continue
+        fig.add_trace(
+            go.Scatter(
+                x=[row[0] for row in branch],
+                y=[row[1] for row in branch],
+                mode="lines",
+                line={"color": BLUE, "width": width, "dash": dash},
+                name=name,
+                hovertemplate=hover,
+            )
+        )
+
+    f_gamma = "f<sub>y</sub> / γ<sub>M0</sub>"
+    for level, text, anchor in (
+        (result.elastic_moment * _KNM, f"M<sub>el</sub> = W<sub>el</sub> {f_gamma}", "top"),
+        (result.plastic_moment * _KNM, f"M<sub>pl</sub> = W<sub>pl</sub> {f_gamma}", "bottom"),
+    ):
+        shapes.append(
+            {
+                "type": "line",
+                "x0": 0,
+                "x1": x_max,
+                "y0": level,
+                "y1": level,
+                "line": {"color": MUTED, "width": 1.5, "dash": "dot"},
+            }
+        )
+        annotations.append(
+            {
+                "x": x_max,
+                "y": level,
+                "text": f"{text} = {level:.2f} kN m",
+                "showarrow": False,
+                "xanchor": "right",
+                "yanchor": anchor,
+            }
+        )
+
+    # the strain limit cannot go beyond the cap of B.5.1
+    shapes.append(
+        {
+            "type": "line",
+            "x0": cap,
+            "x1": cap,
+            "y0": 0,
+            "y1": 1,
+            "yref": "paper",
+            "line": {"color": ORANGE, "width": 1.5, "dash": "dash"},
+        }
+    )
+    annotations.append(
+        {
+            "x": cap,
+            "y": 0.02,
+            "yref": "paper",
+            "text": f"cap {cap:.4g}: {typeset_html(deformation.cap_source.value)}",
+            "showarrow": False,
+            "xanchor": "right",
+            "textangle": -90,
+        }
+    )
+
+    ratio, moment = at(result.strain_ratio)
+    shapes.append(
+        {
+            "type": "line",
+            "x0": ratio,
+            "x1": ratio,
+            "y0": 0,
+            "y1": moment,
+            "line": {"color": ORANGE, "width": 1, "dash": "dot"},
+        }
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=[ratio],
+            y=[moment],
+            mode="markers+text",
+            marker={
+                "color": ORANGE,
+                "size": 13,
+                "symbol": "diamond",
+                "line": {"color": "white", "width": 2},
+            },
+            text=[f"your section: {moment:.2f} kN m"],
+            textposition="bottom right" if ratio < x_max * 0.6 else "bottom left",
+            name="Your section",
+            hovertemplate=f"ε<sub>csm</sub> / ε<sub>y</sub> = {ratio:.3f}"
+            f"<br>M<sub>csm,c,Rd</sub> = {moment:.2f} kN m ({result.formula.value})<extra></extra>",
+        )
+    )
+
+    top = max(result.plastic_moment * _KNM, max(row[1] for row in above))
+    fig.update_layout(
+        shapes=shapes,
+        annotations=annotations,
+        height=450,
+        margin={"l": 10, "r": 10, "t": 20, "b": 10},
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        legend={"orientation": "h", "y": -0.25},
+        xaxis={
+            "title": {"text": "strain limit ε<sub>csm</sub> / ε<sub>y</sub>"},
+            "range": [0, x_max],
+            "gridcolor": GRID,
+            "zeroline": False,
+        },
+        yaxis={
+            "title": {"text": "M<sub>csm,c,Rd</sub> [kN m]"},
+            "range": [0, top * 1.15],
+            "gridcolor": GRID,
+            "zeroline": False,
+        },
+    )
+    return _to_dict(fig)
+
+
+def bending_blocks_figure(model: CSMBilinearModel, result: BendingResult) -> dict[str, Any]:
+    """Strain and stress across the depth when the compression edge reaches ε_csm.
+
+    Illustrative: a section symmetric about its neutral axis, depth scaled to -1 (tension edge) to
+    +1 (compression edge). The strain is a straight line; the stress at each depth is read from
+    the B.4 curve (elastic to f_y, then the hardening line). The moment itself comes from B.19 or
+    B.20, not from integrating this block.
+    """
+    ratio = result.strain_ratio
+    fy, eps_y = model.material.fy, model.yield_strain
+    depths = [-1.0, 1.0] if ratio <= 1 else [-1.0, -1 / ratio, 1 / ratio, 1.0]
+    strains = [ratio * u for u in depths]  # ε / ε_y
+    stresses = [
+        (1 if u >= 0 else -1) * model.stress_at(abs(e) * eps_y)
+        for u, e in zip(depths, strains, strict=True)
+    ]
+    edge = stresses[-1]
+
+    fig = make_subplots(
+        rows=1,
+        cols=2,
+        shared_yaxes=True,
+        horizontal_spacing=0.05,
+        subplot_titles=("strain ε / ε<sub>y</sub>", "stress σ [N/mm²]"),
+    )
+    for col, xs, color, name, unit in (
+        (1, strains, ORANGE, "Strain", ""),
+        (2, stresses, BLUE, "Stress", " N/mm²"),
+    ):
+        fig.add_trace(
+            go.Scatter(
+                x=[0, *xs, 0],
+                y=[-1, *depths, 1],
+                mode="lines",
+                fill="toself",
+                line={"color": color, "width": 2.5},
+                fillcolor="rgba(235, 104, 52, 0.18)" if col == 1 else BLUE_FILL,
+                name=name,
+                hovertemplate=f"depth = %{{y:.2f}}<br>{name.lower()} = %{{x:.4g}}{unit}"
+                "<extra></extra>",
+            ),
+            row=1,
+            col=col,
+        )
+    fig.add_vline(x=0, line={"color": MUTED, "width": 1}, row=1, col="all")
+    fig.add_hline(y=0, line={"color": MUTED, "width": 1, "dash": "dash"})
+    if ratio > 1:
+        for sign in (-1, 1):
+            fig.add_vline(
+                x=sign * 1.0, line={"color": MUTED, "width": 1, "dash": "dot"}, row=1, col=1
+            )
+            fig.add_vline(
+                x=sign * fy, line={"color": MUTED, "width": 1, "dash": "dot"}, row=1, col=2
+            )
+    fig.add_annotation(
+        x=ratio, y=1, xref="x", yref="y", text="ε<sub>csm</sub>", showarrow=False,
+        xanchor="left", yanchor="bottom",
+    )  # fmt: skip
+    fig.add_annotation(
+        x=edge, y=1, xref="x2", yref="y2", text=f"σ = {edge:.1f}", showarrow=False,
+        xanchor="left", yanchor="bottom",
+    )  # fmt: skip
+    if ratio > 1:
+        fig.add_annotation(
+            x=1.0, y=0, xref="x", yref="y", text="ε<sub>y</sub>", showarrow=False,
+            xanchor="left", yanchor="top",
+        )  # fmt: skip
+        fig.add_annotation(
+            x=fy, y=0, xref="x2", yref="y2", text="f<sub>y</sub>", showarrow=False,
+            xanchor="left", yanchor="top",
+        )  # fmt: skip
+    reach = max(abs(ratio), 1.0) * 1.35
+    stress_reach = max(abs(edge), fy) * 1.35
+    fig.update_layout(
+        height=380,
+        margin={"l": 10, "r": 10, "t": 40, "b": 10},
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        showlegend=False,
+    )
+    fig.update_xaxes(gridcolor=GRID, zeroline=False)
+    fig.update_xaxes(range=[-reach, reach], row=1, col=1)
+    fig.update_xaxes(range=[-stress_reach, stress_reach], row=1, col=2)
+    fig.update_yaxes(
+        range=[-1.15, 1.15],
+        tickvals=[-1, 0, 1],
+        ticktext=["tension edge", "neutral axis", "compression edge"],
+        gridcolor=GRID,
+        zeroline=False,
+    )
+    return _to_dict(fig)
+

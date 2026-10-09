@@ -3,8 +3,9 @@
 from stainless_csm import formatting as fmt
 from stainless_csm import services
 from stainless_csm.api import schemas as s
-from stainless_csm.core.enums import StainlessFamily
+from stainless_csm.core.enums import SectionType, StainlessFamily
 from stainless_csm.core.trace import CalcTrace
+from stainless_csm.csm.bending import BendingAxis, BendingResult, table_b2_rows
 from stainless_csm.csm.deformation_capacity import LIMITS, DeformationResult, SectionFamily
 from stainless_csm.csm.slenderness import SlendernessResult
 from stainless_csm.data.repository import GradeRepository, csm_coefficients_for
@@ -233,6 +234,44 @@ def compression_form(request: s.CompressionRequest) -> services.CompressionForm:
         area=request.area,
         gamma_m0=request.gamma_m0,
     )
+
+
+# --- bending ---------------------------------------------------------------------------
+
+
+def bending_form(request: s.BendingRequest) -> services.BendingForm:
+    """The bending request: its geometry carries the k_sigma (or sigma_cr,cs) of bending."""
+    return services.BendingForm(
+        deformation=deformation_form(
+            s.DeformationRequest(
+                material=request.material,
+                geometry=request.geometry,
+                omega=request.omega,
+                poisson_ratio=request.poisson_ratio,
+            )
+        ),
+        section_type=request.section_type,
+        axis=None if request.axis is None else BendingAxis(request.axis.value),
+        w_el=request.w_el,
+        w_pl=request.w_pl,
+        gamma_m0=request.gamma_m0,
+        lambda_lt=request.lambda_lt,
+    )
+
+
+def table_b2_out(result: BendingResult) -> list[s.BendingParameterRowOut]:
+    """Table B.2 as printed, with the row that gave α marked."""
+    return [
+        s.BendingParameterRowOut(
+            section=row.section,
+            section_type=SectionType(row.section_type),
+            axis=row.axis,
+            aspect_ratio=row.aspect_ratio,
+            alpha=row.alpha,
+            selected=row == result.alpha_row,
+        )
+        for row in table_b2_rows()
+    ]
 
 
 # --- comparison ------------------------------------------------------------------------

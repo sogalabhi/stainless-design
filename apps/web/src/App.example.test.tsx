@@ -95,7 +95,18 @@ describe("Load example", () => {
     expect(within(dock()).getByLabelText(/^k_?σ, flange outstand/)).toHaveValue(0.43);
     expect(within(dock()).queryByLabelText(/^Flat width/)).not.toBeInTheDocument();
 
-    for (const name of [/Material/, /Deformation/, /Tension/, /Compression/]) {
+    // Bending: the major axis, W_el,y and W_pl,y of the example section, λ_LT and the bending k_σ
+    await openGroup(user, /^Bending/);
+    expect(within(dock()).getByLabelText(/^Axis of bending/)).toHaveValue("major");
+    expect(within(dock()).getByLabelText(/^Elastic modulus/)).toHaveValue(194300);
+    expect(within(dock()).getByLabelText(/^Plastic modulus/)).toHaveValue(220600);
+    expect(within(dock()).getByLabelText(/^Relative slenderness/)).toHaveValue(0.15);
+    expect(within(dock()).getByLabelText(/^k_?σ in bending, web/)).toHaveValue(23.9);
+    expect(within(dock()).getByLabelText(/^k_?σ in bending, flange outstand/)).toHaveValue(0.43);
+    // the compression k_σ (checked above, in the Deformation group) are separate fields
+    expect(within(dock()).queryByLabelText(/^k_?σ, web/)).not.toBeInTheDocument();
+
+    for (const name of [/Material/, /Deformation/, /Tension/, /Compression/, /Bending/]) {
       await waitFor(() => expect(tab(name)).not.toHaveTextContent("waiting for inputs"));
     }
     expect(screen.getByRole("button", { name: /^Inputs/ })).not.toHaveTextContent("to enter");
@@ -124,7 +135,8 @@ describe("Load example", () => {
     const summary = within(dock()).getByText("Where these example values come from");
     await user.click(summary);
     for (const source of EXAMPLE_SOURCES) expect(within(dock()).getByText(source)).toBeVisible();
-    expect(EXAMPLE_SOURCES).toHaveLength(6);
+    expect(EXAMPLE_SOURCES).toHaveLength(9);
+    expect(EXAMPLE_SOURCES.filter((source) => /^Bending|^λ_LT|^k_σ for bending/.test(source))).toHaveLength(3);
   });
 
   it("empties everything again with Clear all, and the banner goes away", async () => {
@@ -141,6 +153,7 @@ describe("Load example", () => {
     expect(group(/^Material/)).toHaveTextContent("4 to enter");
     expect(group(/^Section/)).toHaveTextContent("3 to enter");
     expect(group(/^Deformation capacity/)).toHaveTextContent("2 to enter");
+    expect(group(/^Bending/)).toHaveTextContent("3 to enter");
     await waitFor(() => expect(tab(/Tension/)).toHaveTextContent("waiting for inputs"));
     expect(tab(/Material/)).toHaveTextContent("waiting for inputs");
   });

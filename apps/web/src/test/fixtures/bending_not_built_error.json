@@ -1,0 +1,4 @@
+{
+  "detail": "B.6.3.3: arrives in phase 3. The channel, minor axis is not an axis of symmetry, so the maximum design strain ε_csm,max and the fibre that yields first are needed.",
+  "error_type": "NotBuiltYetError"
+}

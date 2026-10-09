@@ -304,6 +304,45 @@
         }
       }
     },
+    "/api/v1/bending": {
+      "post": {
+        "summary": "Bending",
+        "description": "B.6.3.1(1) and B.6.3.2: CSM bending resistance about an axis of symmetry (B.5 for the\nsection in bending, then B.19 or B.20 with the α of Table B.2).",
+        "operationId": "bending_api_v1_bending_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BendingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BendingResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/section-properties": {
       "post": {
         "summary": "Section Properties",
@@ -385,6 +424,242 @@
   },
   "components": {
     "schemas": {
+      "BendingAxisKey": {
+        "type": "string",
+        "enum": [
+          "major",
+          "minor"
+        ],
+        "title": "BendingAxisKey",
+        "description": "The axis of bending (Table B.2): y-y is the major axis, z-z the minor axis."
+      },
+      "BendingFormulaKey": {
+        "type": "string",
+        "enum": [
+          "b19",
+          "b20"
+        ],
+        "title": "BendingFormulaKey",
+        "description": "Which formula of B.6.3.2 gave the resistance (stable machine key)."
+      },
+      "BendingParameterRowOut": {
+        "properties": {
+          "section": {
+            "type": "string",
+            "title": "Section"
+          },
+          "section_type": {
+            "$ref": "#/components/schemas/SectionType"
+          },
+          "axis": {
+            "type": "string",
+            "title": "Axis",
+            "description": "major, minor or any"
+          },
+          "aspect_ratio": {
+            "type": "string",
+            "title": "Aspect Ratio",
+            "description": "As printed: Any, h/b < 2, -"
+          },
+          "alpha": {
+            "type": "number",
+            "title": "Alpha"
+          },
+          "selected": {
+            "type": "boolean",
+            "title": "Selected",
+            "description": "The row that gave alpha for this section and axis"
+          }
+        },
+        "type": "object",
+        "required": [
+          "section",
+          "section_type",
+          "axis",
+          "aspect_ratio",
+          "alpha",
+          "selected"
+        ],
+        "title": "BendingParameterRowOut",
+        "description": "One printed row of Table B.2."
+      },
+      "BendingRequest": {
+        "properties": {
+          "material": {
+            "$ref": "#/components/schemas/MaterialInput"
+          },
+          "section_type": {
+            "$ref": "#/components/schemas/SectionType"
+          },
+          "axis": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BendingAxisKey"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Axis of bending; may be left out for a circular hollow section only"
+          },
+          "geometry": {
+            "$ref": "#/components/schemas/GeometryInput"
+          },
+          "omega": {
+            "type": "number",
+            "title": "Omega",
+            "description": "Parameter Omega, an input"
+          },
+          "poisson_ratio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Poisson Ratio",
+            "description": "Poisson ratio nu, an input; not needed with sigma_cr"
+          },
+          "w_el": {
+            "type": "number",
+            "title": "W El",
+            "description": "Elastic section modulus W_el about the axis [mm3], an input"
+          },
+          "w_pl": {
+            "type": "number",
+            "title": "W Pl",
+            "description": "Plastic section modulus W_pl about the axis [mm3], an input"
+          },
+          "gamma_m0": {
+            "type": "number",
+            "title": "Gamma M0",
+            "description": "Partial factor gamma_M0, an input"
+          },
+          "lambda_lt": {
+            "type": "number",
+            "title": "Lambda Lt",
+            "description": "Relative slenderness for lateral-torsional buckling"
+          }
+        },
+        "type": "object",
+        "required": [
+          "material",
+          "section_type",
+          "geometry",
+          "omega",
+          "w_el",
+          "w_pl",
+          "gamma_m0",
+          "lambda_lt"
+        ],
+        "title": "BendingRequest",
+        "description": "The section in bending (B.6.3.1(1), B.6.3.2): every value outside Annex B is an input.\n\nIn `geometry`, `k_sigma`, `plates[].k_sigma` and `sigma_cr_cs` are the values for the\n*bending* stress pattern about the chosen axis, not those of compression (EN 1993-1-5, 6.4.1)."
+      },
+      "BendingResponse": {
+        "properties": {
+          "material": {
+            "$ref": "#/components/schemas/MaterialOut"
+          },
+          "family": {
+            "$ref": "#/components/schemas/FamilyKey"
+          },
+          "slenderness": {
+            "$ref": "#/components/schemas/SlendernessOut"
+          },
+          "strain_limit": {
+            "$ref": "#/components/schemas/StrainLimitOut"
+          },
+          "strain_ratio": {
+            "type": "number",
+            "title": "Strain Ratio",
+            "description": "eps_csm / eps_y, from B.5.1, section in bending"
+          },
+          "formula": {
+            "$ref": "#/components/schemas/BendingFormulaKey"
+          },
+          "formula_label": {
+            "type": "string",
+            "title": "Formula Label",
+            "description": "B.19 or B.20"
+          },
+          "alpha": {
+            "type": "number",
+            "title": "Alpha",
+            "description": "CSM bending parameter, Table B.2"
+          },
+          "table_b2": {
+            "items": {
+              "$ref": "#/components/schemas/BendingParameterRowOut"
+            },
+            "type": "array",
+            "title": "Table B2",
+            "description": "Table B.2, the used row marked"
+          },
+          "elastic_moment": {
+            "type": "number",
+            "title": "Elastic Moment",
+            "description": "W_el f_y / gamma_M0 [N mm], a reference line"
+          },
+          "plastic_moment": {
+            "type": "number",
+            "title": "Plastic Moment",
+            "description": "W_pl f_y / gamma_M0 [N mm], a reference line"
+          },
+          "resistance": {
+            "type": "number",
+            "title": "Resistance",
+            "description": "M_csm,c,Rd [N mm]"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Notes"
+          },
+          "trace": {
+            "items": {
+              "$ref": "#/components/schemas/TraceStepOut"
+            },
+            "type": "array",
+            "title": "Trace"
+          },
+          "moment_figure": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Moment Figure",
+            "description": "Plotly figure: M_csm,c,Rd against eps_csm / eps_y"
+          },
+          "blocks_figure": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Blocks Figure",
+            "description": "Plotly figure: strain and stress across the depth at eps_csm"
+          }
+        },
+        "type": "object",
+        "required": [
+          "material",
+          "family",
+          "slenderness",
+          "strain_limit",
+          "strain_ratio",
+          "formula",
+          "formula_label",
+          "alpha",
+          "table_b2",
+          "elastic_moment",
+          "plastic_moment",
+          "resistance",
+          "notes",
+          "trace",
+          "moment_figure",
+          "blocks_figure"
+        ],
+        "title": "BendingResponse"
+      },
       "CapSourceKey": {
         "type": "string",
         "enum": [

@@ -182,6 +182,7 @@ def test_openapi_spec_documents_every_endpoint() -> None:
         f"{V1}/material-model",
         f"{V1}/tension",
         f"{V1}/compression",
+        f"{V1}/bending",
         f"{V1}/deformation-capacity",
         f"{V1}/section-comparison",
         f"{V1}/section-properties",
@@ -453,6 +454,229 @@ def test_no_emoji_in_the_compression_response() -> None:
     from test_no_emoji import EMOJI
 
     assert not EMOJI.search(client.post(f"{V1}/compression", json=compression_body()).text)
+
+
+# --- B.6.3.1(1), B.6.3.2: bending about an axis of symmetry -------------------------------
+
+
+def bending_body(designation: str = "1.4307", **changes: object) -> dict[str, object]:
+    """One plate 100 x 5, bending k_σ 8 (stocky: B.20), an I-section about its major axis."""
+    body: dict[str, object] = {
+        **deformation_body(designation, kind="plates", plates=[plate_input(k=8.0)]),
+        "section_type": "I-section",
+        "axis": "major",
+        "w_el": 194_318,
+        "w_pl": 220_640,
+        "gamma_m0": GAMMA_M0,
+        "lambda_lt": 0.15,
+    }
+    return {**body, **changes}
+
+
+def test_bending_stocky_plate_uses_b20() -> None:
+    r = client.post(f"{V1}/bending", json=bending_body())
+    assert r.status_code == 200
+    out = r.json()
+    assert out["formula"] == "b20"
+    assert out["formula_label"] == "B.20"
+    assert out["alpha"] == 2.0
+    assert out["strain_ratio"] >= 1
+    assert out["resistance"] > out["elastic_moment"]
+    assert out["elastic_moment"] == pytest.approx(194_318 * 210 / GAMMA_M0)
+    assert out["plastic_moment"] == pytest.approx(220_640 * 210 / GAMMA_M0)
+    assert [step["clause"] for step in out["trace"]][-1] == "B.6.3.2"
+
+
+def test_bending_slender_plate_uses_b19() -> None:
+    body = bending_body(geometry={"kind": "plates", "plates": [plate_input("web", 250, 3, 8.0)]})
+    out = client.post(f"{V1}/bending", json=body).json()
+    assert out["formula"] == "b19"
+    assert out["strain_ratio"] < 1
+    assert out["resistance"] == pytest.approx(out["strain_ratio"] * out["elastic_moment"])
+
+
+def test_bending_reports_table_b2_with_the_used_row_marked() -> None:
+    out = client.post(f"{V1}/bending", json=bending_body(axis="minor")).json()
+    assert len(out["table_b2"]) == 13
+    selected = [row for row in out["table_b2"] if row["selected"]]
+    assert len(selected) == 1
+    assert (selected[0]["section"], selected[0]["axis"], selected[0]["alpha"]) == (
+        "I-section",
+        "minor",
+        1.2,
+    )
+    assert out["alpha"] == 1.2
+
+
+def test_bending_returns_both_charts_in_kn_m() -> None:
+    out = client.post(f"{V1}/bending", json=bending_body()).json()
+    assert out["moment_figure"]["data"] and out["blocks_figure"]["data"]
+    assert "kN m" in out["moment_figure"]["layout"]["yaxis"]["title"]["text"]
+
+
+def test_bending_chs_needs_no_axis() -> None:
+    body = bending_body(
+        section_type="circular hollow section", geometry={"kind": "chs", "d": 100, "t": 3}
+    )
+    del body["axis"]
+    out = client.post(f"{V1}/bending", json=body).json()
+    assert out["alpha"] == 2.0
+    assert out["family"] == "circular_hollow"
+
+
+def test_bending_template_uses_the_bending_k_sigma() -> None:
+    body = bending_body(
+        "1.4301",
+        geometry={**i_template(), "k_sigma": {"web": 23.9, "flange": 0.43}},
+        w_el=194_300,
+        w_pl=220_600,
+    )
+    compression = compression_body(
+        "1.4301", geometry={**i_template(), "k_sigma": {"web": 4.0, "flange": 0.43}}
+    )
+    bending = client.post(f"{V1}/bending", json=body).json()
+    comp = client.post(f"{V1}/compression", json=compression).json()
+    assert bending["slenderness"]["plates"][0]["k_sigma"] == 23.9
+    assert comp["slenderness"]["plates"][0]["k_sigma"] == 4.0
+    assert bending["slenderness"]["plates"][0]["width"] == pytest.approx(159.0)
+
+
+def test_bending_lambda_lt_above_0_4_is_refused_with_the_8_2_4_message() -> None:
+    r = client.post(f"{V1}/bending", json=bending_body(lambda_lt=0.5))
+    assert r.status_code == 422
+    assert r.json()["error_type"] == "NotApplicableError"
+    assert "B.6.3.1 does not apply; use 8.2.4" in r.json()["detail"]
+
+
+@pytest.mark.parametrize(
+    ("changes", "fragment"),
+    [
+        ({"lambda_lt": 0.3}, "B.18 interpolation: arrives in phase 3"),
+        ({"section_type": "channel", "axis": "minor"}, "B.6.3.3: arrives in phase 3"),
+        ({"section_type": "angle", "axis": "major"}, "B.6.3.3: arrives in phase 3"),
+        ({"section_type": "T-section", "axis": "major"}, "B.6.3.3: arrives in phase 3"),
+    ],
+)
+def test_bending_not_built_yet_is_a_422_with_its_own_error_type(
+    changes: dict[str, str | float], fragment: str
+) -> None:
+    body = {**bending_body(), **changes}
+    r = client.post(f"{V1}/bending", json=body)
+    assert r.status_code == 422
+    assert r.json()["error_type"] == "NotBuiltYetError"
+    assert fragment in r.json()["detail"]
+
+
+def test_bending_beyond_the_b5_limit_is_a_clear_422() -> None:
+    body = bending_body(geometry={"kind": "plates", "plates": [plate_input("thin", 400, 2, 8.0)]})
+    r = client.post(f"{V1}/bending", json=body)
+    assert r.status_code == 422
+    assert r.json()["error_type"] == "NotApplicableError"
+    assert "too slender" in r.json()["detail"]
+
+
+def test_bending_bad_inputs_are_422s() -> None:
+    assert client.post(f"{V1}/bending", json=bending_body(w_el=0)).status_code == 422
+    assert client.post(f"{V1}/bending", json=bending_body(gamma_m0=0)).status_code == 422
+    swapped = client.post(f"{V1}/bending", json=bending_body(w_el=220_640, w_pl=194_318))
+    assert swapped.status_code == 422 and "less than W_el" in swapped.json()["detail"]
+    no_axis = bending_body()
+    del no_axis["axis"]
+    r = client.post(f"{V1}/bending", json=no_axis)
+    assert r.status_code == 422 and "axis of bending" in r.json()["detail"]
+    mismatch = bending_body(section_type="circular hollow section")
+    r = client.post(f"{V1}/bending", json=mismatch)
+    assert r.status_code == 422 and "do not match" in r.json()["detail"]
+
+
+def test_bending_inputs_from_outside_annex_b_are_required() -> None:
+    for name in ("w_el", "w_pl", "lambda_lt", "gamma_m0", "omega", "section_type"):
+        body = bending_body()
+        del body[name]
+        response = client.post(f"{V1}/bending", json=body)
+        assert response.status_code == 422, name
+        assert name in response.text, name
+
+
+def test_bending_has_no_default_for_a_bending_k_sigma() -> None:
+    plate = {"label": "a", "width": 100, "thickness": 5}
+    body = bending_body(geometry={"kind": "plates", "plates": [plate]})
+    response = client.post(f"{V1}/bending", json=body)
+    assert response.status_code == 422
+    assert "k_sigma" in response.text
+
+
+def test_bending_contract_equals_service() -> None:
+    from stainless_csm.csm.bending import BendingAxis
+
+    plates = (services.PlateForm("web", 138, 4, 8.0), services.PlateForm("flange", 88, 4, 0.43))
+    form = services.BendingForm(
+        services.DeformationForm(
+            services.GeometryForm(kind=services.GeometryKind.PLATES, plates=plates), OMEGA, NU
+        ),
+        SectionType.I_SECTION,
+        BendingAxis.MINOR,
+        12_345.0,
+        20_000.0,
+        GAMMA_M0,
+        0.1,
+    )
+    model = CSMBilinearModel(services.build_material(services.MaterialForm("1.4404", E)))
+    outcome = services.run_bending(model, form)
+    body = bending_body(
+        "1.4404",
+        geometry={
+            "kind": "plates",
+            "plates": [plate_input("web", 138, 4, 8.0), plate_input("flange", 88, 4, 0.43)],
+        },
+        axis="minor",
+        w_el=12_345,
+        w_pl=20_000,
+        lambda_lt=0.1,
+    )
+    api = client.post(f"{V1}/bending", json=body).json()
+    assert api["resistance"] == outcome.result.resistance
+    assert api["strain_ratio"] == outcome.result.strain_ratio
+    assert api["formula_label"] == outcome.result.formula.value
+    assert api["alpha"] == outcome.result.alpha
+    assert api["elastic_moment"] == outcome.result.elastic_moment
+    assert api["plastic_moment"] == outcome.result.plastic_moment
+    assert api["slenderness"]["value"] == outcome.deformation.slenderness.slenderness
+    assert [step["symbol"] for step in api["trace"]] == [s.symbol for s in outcome.trace]
+    assert [step["value"] for step in api["trace"]] == [s.value for s in outcome.trace]
+    assert all(step["latex"] for step in api["trace"])
+
+
+@pytest.mark.parametrize("designation", GradeRepository.load_default().designations())
+def test_bending_contract_for_every_grade(designation: str) -> None:
+    body = bending_body(
+        designation,
+        section_type="circular hollow section",
+        geometry={"kind": "chs", "d": 100, "t": 3},
+    )
+    del body["axis"]
+    api = client.post(f"{V1}/bending", json=body).json()
+    model = CSMBilinearModel(services.build_material(services.MaterialForm(designation, E)))
+    form = services.BendingForm(
+        services.DeformationForm(
+            services.GeometryForm(services.GeometryKind.CHS, d=100, t=3), OMEGA, NU
+        ),
+        SectionType.CHS,
+        None,
+        194_318.0,
+        220_640.0,
+        GAMMA_M0,
+        0.15,
+    )
+    outcome = services.run_bending(model, form)
+    assert api["resistance"] == outcome.result.resistance
+    assert api["strain_ratio"] == outcome.result.strain_ratio
+
+
+def test_no_emoji_in_the_bending_response() -> None:
+    from test_no_emoji import EMOJI
+
+    assert not EMOJI.search(client.post(f"{V1}/bending", json=bending_body()).text)
 
 
 # --- nothing outside Annex B is assumed ---------------------------------------------------

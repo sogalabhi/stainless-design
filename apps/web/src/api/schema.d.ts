@@ -181,6 +181,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/bending": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Bending
+         * @description B.6.3.1(1) and B.6.3.2: CSM bending resistance about an axis of symmetry (B.5 for the
+         *     section in bending, then B.19 or B.20 with the α of Table B.2).
+         */
+        post: operations["bending_api_v1_bending_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/section-properties": {
         parameters: {
             query?: never;
@@ -228,6 +249,149 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * BendingAxisKey
+         * @description The axis of bending (Table B.2): y-y is the major axis, z-z the minor axis.
+         * @enum {string}
+         */
+        BendingAxisKey: "major" | "minor";
+        /**
+         * BendingFormulaKey
+         * @description Which formula of B.6.3.2 gave the resistance (stable machine key).
+         * @enum {string}
+         */
+        BendingFormulaKey: "b19" | "b20";
+        /**
+         * BendingParameterRowOut
+         * @description One printed row of Table B.2.
+         */
+        BendingParameterRowOut: {
+            /** Section */
+            section: string;
+            section_type: components["schemas"]["SectionType"];
+            /**
+             * Axis
+             * @description major, minor or any
+             */
+            axis: string;
+            /**
+             * Aspect Ratio
+             * @description As printed: Any, h/b < 2, -
+             */
+            aspect_ratio: string;
+            /** Alpha */
+            alpha: number;
+            /**
+             * Selected
+             * @description The row that gave alpha for this section and axis
+             */
+            selected: boolean;
+        };
+        /**
+         * BendingRequest
+         * @description The section in bending (B.6.3.1(1), B.6.3.2): every value outside Annex B is an input.
+         *
+         *     In `geometry`, `k_sigma`, `plates[].k_sigma` and `sigma_cr_cs` are the values for the
+         *     *bending* stress pattern about the chosen axis, not those of compression (EN 1993-1-5, 6.4.1).
+         */
+        BendingRequest: {
+            material: components["schemas"]["MaterialInput"];
+            section_type: components["schemas"]["SectionType"];
+            /** @description Axis of bending; may be left out for a circular hollow section only */
+            axis?: components["schemas"]["BendingAxisKey"] | null;
+            geometry: components["schemas"]["GeometryInput"];
+            /**
+             * Omega
+             * @description Parameter Omega, an input
+             */
+            omega: number;
+            /**
+             * Poisson Ratio
+             * @description Poisson ratio nu, an input; not needed with sigma_cr
+             */
+            poisson_ratio?: number | null;
+            /**
+             * W El
+             * @description Elastic section modulus W_el about the axis [mm3], an input
+             */
+            w_el: number;
+            /**
+             * W Pl
+             * @description Plastic section modulus W_pl about the axis [mm3], an input
+             */
+            w_pl: number;
+            /**
+             * Gamma M0
+             * @description Partial factor gamma_M0, an input
+             */
+            gamma_m0: number;
+            /**
+             * Lambda Lt
+             * @description Relative slenderness for lateral-torsional buckling
+             */
+            lambda_lt: number;
+        };
+        /** BendingResponse */
+        BendingResponse: {
+            material: components["schemas"]["MaterialOut"];
+            family: components["schemas"]["FamilyKey"];
+            slenderness: components["schemas"]["SlendernessOut"];
+            strain_limit: components["schemas"]["StrainLimitOut"];
+            /**
+             * Strain Ratio
+             * @description eps_csm / eps_y, from B.5.1, section in bending
+             */
+            strain_ratio: number;
+            formula: components["schemas"]["BendingFormulaKey"];
+            /**
+             * Formula Label
+             * @description B.19 or B.20
+             */
+            formula_label: string;
+            /**
+             * Alpha
+             * @description CSM bending parameter, Table B.2
+             */
+            alpha: number;
+            /**
+             * Table B2
+             * @description Table B.2, the used row marked
+             */
+            table_b2: components["schemas"]["BendingParameterRowOut"][];
+            /**
+             * Elastic Moment
+             * @description W_el f_y / gamma_M0 [N mm], a reference line
+             */
+            elastic_moment: number;
+            /**
+             * Plastic Moment
+             * @description W_pl f_y / gamma_M0 [N mm], a reference line
+             */
+            plastic_moment: number;
+            /**
+             * Resistance
+             * @description M_csm,c,Rd [N mm]
+             */
+            resistance: number;
+            /** Notes */
+            notes: string[];
+            /** Trace */
+            trace: components["schemas"]["TraceStepOut"][];
+            /**
+             * Moment Figure
+             * @description Plotly figure: M_csm,c,Rd against eps_csm / eps_y
+             */
+            moment_figure: {
+                [key: string]: unknown;
+            };
+            /**
+             * Blocks Figure
+             * @description Plotly figure: strain and stress across the depth at eps_csm
+             */
+            blocks_figure: {
+                [key: string]: unknown;
+            };
+        };
         /**
          * CapSourceKey
          * @enum {string}
@@ -1407,6 +1571,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CompressionResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    bending_api_v1_bending_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BendingRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BendingResponse"];
                 };
             };
             /** @description Unprocessable Content */

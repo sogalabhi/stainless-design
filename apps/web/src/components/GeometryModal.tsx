@@ -2,7 +2,7 @@ import type { UseQueryResult } from "@tanstack/react-query";
 import { X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { ApiError } from "../api/client";
-import type { SectionPropertiesResponse, SectionType } from "../api/types";
+import type { BendingAxisKey, SectionPropertiesResponse, SectionType } from "../api/types";
 import { dimsOf, usesDimensions, type DeformationFormState } from "../lib/geometry";
 import type { MissingItem } from "../lib/inputs";
 import {
@@ -44,6 +44,7 @@ export function GeometryModal({
   stale,
   missing,
   currentValues,
+  bendingAxis,
   onUse,
   onClose,
 }: {
@@ -61,6 +62,8 @@ export function GeometryModal({
   missing: MissingItem[];
   /** what the dock's input fields hold now (to mark a value as used) */
   currentValues: Record<string, number | null>;
+  /** the axis of bending chosen in the Bending group, so the moduli of that axis get a Use button */
+  bendingAxis: BendingAxisKey | null;
   onUse: (key: string, value: number) => void;
   onClose: () => void;
 }) {
@@ -190,7 +193,13 @@ export function GeometryModal({
               ) : null}
               {missing.length === 0 && !query.isError && !data ? <p className="muted">Calculating...</p> : null}
               {missing.length === 0 && data && !query.isError ? (
-                <PropertiesTable data={data} stale={stale} currentValues={currentValues} onUse={onUse} />
+                <PropertiesTable
+                  data={data}
+                  stale={stale}
+                  currentValues={currentValues}
+                  bendingAxis={bendingAxis}
+                  onUse={onUse}
+                />
               ) : null}
             </section>
           </div>

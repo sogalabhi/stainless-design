@@ -2,6 +2,7 @@
 
 import json
 from collections.abc import Iterable
+from dataclasses import dataclass
 from functools import cache
 from importlib.resources import files
 from typing import Any
@@ -75,3 +76,24 @@ def _csm_coefficient_table() -> dict[StainlessFamily, CSMCoefficients]:
 def csm_coefficients_for(family: StainlessFamily) -> CSMCoefficients:
     """Table B.1 lookup."""
     return _csm_coefficient_table()[family]
+
+
+@dataclass(frozen=True, slots=True)
+class BendingParameterRow:
+    """One printed row of Table B.2, the CSM bending parameter α."""
+
+    section_type: str  # a SectionType value
+    section: str  # as printed: "Equal angle", "I-section", ...
+    axis: str  # "major", "minor" or "any"
+    aspect_ratio: str  # as printed: "Any", "h/b < 2", "-"
+    ratio_min: float | None  # the row holds for ratio_min <= h/b < ratio_max (None = unbounded)
+    ratio_max: float | None
+    legs: str | None  # "equal" or "unequal" (angles only)
+    alpha: float
+
+
+@cache
+def bending_parameter_rows() -> tuple[BendingParameterRow, ...]:
+    """Table B.2, in the order it is printed."""
+    records = _read_json("bending_parameters.json")["rows"]
+    return tuple(BendingParameterRow(**record) for record in records)

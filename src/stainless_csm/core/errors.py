@@ -19,3 +19,7 @@ class NotApplicableError(CSMError):
 
 class InvalidSectionError(CSMError):
     """Section geometry or slenderness inputs are physically meaningless."""
+
+
+class NotBuiltYetError(CSMError):
+    """The case belongs to Annex B but this tool does not calculate it yet. Not a refusal."""

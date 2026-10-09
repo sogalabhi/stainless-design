@@ -64,6 +64,10 @@ describe("helpKeyOf", () => {
     expect(helpKeyOf("plate-3-kSigma")).toBe("kSigma");
     expect(helpKeyOf("plate-1-width")).toBe("plateWidth");
     expect(helpKeyOf("plate-12-thickness")).toBe("plateThickness");
+    expect(helpKeyOf("kSigmaB-web")).toBe("kSigmaBending");
+    expect(helpKeyOf("plate-3-kSigmaB")).toBe("kSigmaBending");
+    expect(helpKeyOf("sigmaCrBending")).toBe("sigmaCrBending");
+    expect(helpKeyOf("wEl")).toBe("wEl");
     expect(helpKeyOf("fy")).toBe("fy");
     expect(helpKeyOf("rO")).toBe("rO");
   });
@@ -127,8 +131,12 @@ describe("the ? button on every input", () => {
       const route = within(dock()).getByLabelText(/^Slenderness from/) as HTMLSelectElement;
       const routes = [...route.options].map((option) => option.value).filter(Boolean);
       for (const value of routes) {
-        await user.selectOptions(route, value);
+        await openGroup(user, /^Deformation capacity/);
+        await user.selectOptions(within(dock()).getByLabelText(/^Slenderness from/), value);
         if (value === "plates") await user.click(within(dock()).getByRole("button", { name: /Add plate/ }));
+        collect();
+        // the Bending group follows the route: bending k_σ per plate, per role, or a typed σ_cr,cs
+        await openGroup(user, /^Bending/);
         collect();
       }
     }
@@ -141,6 +149,10 @@ describe("the ? button on every input", () => {
     expect([...seen].some((key) => /^plate-\d+-thickness$/.test(key))).toBe(true);
     expect([...seen].some((key) => /^plate-\d+-kSigma$/.test(key))).toBe(true);
     expect([...seen].some((key) => key.startsWith("kSigma-"))).toBe(true);
+    // and the Bending group: its own fields, and its own k_σ per plate, per role and the typed stress
+    for (const key of ["axis", "wEl", "wPl", "lambdaLT", "sigmaCrBending"]) expect(seen.has(key), key).toBe(true);
+    expect([...seen].some((key) => /^plate-\d+-kSigmaB$/.test(key))).toBe(true);
+    expect([...seen].some((key) => key.startsWith("kSigmaB-"))).toBe(true);
   });
 
   it("opens a panel under the field on a click and closes it on a second click", async () => {

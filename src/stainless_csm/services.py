@@ -9,6 +9,14 @@ from enum import Enum
 from stainless_csm.core.enums import SectionType, StainlessFamily
 from stainless_csm.core.errors import InvalidSectionError
 from stainless_csm.core.trace import CalcTrace
+from stainless_csm.csm.bending import CLAUSES as BENDING_CLAUSES
+from stainless_csm.csm.bending import (
+    BendingAxis,
+    BendingInput,
+    BendingResult,
+    CSMBending,
+    check_scope,
+)
 from stainless_csm.csm.compression import CompressionInput, CompressionResult, CSMCompression
 from stainless_csm.csm.deformation_capacity import (
     LIMITS,
@@ -362,6 +370,75 @@ def run_compression(model: CSMBilinearModel, form: CompressionForm) -> Compressi
         if step.clause == "B.6.2":
             trace.add(step)
     return CompressionOutcome(outcome, result, trace)
+
+
+# --- B.6.3: bending about an axis of symmetry -----------------------------------------------
+
+
+@dataclass(frozen=True)
+class BendingForm:
+    """The section in bending: its B.5 inputs with the k_σ (or σ_cr,cs) of the *bending* stress
+    pattern, the axis, W_el, W_pl, γM0 and λ_LT (all inputs, never assumed)."""
+
+    deformation: DeformationForm
+    section_type: SectionType
+    axis: BendingAxis | None  # None only for a circular hollow section
+    w_el: float  # mm³ about the axis of bending
+    w_pl: float  # mm³
+    gamma_m0: float
+    lambda_lt: float
+
+
+@dataclass(frozen=True)
+class BendingOutcome:
+    deformation: DeformationOutcome  # B.5 for the section in bending
+    result: BendingResult
+    trace: CalcTrace  # B.4, then the B.5 steps the result depends on, then B.6.3
+
+
+def run_bending(model: CSMBilinearModel, form: BendingForm) -> BendingOutcome:
+    """The λ_LT gate of B.6.3.1, B.5 for the section in bending, then B.19 or B.20 with Table B.2.
+
+    Raises a CSMError for invalid inputs, NotApplicableError for λ_LT above 0.4 or a section beyond
+    the B.5 slenderness limit, and NotBuiltYetError for B.6.3.3 shapes and B.18 (phase 3).
+    """
+    check_scope(form.section_type, form.axis, form.lambda_lt)
+    geometry = form.deformation.geometry
+    if geometry.kind is GeometryKind.TEMPLATE and geometry.shape is not form.section_type:
+        raise InvalidSectionError(
+            "The section template and the section type of the bending check are different shapes."
+        )
+    outcome = run_deformation_capacity(model, form.deformation)
+    circular = outcome.family is SectionFamily.CIRCULAR_HOLLOW
+    if circular is not (form.section_type is SectionType.CHS):
+        raise InvalidSectionError(
+            "A circular hollow section is checked as a tube (B.10, B.11) and every other section "
+            "as flat plates: the section type and the way the slenderness is given do not match."
+        )
+    template = geometry.kind is GeometryKind.TEMPLATE
+    h_over_b = geometry.h / geometry.b if template and geometry.h and geometry.b else None
+    angle = template and form.section_type is SectionType.ANGLE
+    legs_equal = geometry.h == geometry.b if angle else None
+    data = BendingInput(
+        model=model,
+        deformation=outcome.capacity,
+        section_type=form.section_type,
+        axis=form.axis,
+        w_el=form.w_el,
+        w_pl=form.w_pl,
+        gamma_m0=form.gamma_m0,
+        lambda_lt=form.lambda_lt,
+        h_over_b=h_over_b,
+        legs_equal=legs_equal,
+    )
+    result = CSMBending(data).calculate()
+    trace = CalcTrace(model.trace.steps)
+    for step in outcome.trace:
+        trace.add(step)
+    for step in result.trace:
+        if step.clause in BENDING_CLAUSES:
+            trace.add(step)
+    return BendingOutcome(outcome, result, trace)
 
 
 # --- Comparison: the same section made thicker or thinner -------------------------------------

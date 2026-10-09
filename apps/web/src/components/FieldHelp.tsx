@@ -16,13 +16,17 @@ export function helpPanelIsOpen(): boolean {
 /**
  * The key of the help entry for a dock field key. The plate fields carry the plate in their key
  * (`kSigma-web`, `plate-2-width`), so they are matched by suffix: one entry each for the flat width,
- * the thickness and k_σ. Every other field key is its own entry.
+ * the thickness and k_σ (and one for the bending k_σ: `kSigmaB-web`, `plate-2-kSigmaB`). Every other field key is its own entry.
  */
 export function helpKeyOf(fieldKey: string): string {
   if (fieldKey.startsWith("kSigma-")) return "kSigma";
-  const plate = /^plate-\d+-(width|thickness|kSigma)$/.exec(fieldKey);
-  if (plate) return plate[1] === "kSigma" ? "kSigma" : plate[1] === "width" ? "plateWidth" : "plateThickness";
-  return fieldKey;
+  if (fieldKey.startsWith("kSigmaB-")) return "kSigmaBending";
+  const plate = /^plate-\d+-(width|thickness|kSigma|kSigmaB)$/.exec(fieldKey);
+  if (plate) {
+    if (plate[1] === "kSigmaB") return "kSigmaBending";
+    return plate[1] === "kSigma" ? "kSigma" : plate[1] === "width" ? "plateWidth" : "plateThickness";
+  }
+  return fieldKey === "sigmaCrBending" ? "sigmaCrBending" : fieldKey;
 }
 
 type HelpState = {

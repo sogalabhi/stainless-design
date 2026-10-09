@@ -1,9 +1,9 @@
-import { BookOpen, Box, ChevronsDownUp, Layers, MoveVertical, Ruler, SlidersHorizontal } from "lucide-react";
+import { BookOpen, Box, ChevronsDownUp, Layers, MoveVertical, Ruler, SlidersHorizontal, Spline } from "lucide-react";
 import { keepPreviousData, useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "./api/client";
-import type { GraphView, SectionType } from "./api/types";
-import { AreaNote } from "./components/AreaNote";
+import type { BendingAxisKey, GraphView, SectionType } from "./api/types";
+import { AreaNote, ModulusNote } from "./components/AreaNote";
 import { Dock, type FocusRequest } from "./components/Dock";
 import { InputHelpProvider } from "./components/FieldHelp";
 import { GeometryModal } from "./components/GeometryModal";
@@ -12,9 +12,11 @@ import { Segmented } from "./components/ui";
 import { useDarkMode, useDebounced } from "./lib/hooks";
 import { defaultMaterialForm, materialInput, missingMaterialItems } from "./lib/material";
 import { exampleState } from "./lib/example";
+import { bendingRequest, defaultBendingForm, missingBendingItems, type BendingFormState } from "./lib/bending";
 import { comparisonRequest } from "./lib/comparison";
 import { compressionRequest, missingCompressionItems } from "./lib/compression";
 import {
+  CIRCULAR,
   defaultDeformationForm,
   deformationRequest,
   missingDeformationItems,
@@ -32,6 +34,7 @@ import {
 } from "./lib/inputs";
 import type { PlateRoleKey } from "./lib/sectionTemplates";
 import { defaultTensionForm, missingTensionItems } from "./lib/tension";
+import { BendingPage, NOT_APPLICABLE_ERROR, NOT_BUILT_YET_ERROR } from "./pages/BendingPage";
 import { CompressionPage } from "./pages/CompressionPage";
 import { DeformationPage } from "./pages/DeformationPage";
 import { HelpPage } from "./pages/HelpPage";
@@ -39,7 +42,7 @@ import { MaterialPage } from "./pages/MaterialPage";
 import { VisualisePage } from "./pages/VisualisePage";
 import { TensionPage } from "./pages/TensionPage";
 
-type Tab = "material" | "deformation" | "tension" | "compression" | "explore" | "help";
+type Tab = "material" | "deformation" | "tension" | "compression" | "bending" | "explore" | "help";
 
 /** One word for what a tab holds: waiting for inputs, done, not applicable, or something wrong. */
 function statusOf(
@@ -60,12 +63,18 @@ export function App() {
   const [sectionType, setSectionType] = useState<SectionType | null>(null);
   const [tensionForm, setTensionForm] = useState(defaultTensionForm);
   const [deformationForm, setDeformationForm] = useState(defaultDeformationForm);
+  const [bendingForm, setBendingForm] = useState(defaultBendingForm);
   const [openGroup, setOpenGroup] = useState<GroupKey | null>("material");
   const [focusRequest, setFocusRequest] = useState<FocusRequest | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [geometryOpen, setGeometryOpen] = useState(false);
   // the area that the Use button last copied into the A field (null once the field is edited)
   const [areaFromGeometry, setAreaFromGeometry] = useState<number | null>(null);
+  // the same for W_el and W_pl in the Bending group (null once the field is edited)
+  const [moduliFromGeometry, setModuliFromGeometry] = useState<{ wEl: number | null; wPl: number | null }>({
+    wEl: null,
+    wPl: null,
+  });
   const dark = useDarkMode();
 
   // One section-type picker: it also chooses the B.5 route (tube or plates).
@@ -84,7 +93,9 @@ export function App() {
     setSectionType(example.sectionType);
     setTensionForm(example.tensionForm);
     setDeformationForm(example.deformationForm);
+    setBendingForm(example.bendingForm);
     setAreaFromGeometry(null);
+    setModuliFromGeometry({ wEl: null, wPl: null });
     setExampleLoaded(true);
   };
   const clearAll = () => {
@@ -92,7 +103,9 @@ export function App() {
     setSectionType(null);
     setTensionForm(defaultTensionForm);
     setDeformationForm(defaultDeformationForm);
+    setBendingForm(defaultBendingForm);
     setAreaFromGeometry(null);
+    setModuliFromGeometry({ wEl: null, wPl: null });
     setGeometryOpen(false);
     setExampleLoaded(false);
   };
@@ -101,10 +114,25 @@ export function App() {
     if (form.area !== tensionForm.area) setAreaFromGeometry(null);
     setTensionForm(form);
   };
+  // Typing in W_el or W_pl ends "copied from geometry" too.
+  const changeBending = (form: BendingFormState) => {
+    setModuliFromGeometry((copied) => ({
+      wEl: form.wEl === bendingForm.wEl ? copied.wEl : null,
+      wPl: form.wPl === bendingForm.wPl ? copied.wPl : null,
+    }));
+    setBendingForm(form);
+  };
   const useProperty = (key: string, value: number) => {
-    if (key !== "A") return;
-    setTensionForm((form) => ({ ...form, area: value }));
-    setAreaFromGeometry(value);
+    if (key === "A") {
+      setTensionForm((form) => ({ ...form, area: value }));
+      setAreaFromGeometry(value);
+    } else if (key.startsWith("W_el_")) {
+      setBendingForm((form) => ({ ...form, wEl: value }));
+      setModuliFromGeometry((copied) => ({ ...copied, wEl: value }));
+    } else if (key.startsWith("W_pl_")) {
+      setBendingForm((form) => ({ ...form, wPl: value }));
+      setModuliFromGeometry((copied) => ({ ...copied, wPl: value }));
+    }
   };
   const goTo = (item: MissingItem) => {
     setOpenGroup(item.group);
@@ -115,6 +143,7 @@ export function App() {
   const material = materialInput(useDebounced(materialForm, 250));
   const debouncedTension = useDebounced(tensionForm, 250);
   const debouncedDeformation = useDebounced(deformationForm, 250);
+  const debouncedBending = useDebounced(bendingForm, 250);
 
   const materialQuery = useQuery({
     queryKey: ["material", material, view],
@@ -202,7 +231,13 @@ export function App() {
   const materialMissing = missingMaterialItems(materialForm);
   const tensionMissing = missingTensionItems(tensionForm);
   const deformationMissing = missingDeformationItems(deformationForm);
-  const allMissing = uniqueItems([...materialMissing, ...tensionMissing, ...deformationMissing]);
+  const bendingMissing = missingBendingItems(sectionType, deformationForm, bendingForm, tensionForm);
+  const allMissing = uniqueItems([
+    ...materialMissing,
+    ...tensionMissing,
+    ...deformationMissing,
+    ...bendingMissing,
+  ]);
   const materialProblem = materialMissing.length === 0 && materialQuery.isError;
   const typedStress = deformationForm.kind === "sigma_cr";
 
@@ -242,6 +277,46 @@ export function App() {
     retry: false,
   });
 
+  // B.6.3.2 in bending: the B.5 inputs of the section with the *bending* k_σ, the Bending group, γM0. The
+  // engine answers the λ_LT gate and the not-built-yet cases itself, so every error is shown as it comes.
+  const bendingWaiting = uniqueItems([...materialMissing, ...bendingMissing]);
+  const bendingRequestBody =
+    material === null
+      ? null
+      : bendingRequest(material, sectionType, debouncedDeformation, debouncedBending, debouncedTension);
+  const bendingQuery = useQuery({
+    queryKey: ["bending", bendingRequestBody],
+    queryFn: ({ signal }) => api.bending(bendingRequestBody!, signal),
+    enabled: bendingRequestBody !== null,
+    placeholderData: keepPreviousData,
+    retry: false,
+  });
+  const bendingStatus: TabStatus =
+    bendingWaiting.length > 0
+      ? "waiting"
+      : bendingQuery.isError
+        ? bendingQuery.error.errorType === NOT_APPLICABLE_ERROR
+          ? "not_applicable"
+          : bendingQuery.error.errorType === NOT_BUILT_YET_ERROR
+            ? "later"
+            : "error"
+        : bendingQuery.data
+          ? "done"
+          : "waiting";
+
+  // The modulus rows that get a Use button, and the engine's value to compare a typed one with.
+  const modulusAxis: BendingAxisKey | null = sectionType === CIRCULAR ? "major" : bendingForm.axis;
+  const geometryModulus = (which: "el" | "pl"): number | null => {
+    if (!properties || modulusAxis === null) return null;
+    const major = modulusAxis === "major";
+    return which === "el"
+      ? (major ? properties.w_el_y : properties.w_el_z).value
+      : major
+        ? properties.w_pl_y
+        : properties.w_pl_z;
+  };
+  const axisLabel = modulusAxis === null ? null : modulusAxis === "major" ? "y-y" : "z-z";
+
   // Explore only asks the engine while it is open (a full thickness sweep), so with every input
   // given and nothing fetched yet it is ready, not waiting.
   const exploreReady =
@@ -261,6 +336,7 @@ export function App() {
       tensionForm.hasHoles || scope.state === "beyond",
     ),
     compression: statusOf(compressionWaiting, compressionQuery, scope.state === "beyond"),
+    bending: bendingStatus,
     explore: exploreReady && !comparisonQuery.data ? "done" : statusOf(exploreWaiting, comparisonQuery, typedStress),
   };
   const tabs: { key: Exclude<Tab, "help">; label: string; icon: typeof Layers }[] = [
@@ -268,6 +344,7 @@ export function App() {
     { key: "deformation", label: "Deformation (B.5)", icon: Ruler },
     { key: "tension", label: "Tension (B.6.1)", icon: MoveVertical },
     { key: "compression", label: "Compression (B.6.2)", icon: ChevronsDownUp },
+    { key: "bending", label: "Bending (B.6.3)", icon: Spline },
     { key: "explore", label: "Explore", icon: Box },
   ];
 
@@ -326,6 +403,26 @@ export function App() {
               onTensionChange={changeTension}
               deformationForm={deformationForm}
               onDeformationChange={setDeformationForm}
+              bendingForm={bendingForm}
+              onBendingChange={changeBending}
+              wElNote={
+                <ModulusNote
+                  name="W_el"
+                  typed={bendingForm.wEl}
+                  copiedValue={moduliFromGeometry.wEl}
+                  geometryValue={geometryModulus("el")}
+                  axisLabel={axisLabel}
+                />
+              }
+              wPlNote={
+                <ModulusNote
+                  name="W_pl"
+                  typed={bendingForm.wPl}
+                  copiedValue={moduliFromGeometry.wPl}
+                  geometryValue={geometryModulus("pl")}
+                  axisLabel={axisLabel}
+                />
+              }
               onOpenGeometry={() => setGeometryOpen(true)}
               areaNote={
                 <AreaNote
@@ -370,6 +467,15 @@ export function App() {
                 query={compressionQuery}
                 dark={dark}
               />
+            ) : tab === "bending" ? (
+              <BendingPage
+                waiting={bendingWaiting}
+                materialProblem={materialProblem}
+                onGo={goTo}
+                onOpenMaterial={() => setTab("material")}
+                query={bendingQuery}
+                dark={dark}
+              />
             ) : tab === "explore" ? (
               <VisualisePage
                 waiting={exploreWaiting}
@@ -404,7 +510,8 @@ export function App() {
             properties={properties}
             stale={!propertiesFresh}
             missing={propertiesMissing}
-            currentValues={{ area: tensionForm.area }}
+            currentValues={{ area: tensionForm.area, wEl: bendingForm.wEl, wPl: bendingForm.wPl }}
+            bendingAxis={modulusAxis}
             onUse={useProperty}
             onClose={() => setGeometryOpen(false)}
           />

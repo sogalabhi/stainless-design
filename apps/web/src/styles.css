@@ -807,7 +807,8 @@ ol.plain li {
   color: var(--muted);
 }
 
-.tab-status-not_applicable {
+.tab-status-not_applicable,
+.tab-status-later {
   color: var(--muted);
 }
 

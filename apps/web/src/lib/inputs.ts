@@ -1,10 +1,11 @@
 /** The groups of the input dock, in the order they appear. */
-export type GroupKey = "material" | "section" | "deformation";
+export type GroupKey = "material" | "section" | "deformation" | "bending";
 
 export const GROUP_TITLES: Record<GroupKey, string> = {
   material: "Material",
   section: "Section",
   deformation: "Deformation capacity (B.5)",
+  bending: "Bending (B.6.3)",
 };
 
 /** An input the user has not given yet, and where to find it in the dock. */
@@ -15,18 +16,19 @@ export type MissingItem = {
 };
 
 /** What a result tab shows beside its name. */
-export type TabStatus = "done" | "waiting" | "not_applicable" | "error";
+export type TabStatus = "done" | "waiting" | "not_applicable" | "later" | "error";
 
 export const STATUS_WORDS: Record<TabStatus, string> = {
   done: "done",
   waiting: "waiting for inputs",
   not_applicable: "not applicable",
+  later: "arrives in a later phase",
   error: "needs attention",
 };
 
 /** The empty required fields in each group (shown in the group header). */
 export function countByGroup(items: MissingItem[]): Record<GroupKey, number> {
-  const counts: Record<GroupKey, number> = { material: 0, section: 0, deformation: 0 };
+  const counts: Record<GroupKey, number> = { material: 0, section: 0, deformation: 0, bending: 0 };
   for (const item of items) counts[item.group] += 1;
   return counts;
 }

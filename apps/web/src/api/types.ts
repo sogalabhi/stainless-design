@@ -28,6 +28,11 @@ export type PlateOut = S["PlateOut"];
 export type CompressionRequest = S["CompressionRequest"];
 export type CompressionResponse = S["CompressionResponse"];
 
+export type BendingRequest = S["BendingRequest"];
+export type BendingResponse = S["BendingResponse"];
+export type BendingParameterRowOut = S["BendingParameterRowOut"];
+export type BendingAxisKey = S["BendingAxisKey"];
+
 export type ComparisonRequest = S["ComparisonRequest"];
 export type ComparisonResponse = S["ComparisonResponse"];
 export type ComparisonPointOut = S["ComparisonPointOut"];

@@ -6,6 +6,7 @@ import pytest
 from helpers import GAMMA_M0, NU, OMEGA, grade_material
 from stainless_csm import services
 from stainless_csm.core.enums import SectionType
+from stainless_csm.csm.bending import BendingAxis
 from stainless_csm.csm.deformation_capacity import SectionFamily
 from stainless_csm.csm.tension import CSMTension, TensionInput
 from stainless_csm.material_models.csm_bilinear import CSMBilinearModel
@@ -48,9 +49,11 @@ def test_topics_are_the_pages() -> None:
         "tension",
         "deformation",
         "compression",
+        "bending",
     }
     assert 0 < len(symbols_for("tension")) < len(load_symbols())
     assert 0 < len(symbols_for("compression")) < len(load_symbols())
+    assert 0 < len(symbols_for("bending")) < len(load_symbols())
     assert len(symbols_for(None)) == len(load_symbols())
 
 
@@ -105,6 +108,16 @@ def trace_symbols() -> set[str]:
         deformation = services.DeformationForm(geometry, OMEGA, NU)
         form = services.CompressionForm(deformation, 1000.0, GAMMA_M0)
         found |= {s.symbol for s in services.run_compression(model, form).trace}
+    # B.6.3.2 with both formulas: a slender and a stocky section in bending
+    for plate in (services.PlateForm("web", 250, 3, 8.0), services.PlateForm("web", 100, 5, 4.0)):
+        geometry = services.GeometryForm(services.GeometryKind.PLATES, plates=(plate,))
+        deformation = services.DeformationForm(geometry, OMEGA, NU)
+        w_el, w_pl = 194_318.0, 220_640.0
+        axis = BendingAxis.MAJOR
+        bending = services.BendingForm(
+            deformation, SectionType.I_SECTION, axis, w_el, w_pl, GAMMA_M0, 0.1
+        )
+        found |= {s.symbol for s in services.run_bending(model, bending).trace}
     return {normalised(s) for s in found}
 
 
@@ -119,7 +132,7 @@ def test_readme_table_matches_the_glossary() -> None:
     assert block == symbols_markdown(), "run: python -m stainless_csm.symbols and paste into README"
 
 
-DIAGRAMS = {"csm_curve", "plate", "section", "base_curve", "tension", "compression"}
+DIAGRAMS = {"csm_curve", "plate", "section", "base_curve", "tension", "compression", "bending"}
 
 
 def test_every_symbol_has_a_detail_and_a_known_diagram() -> None:

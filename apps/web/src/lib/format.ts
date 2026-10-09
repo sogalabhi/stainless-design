@@ -4,6 +4,11 @@ export function kn(newtons: number): number {
   return newtons / 1000;
 }
 
+/** N mm to kN m, for display only: the engine keeps moments in N mm. */
+export function knM(newtonMillimetres: number): number {
+  return newtonMillimetres / 1e6;
+}
+
 export function formatNumber(value: number): string {
   if (value === 0) return "0";
   const magnitude = Math.abs(value);
@@ -16,6 +21,10 @@ export function formatNumber(value: number): string {
 
 export function formatKn(newtons: number): string {
   return kn(newtons).toFixed(1);
+}
+
+export function formatKnM(newtonMillimetres: number): string {
+  return knM(newtonMillimetres).toFixed(2);
 }
 
 export function formatPercent(fraction: number, signed = false): string {

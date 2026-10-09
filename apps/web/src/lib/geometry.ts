@@ -106,8 +106,12 @@ export function usesDimensions(form: DeformationFormState): boolean {
   return form.kind === "template" || form.kind === "chs";
 }
 
-/** What the user still has to give before B.5 can be calculated. */
-export function missingDeformationItems(form: DeformationFormState): MissingItem[] {
+/**
+ * What the user still has to give before B.5 can be calculated. `withStressPattern: false` leaves out
+ * the inputs that belong to one stress pattern (k_σ of each plate, a typed σ_cr,cs); bending asks for
+ * its own and keeps everything else (the section, ν, Ω, the plate widths and thicknesses).
+ */
+export function missingDeformationItems(form: DeformationFormState, withStressPattern = true): MissingItem[] {
   const item = (label: string, field: string): MissingItem => ({ label, group: "deformation", field });
   const sectionItem = (label: string, field: string): MissingItem => ({ label, group: "section", field });
   const missing: MissingItem[] = [];
@@ -127,7 +131,7 @@ export function missingDeformationItems(form: DeformationFormState): MissingItem
   }
   if (form.omega === null) missing.push(item("Ω", "omega"));
   if (form.kind !== "sigma_cr" && form.poissonRatio === null) missing.push(item("ν", "nu"));
-  if (form.kind === "template") {
+  if (form.kind === "template" && withStressPattern) {
     for (const plate of plateRoles(form.shape, form.fabrication)) {
       if (form.kSigma[plate.role] === null) {
         missing.push(item(`k_σ of the ${plate.name.toLowerCase()}`, `kSigma-${plate.role}`));
@@ -139,7 +143,7 @@ export function missingDeformationItems(form: DeformationFormState): MissingItem
       const gaps = [
         row.width === null ? { symbol: "b̄", key: "width" } : null,
         row.thickness === null ? { symbol: "t", key: "thickness" } : null,
-        row.kSigma === null ? { symbol: "k_σ", key: "kSigma" } : null,
+        withStressPattern && row.kSigma === null ? { symbol: "k_σ", key: "kSigma" } : null,
       ].filter((gap) => gap !== null);
       if (gaps.length > 0) {
         missing.push(
@@ -151,7 +155,9 @@ export function missingDeformationItems(form: DeformationFormState): MissingItem
       }
     });
   }
-  if (form.kind === "sigma_cr" && form.sigmaCr === null) missing.push(item("σ_cr,cs", "sigmaCr"));
+  if (withStressPattern && form.kind === "sigma_cr" && form.sigmaCr === null) {
+    missing.push(item("σ_cr,cs", "sigmaCr"));
+  }
   return missing;
 }
 

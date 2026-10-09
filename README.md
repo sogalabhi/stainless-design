@@ -19,7 +19,9 @@ Internal units are always **N, mm, N/mm²**. Conversion to kN happens only when 
 | geometry | Section properties (A, centroid, I, W_el, W_pl, plastic axes, shear centre) from the typed dimensions | done (phase 1c): reference values only, geometry and not a rule of EN 1993-1-4; used only when you click Use |
 | B.6.1 | Tension, Formulas B.12 to B.14 (resistance only; no force check) | done |
 | B.6.2 | Compression, Formulas B.15 to B.17 (resistance only; no force check) | done |
-| B.6.3 | Bending, B.18 to B.20, Table B.2 | planned |
+| B.6.3.1(1), B.6.3.2 | Bending about an axis of symmetry, Formulas B.19 and B.20, Table B.2 (resistance only; no moment check) | done (phase 2): I-section (major, minor), rectangular and circular hollow sections, channel (major), T-section (minor); λ_LT up to 0.2 |
+| B.6.3.1(2) | Interpolation, Formula B.18, for 0.2 < λ_LT ≤ 0.4 | planned (phase 3): the tool says "arrives in phase 3". λ_LT above 0.4 is refused (B.6.3.1 does not apply; use 8.2.4) |
+| B.6.3.3 | Bending about an axis that is not one of symmetry (channel minor, T-section major, angles) | planned (phase 3): the tool says "arrives in phase 3" |
 | B.6.4 | Combined bending and axial force, B.21 to B.29 | planned |
 
 ### Inputs from outside Annex B (never assumed)
@@ -32,13 +34,17 @@ argument). The working shows such a value as "input", never as a clause.
 |---|---|
 | E | B.4 (ε_y), B.9, B.11 |
 | ν (Poisson's ratio), unless σ_cr,cs is entered | B.9, B.11 |
-| γ_M0 | B.12, B.15, B.16 |
+| γ_M0 | B.12, B.15, B.16, B.19, B.20 |
 | Ω | B.6, B.7 |
 | k_σ of each plate role (web, flange, stem, leg) | B.9 |
 | Section dimensions h, b, t_w, t_f, t, r (rolled) or s (welded), d, and for a T-section the stem width c_stem | 8.2.2(5), B.9, B.11 |
 | Outer corner radius r_o of a rectangular hollow section, root radius r of an angle (0 is sharp) | the section properties and the drawing only; never c |
 | Plate widths b̄ and thicknesses t, when the plates are entered one by one | B.9 |
 | σ_cr,cs and the section family, optionally (a numerical value) | B.8 |
+| Axis of bending (major or minor; none for a circular hollow section) | Table B.2, which is in the PDF, so α is looked up and never typed |
+| W_el and W_pl about the axis of bending (the Use buttons may copy them from the geometry window, only on a click) | B.19, B.20 |
+| λ_LT | B.6.3.1 (the gate: up to 0.2 B.19 and B.20, above 0.4 not applicable) |
+| k_σ of each plate role for **bending** about the chosen axis (or a typed σ_cr,cs for bending), separate from the compression ones | B.9 for the section in bending |
 | Area A | B.12, B.15, B.16 |
 | "Section has holes" (tension only; B.6.2 has no holes clause) | B.12 |
 | f_y, f_u and the family (or f_ya, f_ua when cold-formed, B.3(3)) | B.4 |
@@ -71,7 +77,6 @@ later in a separate module. The source is `src/stainless_csm/data/symbols.json`;
 generated from it (`python -m stainless_csm.symbols`) and a test keeps the two in step.
 
 <!-- symbols:start -->
-
 **Material and the CSM model (B.4)**
 
 | Symbol | Meaning | Unit | Clause |
@@ -104,7 +109,7 @@ generated from it (`python -m stainless_csm.symbols`) and a test keeps the two i
 | λ_p,cs | Cross-section slenderness (plates): Relative slenderness of a section of flat plates: the square root of f_y / σ_cr,cs (Formula B.8). | - | B.5.2 |
 | λ_c,cs | Cross-section slenderness (tube): Relative slenderness of a circular hollow section: the square root of f_y / σ_cr,c (Formula B.10). | - | B.5.2 |
 | λ_cs | Cross-section slenderness: The slenderness used on the base curve: λ_p,cs for plates or λ_c,cs for tubes. | - | B.5.1 |
-| k_σ | Plate buckling factor: How easily a plate buckles; an input for each plate. | - | input |
+| k_σ | Plate buckling factor: How easily a plate buckles; an input for each plate, and a separate input for bending. | - | input |
 | ε_csm | CSM strain limit: The limiting compressive strain the cross-section can reach before local buckling. | - | B.5.1 |
 | ε_csm/ε_y | Strain limit ratio: The CSM strain limit as a multiple of the yield strain; above 1 the section can strain-harden. | - | B.5.1 |
 | (ε_csm/ε_y) base curve | Base curve value: The value read from the base curve (B.6 or B.7) before the cap is applied. | - | B.5.1 |
@@ -143,7 +148,7 @@ generated from it (`python -m stainless_csm.symbols`) and a test keeps the two i
 
 | Symbol | Meaning | Unit | Clause |
 |---|---|---|---|
-| ε_csm/ε_y vs 1 | Branch test: Compares the strain limit ratio with 1.0 to pick Formula B.15 (below 1.0) or B.16 (from 1.0). | - | B.6.2 |
+| ε_csm/ε_y vs 1 | Branch test: Compares ε_csm/ε_y with 1.0 to pick the formula: B.15 or B.16 in compression, B.19 or B.20 in bending. | - | B.6.2, B.6.3.2 |
 | f_csm | CSM compressive design stress: Stress on the hardening line at ε_csm (Formula B.17); used only when ε_csm/ε_y is at least 1.0. | N/mm² | B.6.2 |
 | N_csm,Rd | CSM compression resistance: Design value of the CSM resistance of the cross-section to compression axial force (Formulas B.15 and B.16). | N | B.6.2 |
 
@@ -178,6 +183,17 @@ generated from it (`python -m stainless_csm.symbols`) and a test keeps the two i
 | I_u | Second moment about the major axis: Largest second moment of area of an angle, about the major principal axis u. | mm⁴ | geometry, not a rule of EN 1993-1-4 |
 | I_v | Second moment about the minor axis: Smallest second moment of area of an angle, about the minor principal axis v. | mm⁴ | geometry, not a rule of EN 1993-1-4 |
 
+**Bending (B.6.3)**
+
+| Symbol | Meaning | Unit | Clause |
+|---|---|---|---|
+| W_el | Elastic section modulus: Section modulus up to first yield, about the axis of bending; an input. | mm³ | input |
+| W_pl | Plastic section modulus: Section modulus of the fully plastic section, about the axis of bending; an input. | mm³ | input |
+| λ_LT | Relative slenderness for lateral-torsional buckling: How much lateral-torsional buckling limits the beam; decides whether B.6.3 applies; an input. | - | B.6.3.1 |
+| α | CSM bending parameter: The exponent in Formula B.20 that sets how fast the plastic reserve is reached; read from Table B.2. | - | B.6.3.2, Table B.2 |
+| M_el | Elastic moment: W_el f_y / γ_M0, the moment at first yield; a reference line, equal to Formula B.19 at ε_csm/ε_y = 1.0. | N mm | B.6.3.2 |
+| M_pl | Plastic moment: W_pl f_y / γ_M0, the factor in front of the bracket of Formula B.20; a reference line. | N mm | B.6.3.2 |
+| M_csm,c,Rd | CSM bending resistance: Design value of the CSM bending moment resistance of the cross-section about an axis of symmetry. | N mm | B.6.3.2 |
 <!-- symbols:end -->
 
 ## Layout
@@ -189,7 +205,8 @@ src/stainless_csm/
   data/            Table 5.1 and Table B.1 as JSON, and the repository that loads them
   materials/       Grade (Table 5.1) and Material (what the steel is)
   material_models/ stress-strain models: CSM bilinear (B.4) and the classic elastic-plastic one
-  csm/             Annex B: slenderness (B.5.2), base curve (B.5.1), tension (B.6.1), compression (B.6.2)
+  csm/             Annex B: slenderness (B.5.2), base curve (B.5.1), tension (B.6.1), compression (B.6.2),
+                   bending (B.6.3.2, Table B.2 from data/bending_parameters.json)
   sections/        section templates (8.2.2(5)): six shapes from typed dimensions, the plates and c for B.5;
                    properties.py: A, centroid, I, W_el, W_pl, plastic axes, shear centre (reference values)
   services.py      use cases shared by every front end (no UI imports), incl. the thickness sweep
@@ -213,7 +230,7 @@ cd apps/web && npm install && npm run build      # once, builds apps/web/dist
 ```
 
 The website has one **input dock** on the left and the results on the right. Every input lives in
-the dock, in groups (**Material**, **Section**, **Deformation capacity (B.5)**; one open at a time),
+the dock, in groups (**Material**, **Section**, **Deformation capacity (B.5)**, **Bending (B.6.3)**; one open at a time),
 so no two pages can hold different values of A or γM0. Each group header counts the fields still to
 enter. Everything starts empty. The **section type** is
 chosen once, in the Section group; it also decides whether B.5 asks for a tube (diameter and
@@ -278,7 +295,7 @@ I-section flange (by analogy) and a typed stem c; angle b̄ = h; rectangular hol
 b − 3t. Each c is a step of the working that names its source. A, W_el, W_pl and k_σ stay typed.
 
 The result tabs are **Material (B.4)**, **Deformation (B.5)**, **Tension (B.6.1)**,
-**Compression (B.6.2)**, **Explore** and **Help**. Each tab carries a status icon (done, waiting for inputs, not applicable, needs attention).
+**Compression (B.6.2)**, **Bending (B.6.3)**, **Explore** and **Help**. Each tab carries a status icon (done, waiting for inputs, not applicable, arrives in a later phase, needs attention).
 A tab that is waiting lists what it needs as links ("Waiting for: A; γM0"); a link opens that field
 in the dock. On a phone the dock becomes an **Inputs** button that slides a drawer out. "Graph view"
 switches between a schematic (not to scale, like Figure B.1) and a true-scale view. "Show working"
@@ -291,6 +308,17 @@ N_csm,Rd in kN, which formula applied (B.15 below 1.0, B.16 from 1.0) and why, a
 against slenderness (N_csm,Rd / (A f_y / γM0), the B.15 and B.16 branches, the cap and your section) and
 the compression point on the material curve. Beyond the B.5 slenderness limit the tab is "not
 applicable" and shows no resistance.
+
+**Bending (B.6.3)** has its own Bending group in the dock: the axis of bending, W_el and W_pl about it, λ_LT and
+one k_σ per plate for the bending stress pattern (a web in pure bending is held back less than one in uniform
+compression, so these are separate from the compression k_σ; the engine runs B.5 again for the section in
+bending). The Section geometry window gets Use buttons for W_el and W_pl of the chosen axis (y-y for the major
+axis, z-z for the minor one), copied only on a click. The tab shows ε_csm/ε_y, α, M_csm,c,Rd in kN m, which
+formula applied (B.19 below 1.0, B.20 from 1.0) and why, Table B.2 with the row used lit, a chart of M_csm,c,Rd
+against ε_csm/ε_y with W_el f_y / γ_M0 and W_pl f_y / γ_M0 as reference lines and your section as a dot, and an
+illustration of strain and stress across the depth at ε_csm. λ_LT above 0.4 is refused ("B.6.3.1 does not apply;
+use 8.2.4"); the B.18 range (0.2 to 0.4) and the shapes that need B.6.3.3 show "arrives in phase 3", which is
+a case not built yet and not a refusal of the standard.
 
 **Explore** shows stocky against slender live. It uses the same dock inputs as the other tabs and
 redraws as you type. A slider multiplies every thickness (t_w, t_f and t; h, b, r, s, d, c_stem and k_σ stay as entered, and c is derived again at each point), and each
@@ -306,7 +334,7 @@ browser. It shows:
 - the base curve and the material curve, each with those sections and the slider marked, and the
   flat-yield curve for contrast;
 - a strain and stress picture across the depth of a bent section, with the CSM stress against the
-  flat-yield stress (no moment: B.6.3 is not built).
+  flat-yield stress (an illustration; the moment of the Bending tab comes from B.19 or B.20).
 
 The wave size in 3D is only a picture of "more slender, more buckling": the CSM does not calculate a
 buckled shape. A typed σ_cr,cs has no thickness to change, so that mode shows a message instead.
@@ -329,6 +357,7 @@ The API port is 8100 (8000 is often taken by other dev servers); change it with
 | POST | `/api/v1/material-model` | B.4 |
 | POST | `/api/v1/tension` | B.6.1 |
 | POST | `/api/v1/compression` | B.6.2, with B.5 for the section |
+| POST | `/api/v1/bending` | B.6.3.1(1) and B.6.3.2: the λ_LT gate, B.5 for the section in bending (`geometry.k_sigma` are the bending values), then B.19 or B.20 with α from Table B.2; 422 with `error_type` `NotApplicableError` (λ_LT above 0.4, beyond the B.5 limit) or `NotBuiltYetError` (B.18 range, B.6.3.3 shapes) |
 | POST | `/api/v1/deformation-capacity` | B.5, with 8.2.2(5) for a section template (`geometry.kind = "template"`) |
 | POST | `/api/v1/section-properties` | not a clause: reference geometry (A, centroid, I, W_el, W_pl, plastic axes, shear centre) from the template dimensions; needs r_o (RHS) or r (angle) |
 | POST | `/api/v1/section-comparison` | B.5 and B.4 for the section made thicker and thinner (t_w, t_f and t are multiplied; c is derived again at each point) |

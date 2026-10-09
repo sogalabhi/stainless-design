@@ -56,10 +56,16 @@ describe("Help page", () => {
     expect(screen.getByText(/No IS 800 number is calculated/)).toBeInTheDocument();
   });
 
-  it("describes all three modules", async () => {
+  it("describes all the modules, compression and bending included", async () => {
     renderHelp();
     await openTopic("Modules");
-    for (const name of [/1 · Material/, /2 · Tension/, /3 · Deformation capacity/]) {
+    for (const name of [
+      /1 · Material/,
+      /2 · Tension/,
+      /3 · Deformation capacity/,
+      /4 · Compression \(B\.6\.2\)/,
+      /5 · Bending \(B\.6\.3\)/,
+    ]) {
       expect(screen.getByRole("heading", { name })).toBeInTheDocument();
     }
   });

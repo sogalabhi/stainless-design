@@ -1,3 +1,10 @@
+import bendingB19 from "./fixtures/bending_b19.json";
+import bendingB20 from "./fixtures/bending_b20.json";
+import bendingB18Error from "./fixtures/bending_b18_error.json";
+import bendingBeyondError from "./fixtures/bending_beyond_error.json";
+import bendingGateError from "./fixtures/bending_gate_error.json";
+import bendingNotBuiltError from "./fixtures/bending_not_built_error.json";
+import bendingTemplate from "./fixtures/bending_template.json";
 import compressionB15 from "./fixtures/compression_b15.json";
 import compressionBeyond from "./fixtures/compression_beyond_error.json";
 import compression from "./fixtures/compression.json";
@@ -20,6 +27,8 @@ import tension from "./fixtures/tension.json";
 
 type Body = {
   shape?: string;
+  section_type?: string;
+  lambda_lt?: number;
   t_f?: number;
   tension?: { has_holes?: boolean; gamma_m0?: number };
   geometry?: { kind?: string; b?: number; t_f?: number; plates?: { width?: number }[] };
@@ -67,6 +76,17 @@ export function installMockApi() {
       return json(tension);
     }
     if (path.endsWith("/section-comparison")) return json(template ? comparisonTemplate : comparison);
+    if (path.endsWith("/bending")) {
+      // recorded bending: λ_LT 0.5 is refused, 0.3 is the B.18 range, a channel minor axis is B.6.3.3,
+      // a plate 400 wide is beyond the B.5 limit, 250 wide gives B.19, 100 wide gives B.20
+      if ((body?.lambda_lt ?? 0) > 0.4) return json(bendingGateError, 422);
+      if ((body?.lambda_lt ?? 0) > 0.2) return json(bendingB18Error, 422);
+      if (body?.section_type === "channel") return json(bendingNotBuiltError, 422);
+      if (template) return json(bendingTemplate);
+      const width = body?.geometry?.plates?.[0]?.width;
+      if (width === 400) return json(bendingBeyondError, 422);
+      return json(width === 250 ? bendingB19 : bendingB20);
+    }
     if (path.endsWith("/compression")) {
       if (template) return json(compressionTemplate);
       // recorded plates: 100 wide gives B.16, 250 wide gives B.15, 400 wide is beyond the limit

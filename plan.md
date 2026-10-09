@@ -26,8 +26,8 @@ Rules that stay in force (from the README and the project notes):
 | B.5.2 | B.8 to B.11 | λ_p,cs, λ_c,cs, σ_cr,p, σ_cr,c | done (conservative most-slender-plate route, or a typed σ_cr,cs) |
 | B.6.1 | B.12 to B.14 | Tension resistance | done |
 | B.6.2 | B.15 to B.17 | Compression resistance | done (phase 1, 2026-10-09); the extra charts of section 5 remain |
-| B.6.3.1 | B.18 | Interpolation for 0.2 < λ_LT <= 0.4 | to do (phase 3) |
-| B.6.3.2 | B.19, B.20, Table B.2 | Bending about an axis of symmetry, and the parameter α | to do (phase 2) |
+| B.6.3.1 | B.18 | Gate on λ_LT, and interpolation for 0.2 < λ_LT <= 0.4 | gate done (phase 2: B.19 or B.20 up to 0.2, refusal above 0.4); B.18 to do (phase 3) |
+| B.6.3.2 | B.19, B.20, Table B.2 | Bending about an axis of symmetry, and the parameter α | done (phase 2, 2026-10-09); the extra charts of section 5 remain |
 | B.6.3.3 | none printed (procedure in words) | Bending about an axis that is not one of symmetry: ε_csm,max, ε_csm,t, design neutral axis | to do (phase 3) |
 | B.6.4.1 | B.21 to B.24 | Combined loading, rectangular hollow sections | to do (phase 4) |
 | B.6.4.2 | B.25 to B.27, plus B.23 and B.24 with I-section values | Combined loading, I-sections | to do (phase 5) |
@@ -132,7 +132,7 @@ README row marked done. A contract test (service against API) covers every new e
 
 | 1c | section properties and the geometry modal, DONE 2026-10-09 | `sections/properties.py`: A, centroid, I, W_el, W_pl, plastic neutral axis, principal axes, shear centre from the template dimensions; `POST /api/v1/section-properties` | the Section geometry modal with layer checkboxes, editable dimensions and a properties table with Use buttons. Spec in section 4d |
 | 1d | "?" help on every input, DONE 2026-10-09 | `data/input_help.json` keyed by field key, served at `GET /api/v1/input-help`; a test that every dock field has an entry | a "?" button beside every input label opening a short panel. Spec in section 4e |
-| 2 | B.6.3.2 bending, Table B.2 | `data/bending_parameters.json`, a lookup by type, axis and h/b; `csm/bending.py`: B.19, B.20, with the λ_LT gate of B.6.3.1(1). Refuses channel minor axis, T-section major axis and all angles (B.6.3.3, phase 3) | step "Bending (B.6.3)"; section type and axis picker; moment against ε_csm/ε_y; stress block with real moments |
+| 2 | B.6.3.2 bending, Table B.2, DONE 2026-10-09 | `data/bending_parameters.json`, a lookup by type, axis and h/b; `csm/bending.py`: B.19, B.20, with the λ_LT gate of B.6.3.1(1). Channel minor axis, T-section major axis and all angles, and 0.2 < λ_LT <= 0.4, answer "arrives in phase 3" (`NotBuiltYetError`, not a refusal); λ_LT > 0.4 is refused | step "Bending (B.6.3)"; the Bending group and tab; moment against ε_csm/ε_y; strain and stress blocks across the depth |
 | 3 | B.6.3.1 and B.6.3.3 | B.6.3.3(1) for channel minor axis, T-section major axis and angles (B.19 or B.20 with ε_csm,max, the first-yield fibre); B.18 (needs λ_LT and M_c,Rd as inputs); ε_csm,max and ε_csm,t from the linear strain assumption. ε_csm,t first uses the elastic neutral axis; if ε_csm,max > ε_y, it is recalculated at the midway point between the elastic and plastic axes (the approximation printed in B.6.3.3(3)), with both axis positions typed in. Equilibrium is out for now (section 9) | interpolation chart; neutral-axis shift diagram for angles, channels, T-sections |
 | 4 | B.6.4.1 RHS | `csm/combined.py`: B.21 to B.24 for RHS. Refuses bending with tension, and channels, T-sections and angles (outside B.6.4, B.3(2)). I-sections and CHS show "not built yet (phase 5)", which is not a refusal | interaction curve; biaxial surface |
 | 5 | B.6.4.2 and B.6.4.3 | B.25 to B.27, I-section values for B.23, B.28 and B.29. Refuses channels, T-sections and angles, which fall under EN 1993-1-1 8.2.9 (outside the Annex) | I-section and CHS interaction curves |
@@ -301,6 +301,47 @@ Judgement calls and what is left:
   positions; look at the modal layout at desktop and phone width, the legend and the label placement.
 - `make_fixtures.py` not updated (phase 8). The 20 failures in `src/App.test.tsx` and `src/lib/material.test.ts` remain.
 
+**Phase 2 hand-off (bending about an axis of symmetry, B.6.3.1(1), B.6.3.2, Table B.2, done 2026-10-09).** Engine:
+`data/bending_parameters.json` holds the whole of Table B.2 (13 printed rows; `data/repository.py:bending_parameter_rows`).
+`csm/bending.py` has the gate and scope (`check_scope`: λ_LT above 0.4 raises `NotApplicableError` "B.6.3.1 does not apply; use
+8.2.4"; a shape or axis that is not about an axis of symmetry raises the new `NotBuiltYetError` "B.6.3.3: arrives in phase 3";
+0.2 < λ_LT <= 0.4 raises `NotBuiltYetError` "B.18 interpolation: arrives in phase 3"; the refusal is checked first), the Table B.2
+lookup (`table_b2_row`, by type, axis, h/b and, for angles, equal or unequal legs), the pure formulas `moment_b19`, `moment_b20`
+and `moment_at`, and `CSMBending` with a CalcStep and LaTeX for each step: `λ_LT` (B.6.3.1), `α` (Table B.2), `M_el` and `M_pl`
+(W f_y / γM0, the reference lines; not Annex B results), `ε_csm/ε_y vs 1`, `M_csm,c,Rd`. `W_pl < W_el` is rejected as an input
+error. `services.run_bending` runs the gate, then B.5 for the section in bending, then B.19 or B.20; its trace is B.4, B.5, then
+B.6.3.1 and B.6.3.2 steps. API: `POST /api/v1/bending` (request = the B.5 inputs, with `geometry.k_sigma`, `plates[].k_sigma`
+and `sigma_cr_cs` being the **bending** values, plus `section_type`, `axis` (omitted only for a circular hollow section),
+`w_el`, `w_pl`, `gamma_m0`, `lambda_lt`; response = B.5 slenderness and strain limit, `strain_ratio`, `formula`, `alpha`,
+`table_b2` (all rows, the used one `selected`), `elastic_moment`, `plastic_moment`, `resistance` in N mm, notes, trace,
+`moment_figure`, `blocks_figure`). Charts in `viz/plotly_figures.py`: `bending_moment_figure` (M in kN m against ε_csm/ε_y: the
+B.19 and B.20 branches from `moment_at`, M_el and M_pl as dotted lines, the cap, your section) and `bending_blocks_figure`
+(strain and stress across the depth of a symmetric section at ε_csm, stress read from the B.4 curve; an illustration, the moment
+is from B.19 or B.20). Website: the Bending group of the dock (`BendingInputs`: axis, W_el, W_pl, λ_LT, then one bending k_σ per
+plate role, per manual plate, or a typed bending σ_cr,cs; a tube is asked no axis and no k_σ), `lib/bending.ts` (own
+`BendingFormState`, so the compression k_σ stay untouched; `withBendingStress` swaps the stress pattern into the B.5 form;
+`missingBendingItems` does not ask for the compression k_σ or the area A), `pages/BendingPage.tsx` (cards, the formula note,
+Table B.2 with the used row lit, both charts, working, symbols), tab "Bending (B.6.3)" after Compression, new tab status "later"
+(clock icon, "arrives in a later phase") for `NotBuiltYetError`, "not applicable" for `NotApplicableError`, Use buttons for
+W_el and W_pl of the chosen axis in the geometry window (`useTarget` in `PropertiesTable.tsx`; major is y-y, minor is z-z, a tube
+uses y-y), `ModulusNote` ("copied from geometry", mismatch note above 0.5 %), Load example now fills major axis, W_el,y 194 300,
+W_pl,y 220 600, λ_LT 0.15, k_σ 23.9 (web) and 0.43 (flange) with three new source lines, a Help module "5 · Bending (B.6.3)" with
+the `bending` diagram, glossary topic `bending`. New symbols: W_el, W_pl, λ_LT, α, M_el, M_pl, M_csm,c,Rd (group "Bending
+(B.6.3)"); `ε_csm/ε_y vs 1`, `k_σ`, γ_M0 and the B.5 symbols also carry the topic `bending`; README table regenerated. Six new
+`input_help.json` entries (axis, wEl, wPl, lambdaLT, kSigmaBending, sigmaCrBending). Tests: `tests/test_bending.py` (97: the four
+hand values with working, the continuity at 1, the E_sh = 0 limit, all 13 Table B.2 rows and the h/b boundaries, the gate and scope,
+inputs, service runs with the bending k_σ, charts), bending tests in `tests/test_api.py` (200, 422 by error type, required inputs,
+contracts), `lib/bending.test.ts`, `pages/BendingPage.test.tsx`, `App.bending.test.tsx`; `App.example.test.tsx`, `App.help.test.tsx`,
+`HelpPage.test.tsx` updated; fixtures `bending_*.json` and refreshed `symbols.json` and `input_help.json` recorded from TestClient.
+Left: B.6.3.1(2) B.18 (needs M_c,Rd as an input) and B.6.3.3 for the channel minor axis, T-section major axis and angles (phase 3);
+the extra bending charts of section 5 (effect of α, shape-factor surface, M/M_pl against λ, 3D beam); the Explore tab has no
+bending view; `make_fixtures.py` not updated (phase 8). Not checked in a browser (none available): look at the Bending group
+at the dock width, Table B.2 with the lit row, both charts (label placement of the cap annotation, the two-panel stress block),
+the clock status icon and the Use buttons in the geometry window. Judgement calls: an RHS is asked its axis (W_el and W_pl differ
+by axis even though α is 2.0 for both); "major" and "minor" mean y-y and z-z of the drawing, so for an RHS with b > h the label
+"major" is the drawing's y-y, not necessarily the stronger axis; the h/b of Table B.2 is taken from the typed h and b of the
+section template (only the phase 3 shapes use it); the angle equal/unequal test is h == b of the template.
+
 ## 4c. Phase 1b spec: section templates
 
 Decided 2026-10-09: all six shapes of B.2 get a template; c is derived from the dimensions where
@@ -462,6 +503,40 @@ Facts the text must use (checked against the PDF):
 - Holes: B.6.1(2) sends sections with holes to EN 1993-1-3:2024, 8.1.2 or EN 1993-1-1:2022, 8.2.3.
 - Section type: B.2 lists the six shapes Annex B covers.
 
+## 4f. Phase 2 spec: bending about an axis of symmetry (B.6.3.1(1), B.6.3.2, Table B.2)
+
+- Scope: bending about an axis of symmetry only: I-section (major, minor), RHS (major, minor),
+  CHS (any), channel (major), T-section (minor). Channel minor, T-section major and all angles show
+  "B.6.3.3: arrives in phase 3" (not a refusal of the standard, a not-built-yet message).
+- λ_LT gate (B.6.3.1): λ_LT <= 0.2 gives B.19 or B.20; 0.2 < λ_LT <= 0.4 shows "B.18 interpolation:
+  arrives in phase 3"; λ_LT > 0.4 is refused: "B.6.3.1 does not apply, use 8.2.4".
+- The strain limit ε_csm/ε_y comes from B.5.1 run for the section **in bending**: the plates carry a
+  bending stress pattern, so their k_σ differ from compression (for example a web in pure bending
+  against one in uniform compression). New typed inputs, empty: one k_σ per plate for bending about
+  the chosen axis (and a typed σ_cr,cs for bending on that route). The compression k_σ stay as they
+  are. See section 8, item 13.
+- New inputs (Bending group of the dock, each with "?" help): axis of bending (major, minor; any
+  for CHS), W_el and W_pl about that axis (Use buttons from the geometry window for the chosen axis),
+  λ_LT, and the bending k_σ per plate. γM0 and the material are shared.
+- Table B.2 as `data/bending_parameters.json`, looked up by type, axis and h/b (the h/b rows matter
+  only for phase 3 shapes, but the whole table goes in now).
+- Engine `csm/bending.py`: B.19 for ε_csm/ε_y < 1, B.20 from 1, with α from Table B.2; every step a
+  CalcStep with LaTeX, clause B.6.3.2 (and B.6.3.1 for the gate). Service `run_bending`, endpoint
+  `POST /api/v1/bending`, contract test.
+- Hand values (austenitic f_y 230, f_u 540, E 200 000, so E_sh 3417.79; W_el 194 318 mm³,
+  W_pl 220 640 mm³, γM0 1.1, α 2.0):
+  - ε_csm/ε_y = 0.8: B.19, M = 0.8 × 194 318 × 230 / 1.1 = 32 504 102 N mm
+  - 1.0: B.20, M = W_el f_y / γM0 = 40 630 127 N mm (continuity with B.19)
+  - 3.0: B.20, M = (W_pl f_y / γM0)[1 + (E_sh/E)(W_el/W_pl)(2) − (1 − W_el/W_pl)/3²] = 46 910 950 N mm
+  - 6.0: B.20, M = 49 452 570 N mm
+  - Limit: on the pure B.20 function with E_sh = 0, M tends to W_pl f_y / γM0 = 46 133 818 N mm.
+- Bending tab: result card M_csm,c,Rd in kN m, the formula used and why, α with the Table B.2 row
+  lit; charts: M_csm,c,Rd against ε_csm/ε_y with M_el and M_pl as reference lines and the section
+  as a dot; the strain and stress blocks across the depth at ε_csm (2D). Help topic, symbols.
+- Load example: adds major axis, W_el,y 194 300 and W_pl,y 220 600 (published table values for the
+  example I-section, labelled example), λ_LT 0.15 (example only), bending k_σ 23.9 for the web
+  (EN 1993-1-5, pure bending) and 0.43 for the flange outstand (example only).
+
 ## 4a. Who does what (model split and hand-off)
 
 Each phase is split by model tier. Use one chat per task, not one chat switched between models, so each
@@ -596,6 +671,7 @@ the gain surface, the 3D stub column and the stocky-against-slender view with re
 10. B.6.3.3(1) says "as indicated in B.6.3.1", the same slip as item 5. It means B.6.3.2, which holds B.19, B.20 and Table B.2.
 11. c for the channel web and the T-section flange follows the I-section sketches of Tables 7.2 and 7.3 by analogy (the PDF draws neither); welded channels and T-sections likewise. The T-section stem is drawn nowhere, so its c is a typed input. Confirm against the standard.
 12. Angles: 8.2.2(5) gives b̄ = h only (the longer leg), so one plate is checked; Table 7.4 also refers to Table 7.3 for outstands.
+13. B.5 slenderness depends on the stress pattern (k_σ, or σ_cr,cs), so a section has one λ_p,cs and ε_csm in compression and another in bending about each axis. Annex B does not say this in words; it follows from B.8, B.9 and EN 1993-1-5. The tool keeps separate typed k_σ for compression and for bending.
 
 ## 9. Decisions needed from you
 

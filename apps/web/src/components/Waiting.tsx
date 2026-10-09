@@ -1,4 +1,4 @@
-import { CircleCheck, CircleDashed, CircleAlert, CircleSlash } from "lucide-react";
+import { CircleCheck, CircleDashed, CircleAlert, CircleSlash, Clock } from "lucide-react";
 import type { MissingItem, TabStatus } from "../lib/inputs";
 import { STATUS_WORDS } from "../lib/inputs";
 import { renderSymbols } from "./Symbols";
@@ -8,6 +8,7 @@ const ICONS = {
   done: CircleCheck,
   waiting: CircleDashed,
   not_applicable: CircleSlash,
+  later: Clock,
   error: CircleAlert,
 } as const;
 

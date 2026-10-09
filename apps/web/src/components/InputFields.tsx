@@ -1,6 +1,7 @@
 import { Plus, Ruler, Trash2 } from "lucide-react";
 import type { ReactNode } from "react";
-import type { FamilyKey, GradeOut, SectionType, StainlessFamily } from "../api/types";
+import type { BendingAxisKey, FamilyKey, GradeOut, SectionType, StainlessFamily } from "../api/types";
+import { asksForAxis, type BendingFormState } from "../lib/bending";
 import { CIRCULAR, dimsOf, usesDimensions, type DeformationFormState, type PlateRow } from "../lib/geometry";
 import {
   needsFabrication,
@@ -439,5 +440,126 @@ function PlatesEditor({
         <Plus size={16} aria-hidden="true" /> Add plate
       </button>
     </div>
+  );
+}
+
+const AXES: { value: BendingAxisKey; label: string }[] = [
+  { value: "major", label: "Major axis (y-y)" },
+  { value: "minor", label: "Minor axis (z-z)" },
+];
+
+/**
+ * The Bending group (B.6.3.1(1), B.6.3.2). Everything here starts empty: the axis of bending, W_el and
+ * W_pl about it, λ_LT, and the plate buckling factors of the bending stress pattern, which are
+ * separate from the compression ones in the Deformation group. α is not typed: Table B.2 is in the
+ * PDF, so the engine looks it up from the section type and the axis.
+ */
+export function BendingInputs({
+  sectionType,
+  deformation,
+  form,
+  onChange,
+  wElNote,
+  wPlNote,
+}: {
+  sectionType: SectionType | null;
+  deformation: DeformationFormState;
+  form: BendingFormState;
+  onChange: (form: BendingFormState) => void;
+  /** under W_el and W_pl: where a copied value came from (the Use button in the geometry window) */
+  wElNote?: ReactNode;
+  wPlNote?: ReactNode;
+}) {
+  const set = (patch: Partial<BendingFormState>) => onChange({ ...form, ...patch });
+  // W_el, W_pl and λ_LT do not depend on the shape; the axis and the plate k_σ do, so they wait for the type.
+  const known = sectionType !== null && deformation.kind !== null;
+  const roles = plateRoles(sectionType, deformation.fabrication);
+  return (
+    <>
+      <p className="muted">
+        {renderSymbols(
+          "Bending about an axis of symmetry (B.6.3.2). W_el, W_pl and λ_LT are outside Annex B, so they are yours to give. The bending k_σ are separate from the compression ones: the stress pattern is different. α comes from Table B.2.",
+        )}
+      </p>
+      {!known ? (
+        <p className="muted">Choose the section type in the Section group first: it decides the axis and the plate k_σ asked for here.</p>
+      ) : null}
+      {known && asksForAxis(sectionType) ? (
+        <SelectField
+          label="Axis of bending"
+          value={form.axis}
+          options={AXES}
+          placeholder="choose the axis"
+          fieldKey="axis"
+          onChange={(axis) => set({ axis })}
+        />
+      ) : null}
+      {known && !asksForAxis(sectionType) ? (
+        <p className="muted">A circular hollow section bends alike about every axis, so no axis is asked for (Table B.2: any).</p>
+      ) : null}
+      <NumberField
+        label="Elastic modulus W_el"
+        unit="mm³"
+        value={form.wEl}
+        step={1000}
+        fieldKey="wEl"
+        onChange={(wEl) => set({ wEl })}
+        note={wElNote}
+      />
+      <NumberField
+        label="Plastic modulus W_pl"
+        unit="mm³"
+        value={form.wPl}
+        step={1000}
+        fieldKey="wPl"
+        onChange={(wPl) => set({ wPl })}
+        note={wPlNote}
+      />
+      <NumberField
+        label="Relative slenderness λ_LT"
+        value={form.lambdaLT}
+        step={0.05}
+        fieldKey="lambdaLT"
+        onChange={(lambdaLT) => set({ lambdaLT })}
+      />
+      {deformation.kind === "template"
+        ? roles.map((plate) => (
+            <NumberField
+              key={plate.role}
+              label={`k_σ in bending, ${plate.name.toLowerCase()} (${plate.kind})`}
+              value={form.kSigma[plate.role]}
+              step={0.01}
+              fieldKey={`kSigmaB-${plate.role}`}
+              hint={`${plate.name}, ${plate.kind} plate, with its stress ratio ψ when the section bends about the chosen axis.`}
+              onChange={(value) => set({ kSigma: { ...form.kSigma, [plate.role]: value } })}
+            />
+          ))
+        : null}
+      {deformation.kind === "plates"
+        ? deformation.plates.map((row) => (
+            <NumberField
+              key={row.id}
+              label={`k_σ in bending, ${row.label || "plate"}`}
+              value={form.plateKSigma[row.id] ?? null}
+              step={0.01}
+              fieldKey={`plate-${row.id}-kSigmaB`}
+              onChange={(value) => set({ plateKSigma: { ...form.plateKSigma, [row.id]: value } })}
+            />
+          ))
+        : null}
+      {deformation.kind === "sigma_cr" ? (
+        <NumberField
+          label="σ_cr,cs in bending"
+          unit="N/mm²"
+          value={form.sigmaCr}
+          step={10}
+          fieldKey="sigmaCrBending"
+          onChange={(sigmaCr) => set({ sigmaCr })}
+        />
+      ) : null}
+      {deformation.kind === "chs" ? (
+        <p className="muted">{renderSymbols("The tube formula B.11 holds for compression and bending, so a circular hollow section needs no k_σ here.")}</p>
+      ) : null}
+    </>
   );
 }

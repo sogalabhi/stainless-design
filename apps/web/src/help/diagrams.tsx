@@ -305,6 +305,42 @@ export function CompressionDiagram() {
   );
 }
 
+/** B.6.3.2: an I-section in bending and the resistance against the strain limit ratio. */
+export function BendingDiagram() {
+  return (
+    <Figure
+      label="An I-section bent about its major axis, and the bending resistance against the strain limit ratio, with Formula B.19 below 1.0 and Formula B.20 from 1.0"
+      caption="Left: the section bends about the axis y-y, which is where W_el and W_pl are measured. Right: below ε_csm/ε_y = 1 Formula B.19 rises in a straight line up to M_el = W_el f_y / γ_M0. From 1.0 Formula B.20 continues from the same point, passes the plastic moment M_pl for a stocky section, and rises more slowly. α sets how fast. Not to scale."
+      width={560}
+      height={290}
+    >
+      <rect x={50} y={80} width={90} height={14} className="dg-plate" />
+      <rect x={90} y={94} width={10} height={90} className="dg-plate" />
+      <rect x={50} y={184} width={90} height={14} className="dg-plate" />
+      <line x1={30} y1={139} x2={160} y2={139} className="dg-guide dg-dash" />
+      <T x={170} y={143} anchor="start" className="dg-text dg-muted">y-y</T>
+      <path d="M 62 60 Q 95 40 128 60" className="dg-line dg-orange" markerEnd={arrow} />
+      <T x={95} y={34} className="dg-text dg-orange-text">M</T>
+      <T x={95} y={224} className="dg-text dg-muted">W_el, W_pl about y-y</T>
+      <T x={95} y={252} className="dg-text dg-muted">resistance M_csm,c,Rd</T>
+
+      <Axes x0={300} y0={250} x1={540} y1={30} xLabel="strain limit ε_csm/ε_y" yLabel="M_csm,c,Rd" yOffset={50} />
+      <line x1={300} y1={250} x2={370} y2={150} className="dg-line dg-blue dg-dash" />
+      <path d="M 370 150 C 400 110, 440 82, 520 66" className="dg-line dg-blue" />
+      <line x1={300} y1={150} x2={370} y2={150} className="dg-guide" />
+      <line x1={370} y1={150} x2={370} y2={250} className="dg-guide" />
+      <line x1={300} y1={110} x2={540} y2={110} className="dg-guide dg-dash" />
+      <circle cx={370} cy={150} r={6} className="dg-dot dg-orange-fill" />
+      <T x={292} y={154} anchor="end">M_el</T>
+      <T x={292} y={114} anchor="end">M_pl</T>
+      <T x={370} y={270}>1</T>
+      <T x={346} y={206} anchor="end" className="dg-text dg-blue-text">B.19</T>
+      <T x={470} y={90} anchor="start" className="dg-text dg-blue-text">B.20</T>
+      <T x={378} y={142} anchor="start" className="dg-text dg-orange-text">ε_csm/ε_y = 1</T>
+    </Figure>
+  );
+}
+
 /** How the three modules feed each other. */
 export function WorkflowDiagram() {
   const box = (x: number, y: number, w: number, title: string, line: string, built: boolean) => (
@@ -331,14 +367,14 @@ export function WorkflowDiagram() {
       {link(362, 388, 66)}
       {box(390, 34, 150, "B.12 / B.13", "f_csm,t and N_csm,t,Rd", true)}
 
-      <T x={20} y={142} anchor="start" className="dg-text dg-muted">Compression and bending (B.5 built, resistances to come)</T>
+      <T x={20} y={142} anchor="start" className="dg-text dg-muted">Compression (B.6.2) and bending (B.6.3.2): both built, the rest to come</T>
       {box(20, 154, 126, "B.5.2", "slenderness λ_cs", true)}
       {link(148, 164, 186)}
       {box(166, 154, 134, "B.5.1", "curve and cap Ω", true)}
       {link(302, 318, 186)}
       {box(320, 154, 104, "B.4", "stress at ε_csm", true)}
       {link(426, 442, 186)}
-      {box(444, 154, 96, "B.6.2 on", "resistance", false)}
+      {box(444, 154, 96, "B.6.2, B.6.3", "resistance", true)}
     </Figure>
   );
 }
@@ -448,6 +484,7 @@ export const DIAGRAMS: Record<string, () => ReactNode> = {
   base_curve: BaseCurveDiagram,
   tension: TensionDiagram,
   compression: CompressionDiagram,
+  bending: BendingDiagram,
 };
 
 /** Arrow heads shared by every sketch. Render it once on the page, outside any hidden section. */

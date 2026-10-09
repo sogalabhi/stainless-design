@@ -174,7 +174,7 @@
     "key": "gammaM0",
     "name": "Partial factor γM0",
     "what": "The partial safety factor applied to the resistance of the cross-section.",
-    "why": "It divides the CSM resistance in B.12, B.15 and B.16, so a larger value gives a lower design resistance.",
+    "why": "It divides the CSM resistance in B.12, B.15 and B.16, and in B.19 and B.20 for bending, so a larger value gives a lower design resistance.",
     "where": "8.1 NOTE gives 1.10 unless the National Annex gives another value.",
     "source": "In EN 1993-1-4 (8.1 NOTE)",
     "in_standard": true
@@ -228,7 +228,7 @@
     "key": "kSigma",
     "name": "Plate buckling factor k_σ",
     "what": "A number that says how well the edges of a plate are held and how the stress varies across it. A higher value means the plate buckles later.",
-    "why": "B.9 uses it to find the critical buckling stress of the plate.",
+    "why": "B.9 uses it to find the critical buckling stress of the plate. These k_σ are for the section in compression; bending has its own k_σ in the Bending group.",
     "where": "EN 1993-1-5:2024, 6.4.1, by plate support (internal plate or outstand) and stress ratio ψ. It is outside EN 1993-1-4.",
     "source": "Outside EN 1993-1-4: you provide it",
     "in_standard": false
@@ -248,6 +248,60 @@
     "what": "The thickness of this plate.",
     "why": "B.9 uses it in the plate buckling stress, together with the flat width.",
     "where": "The manufacturer's section table or the drawings.",
+    "source": "Outside EN 1993-1-4: you provide it",
+    "in_standard": false
+  },
+  {
+    "key": "axis",
+    "name": "Axis of bending",
+    "what": "The axis the section bends about: major (y-y) or minor (z-z), as drawn in the Section geometry window.",
+    "why": "Table B.2 gives the bending parameter α of B.20 for each section type and axis. The axis also decides which W_el and W_pl you give and which plates are compressed.",
+    "where": "Your choice, from how the member is loaded. Table B.2 lists the axes for each section type. A circular hollow section needs no choice.",
+    "source": "In EN 1993-1-4 (Table B.2)",
+    "in_standard": true
+  },
+  {
+    "key": "wEl",
+    "name": "Elastic section modulus W_el",
+    "what": "The elastic section modulus of the cross-section about the axis of bending: the moment per unit of stress at first yield.",
+    "why": "B.19 scales the resistance by it. B.20 uses it for the elastic share W_el/W_pl and the hardening term. It also gives the reference moment W_el f_y / γM0.",
+    "where": "The manufacturer's section table, or the Use button in the Section geometry window for the chosen axis. B.6.3.2 names W_el but gives no way to find it.",
+    "source": "Outside EN 1993-1-4: you provide it",
+    "in_standard": false
+  },
+  {
+    "key": "wPl",
+    "name": "Plastic section modulus W_pl",
+    "what": "The plastic section modulus of the cross-section about the axis of bending: the moment per unit of stress when the whole section yields.",
+    "why": "B.20 uses it for the plastic reserve and as the factor in front of its bracket. B.19 does not use it. It must not be smaller than W_el.",
+    "where": "The manufacturer's section table, or the Use button in the Section geometry window for the chosen axis. B.6.3.2 names W_pl but gives no way to find it.",
+    "source": "Outside EN 1993-1-4: you provide it",
+    "in_standard": false
+  },
+  {
+    "key": "lambdaLT",
+    "name": "Relative slenderness λ_LT",
+    "what": "The relative slenderness of the member for lateral-torsional buckling.",
+    "why": "B.6.3.1 uses it as a gate: up to 0.2 B.19 and B.20 apply, from 0.2 to 0.4 B.18 interpolates, and above 0.4 B.6.3 does not apply (use 8.2.4).",
+    "where": "Member design for lateral-torsional buckling (8.3). It is outside Annex B, so you work it out and give it here.",
+    "source": "Outside EN 1993-1-4: you provide it",
+    "in_standard": false
+  },
+  {
+    "key": "kSigmaBending",
+    "name": "Plate buckling factor k_σ in bending",
+    "what": "The buckling factor of one plate when the section bends about the chosen axis. Its stress pattern is not the one of compression, so it has its own value.",
+    "why": "B.9 uses it for the plate buckling stress, B.8 for the slenderness and B.5.1 for the strain limit ε_csm/ε_y that B.19 and B.20 use.",
+    "where": "EN 1993-1-5:2024, 6.4.1, by plate support (internal plate or outstand) and the stress ratio ψ of that plate in bending about the chosen axis. Outside EN 1993-1-4.",
+    "source": "Outside EN 1993-1-4: you provide it",
+    "in_standard": false
+  },
+  {
+    "key": "sigmaCrBending",
+    "name": "Critical stress σ_cr,cs in bending",
+    "what": "The elastic critical local buckling stress of the whole cross-section when it bends about the chosen axis.",
+    "why": "B.8 turns it into the slenderness of the section in bending, and B.5.1 into the strain limit used by B.19 and B.20. It replaces the plate calculation.",
+    "where": "B.5.2(2): numerical methods (for example a finite strip program) or the analytical expressions of reference [9], for the bending case. Outside EN 1993-1-4.",
     "source": "Outside EN 1993-1-4: you provide it",
     "in_standard": false
   }

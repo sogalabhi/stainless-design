@@ -1,0 +1,4 @@
+{
+  "detail": "B.18 interpolation: arrives in phase 3. λ_LT = 0.3 lies between 0.2 and 0.4, so B.6.3.1(2) interpolates with the 8.2.4 resistance M_c,Rd.",
+  "error_type": "NotBuiltYetError"
+}

@@ -1,0 +1,135 @@
+{
+  "_comment": "Table B.2, CSM bending parameter alpha (EN 1993-1-4:2025, Annex B, printed page 64). One record per printed row. section_type is the SectionType value; axis is major, minor or any; ratio_min <= h/b < ratio_max (null = unbounded) is the aspect-ratio condition; legs is equal or unequal for angles. Read from the rendered page, not only from the text extraction.",
+  "rows": [
+    {
+      "section_type": "rectangular hollow section",
+      "section": "Rectangular hollow section",
+      "axis": "any",
+      "aspect_ratio": "Any",
+      "ratio_min": null,
+      "ratio_max": null,
+      "legs": null,
+      "alpha": 2.0
+    },
+    {
+      "section_type": "circular hollow section",
+      "section": "Circular hollow section",
+      "axis": "any",
+      "aspect_ratio": "-",
+      "ratio_min": null,
+      "ratio_max": null,
+      "legs": null,
+      "alpha": 2.0
+    },
+    {
+      "section_type": "I-section",
+      "section": "I-section",
+      "axis": "major",
+      "aspect_ratio": "Any",
+      "ratio_min": null,
+      "ratio_max": null,
+      "legs": null,
+      "alpha": 2.0
+    },
+    {
+      "section_type": "I-section",
+      "section": "I-section",
+      "axis": "minor",
+      "aspect_ratio": "Any",
+      "ratio_min": null,
+      "ratio_max": null,
+      "legs": null,
+      "alpha": 1.2
+    },
+    {
+      "section_type": "channel",
+      "section": "Channel section",
+      "axis": "major",
+      "aspect_ratio": "Any",
+      "ratio_min": null,
+      "ratio_max": null,
+      "legs": null,
+      "alpha": 2.0
+    },
+    {
+      "section_type": "channel",
+      "section": "Channel section",
+      "axis": "minor",
+      "aspect_ratio": "h/b < 2",
+      "ratio_min": null,
+      "ratio_max": 2.0,
+      "legs": null,
+      "alpha": 1.5
+    },
+    {
+      "section_type": "channel",
+      "section": "Channel section",
+      "axis": "minor",
+      "aspect_ratio": "h/b ≥ 2",
+      "ratio_min": 2.0,
+      "ratio_max": null,
+      "legs": null,
+      "alpha": 1.0
+    },
+    {
+      "section_type": "T-section",
+      "section": "T-section",
+      "axis": "major",
+      "aspect_ratio": "h/b < 1",
+      "ratio_min": null,
+      "ratio_max": 1.0,
+      "legs": null,
+      "alpha": 1.0
+    },
+    {
+      "section_type": "T-section",
+      "section": "T-section",
+      "axis": "major",
+      "aspect_ratio": "h/b ≥ 1",
+      "ratio_min": 1.0,
+      "ratio_max": null,
+      "legs": null,
+      "alpha": 1.5
+    },
+    {
+      "section_type": "T-section",
+      "section": "T-section",
+      "axis": "minor",
+      "aspect_ratio": "Any",
+      "ratio_min": null,
+      "ratio_max": null,
+      "legs": null,
+      "alpha": 1.2
+    },
+    {
+      "section_type": "angle",
+      "section": "Equal angle",
+      "axis": "any",
+      "aspect_ratio": "-",
+      "ratio_min": null,
+      "ratio_max": null,
+      "legs": "equal",
+      "alpha": 1.0
+    },
+    {
+      "section_type": "angle",
+      "section": "Unequal angle",
+      "axis": "major",
+      "aspect_ratio": "Any",
+      "ratio_min": null,
+      "ratio_max": null,
+      "legs": "unequal",
+      "alpha": 1.5
+    },
+    {
+      "section_type": "angle",
+      "section": "Unequal angle",
+      "axis": "minor",
+      "aspect_ratio": "Any",
+      "ratio_min": null,
+      "ratio_max": null,
+      "legs": "unequal",
+      "alpha": 1.0
+    }
+  ]
+}

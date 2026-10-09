@@ -2,12 +2,13 @@ import { ChevronDown, ChevronRight, CircleAlert, CircleCheck, FlaskConical, Tras
 import { useEffect, type ReactNode } from "react";
 import { EXAMPLE_SOURCES } from "../lib/example";
 import type { GradeOut, SectionType } from "../api/types";
+import type { BendingFormState } from "../lib/bending";
 import type { DeformationFormState } from "../lib/geometry";
 import { GROUP_TITLES, countByGroup, type GroupKey, type MissingItem } from "../lib/inputs";
 import type { MaterialFormState } from "../lib/material";
 import type { TensionFormState } from "../lib/tension";
 import { helpPanelIsOpen } from "./FieldHelp";
-import { DeformationInputs, MaterialInputs, SectionInputs } from "./InputFields";
+import { BendingInputs, DeformationInputs, MaterialInputs, SectionInputs } from "./InputFields";
 
 /** Ask the dock to open a group and put the cursor in one of its fields. `nonce` makes a repeat request count. */
 export type FocusRequest = { field: string; nonce: number };
@@ -22,6 +23,11 @@ export type DockProps = {
   onTensionChange: (form: TensionFormState) => void;
   deformationForm: DeformationFormState;
   onDeformationChange: (form: DeformationFormState) => void;
+  bendingForm: BendingFormState;
+  onBendingChange: (form: BendingFormState) => void;
+  /** Under W_el and W_pl: where a copied value came from, and whether it matches the geometry. */
+  wElNote?: ReactNode;
+  wPlNote?: ReactNode;
   /** Opens the section geometry window (the big drawing, the layers and the properties). */
   onOpenGeometry: () => void;
   /** Under the area field: where its value came from, and whether it matches the geometry. */
@@ -42,7 +48,7 @@ export type DockProps = {
   onClearAll: () => void;
 };
 
-const ORDER: GroupKey[] = ["material", "section", "deformation"];
+const ORDER: GroupKey[] = ["material", "section", "deformation", "bending"];
 
 export function Dock(props: DockProps) {
   const { missing, openGroup, onOpenGroup, focusRequest, drawerOpen, onCloseDrawer } = props;
@@ -88,6 +94,16 @@ export function Dock(props: DockProps) {
         form={props.deformationForm}
         onChange={props.onDeformationChange}
         sectionType={props.sectionType}
+      />
+    ),
+    bending: (
+      <BendingInputs
+        sectionType={props.sectionType}
+        deformation={props.deformationForm}
+        form={props.bendingForm}
+        onChange={props.onBendingChange}
+        wElNote={props.wElNote}
+        wPlNote={props.wPlNote}
       />
     ),
   };

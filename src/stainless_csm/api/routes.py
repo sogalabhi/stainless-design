@@ -154,6 +154,38 @@ def compression(request: s.CompressionRequest) -> s.CompressionResponse:
     )
 
 
+@router.post("/bending", response_model=s.BendingResponse, responses=ERRORS)
+def bending(request: s.BendingRequest) -> s.BendingResponse:
+    """B.6.3.1(1) and B.6.3.2: CSM bending resistance about an axis of symmetry (B.5 for the
+    section in bending, then B.19 or B.20 with the α of Table B.2)."""
+    material = services.build_material(mappers.material_form(request.material))
+    model = CSMBilinearModel(material)
+    form = mappers.bending_form(request)
+    outcome = services.run_bending(model, form)
+    result = outcome.result
+    deformation = outcome.deformation
+    return s.BendingResponse(
+        material=mappers.material_out(material, request.material.designation),
+        family=mappers.family_key(deformation.family),
+        slenderness=mappers.slenderness_out(deformation.slenderness, deformation.template_plates),
+        strain_limit=mappers.strain_limit_out(deformation.capacity),
+        strain_ratio=result.strain_ratio,
+        formula=s.BendingFormulaKey[result.formula.name],
+        formula_label=result.formula.value,
+        alpha=result.alpha,
+        table_b2=mappers.table_b2_out(result),
+        elastic_moment=result.elastic_moment,
+        plastic_moment=result.plastic_moment,
+        resistance=result.resistance,
+        notes=list(deformation.notes) + list(result.notes),
+        trace=mappers.trace_steps(outcome.trace),
+        moment_figure=plotly_figures.bending_moment_figure(
+            model, deformation.capacity, result, form.w_el, form.w_pl, form.gamma_m0
+        ),
+        blocks_figure=plotly_figures.bending_blocks_figure(model, result),
+    )
+
+
 @router.post(
     "/section-properties", response_model=s.SectionPropertiesResponse, responses=ERRORS
 )
