@@ -4,7 +4,7 @@ import { Latex } from "./Latex";
 import { renderSymbols } from "./Symbols";
 import { Collapsible } from "./ui";
 
-export type SymbolTopic = "material" | "tension" | "deformation";
+export type SymbolTopic = "material" | "tension" | "deformation" | "compression";
 
 /** One line per symbol used on the page: what it is, its unit and where it comes from. */
 export function SymbolsPanel({ topic }: { topic: SymbolTopic }) {

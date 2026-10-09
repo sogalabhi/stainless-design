@@ -1,5 +1,6 @@
 import { CircleAlert, CircleCheck, CircleX, Info } from "lucide-react";
 import { type ReactNode, useEffect, useId, useState } from "react";
+import { useFieldHelp } from "./FieldHelp";
 import { renderSymbols } from "./Symbols";
 
 export type StatusKind = "pass" | "fail" | "info" | "error";
@@ -60,6 +61,9 @@ export function NumberField({
   step,
   min,
   hint,
+  fieldKey,
+  highlighted,
+  note,
 }: {
   label: string;
   value: number | null;
@@ -68,8 +72,14 @@ export function NumberField({
   step?: number;
   min?: number;
   hint?: string;
+  fieldKey?: string;
+  /** lit while the matching dimension line of the sketch is hovered */
+  highlighted?: boolean;
+  /** extra lines under the field (for example where its value came from) */
+  note?: ReactNode;
 }) {
   const id = useId();
+  const help = useFieldHelp(fieldKey, label);
   const [text, setText] = useState(value === null ? "" : String(value));
   useEffect(() => {
     const current = text === "" ? null : Number(text);
@@ -77,11 +87,14 @@ export function NumberField({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
   return (
-    <div className="field">
-      <label htmlFor={id}>
-        {renderSymbols(label)}
-        {unit ? <span className="unit"> [{unit}]</span> : null}
-      </label>
+    <div className={`field${highlighted ? " field-highlight" : ""}`} data-field={fieldKey}>
+      <div className="field-label-row">
+        <label htmlFor={id}>
+          {renderSymbols(label)}
+          {unit ? <span className="unit"> [{unit}]</span> : null}
+        </label>
+        {help.button}
+      </div>
       <input
         id={id}
         type="number"
@@ -95,7 +108,9 @@ export function NumberField({
           onChange(event.target.value === "" || Number.isNaN(parsed) ? null : parsed);
         }}
       />
+      {help.panel}
       {hint ? <div className="field-hint">{hint}</div> : null}
+      {note}
     </div>
   );
 }
@@ -106,17 +121,23 @@ export function SelectField<T extends string>({
   options,
   onChange,
   placeholder,
+  fieldKey,
 }: {
   label: string;
   value: T | null;
   options: { value: T; label: string }[];
   onChange: (value: T) => void;
   placeholder?: string;
+  fieldKey?: string;
 }) {
   const id = useId();
+  const help = useFieldHelp(fieldKey, label);
   return (
-    <div className="field">
-      <label htmlFor={id}>{renderSymbols(label)}</label>
+    <div className="field" data-field={fieldKey}>
+      <div className="field-label-row">
+        <label htmlFor={id}>{renderSymbols(label)}</label>
+        {help.button}
+      </div>
       <select
         id={id}
         value={value ?? ""}
@@ -133,6 +154,7 @@ export function SelectField<T extends string>({
           </option>
         ))}
       </select>
+      {help.panel}
     </div>
   );
 }
@@ -141,16 +163,21 @@ export function CheckField({
   label,
   checked,
   onChange,
+  fieldKey,
 }: {
   label: string;
   checked: boolean;
   onChange: (checked: boolean) => void;
+  fieldKey?: string;
 }) {
   const id = useId();
+  const help = useFieldHelp(fieldKey, label);
   return (
-    <div className="field field-check">
+    <div className="field field-check" data-field={fieldKey}>
       <input id={id} type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
       <label htmlFor={id}>{label}</label>
+      {help.button}
+      {help.panel}
     </div>
   );
 }

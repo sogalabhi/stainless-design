@@ -10,6 +10,7 @@ const TOPIC_LABELS: Record<string, string> = {
   material: "Material",
   tension: "Tension",
   deformation: "Deformation",
+  compression: "Compression",
 };
 
 function matches(entry: SymbolOut, needle: string): boolean {

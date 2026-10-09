@@ -1,7 +1,14 @@
 import type { ReactNode } from "react";
 import { Sym } from "../components/Symbols";
 import { Collapsible } from "../components/ui";
-import { BaseCurveDiagram, CsmCurveDiagram, PlateDiagram, SectionDiagram, TensionDiagram } from "./diagrams";
+import {
+  BaseCurveDiagram,
+  CompressionDiagram,
+  CsmCurveDiagram,
+  PlateDiagram,
+  SectionDiagram,
+  TensionDiagram,
+} from "./diagrams";
 
 function Facts({ rows }: { rows: [string, ReactNode][] }) {
   return (
@@ -20,7 +27,7 @@ export function Modules() {
   return (
     <div className="help-stack">
       <p className="lead">
-        The three steps are separate on purpose. Each one answers one question, and the later ones
+        The steps are separate on purpose. Each one answers one question, and the later ones
         read the answer of the earlier ones.
       </p>
 
@@ -159,16 +166,18 @@ export function Modules() {
               <>
                 This is what makes the method <em>continuous</em>. A stocky section can reach several
                 times <Sym text="ε_y" /> and uses a lot of hardening; a slender one buckles around
-                yield or earlier and gets none. Resistances for compression and bending (B.6.2
-                onwards, not built yet) will read the stress at this strain from the B.4 curve.
+                yield or earlier and gets none. Compression (B.6.2) reads the stress at this
+                strain from the B.4 curve; bending (B.6.3, not built yet) will too.
               </>,
             ],
             [
               "You give",
               <>
-                The geometry: <Sym text="d" /> and <Sym text="t" /> for a tube, or each plate's{" "}
-                <Sym text="b̄" />, <Sym text="t" /> and <Sym text="k_σ" />, or a numerical{" "}
-                <Sym text="σ_cr,cs" />; also <Sym text="ν" /> (unless you give{" "}
+                The section dimensions of one of the six shapes (the Section group draws them as you
+                type; the engine derives the flat width <Sym text="c" /> of each plate as 8.2.2(5)
+                draws it) and one <Sym text="k_σ" /> per plate, or <Sym text="d" /> and{" "}
+                <Sym text="t" /> for a tube, or each plate's <Sym text="b̄" />, <Sym text="t" /> and{" "}
+                <Sym text="k_σ" /> entered one by one, or a numerical <Sym text="σ_cr,cs" />; also <Sym text="ν" /> (unless you give{" "}
                 <Sym text="σ_cr,cs" />) and <Sym text="Ω" />.
               </>,
             ],
@@ -203,6 +212,67 @@ export function Modules() {
           <PlateDiagram />
           <SectionDiagram />
         </Collapsible>
+      </section>
+
+      <section className="help-card" aria-labelledby="mod-compression">
+        <h2 id="mod-compression">4 · Compression (B.6.2)</h2>
+        <p className="lead">How much push can a short member take, counting the hardening?</p>
+        <Facts
+          rows={[
+            [
+              "What it does",
+              <>
+                Takes the strain limit <Sym text="ε_csm/ε_y" /> of the section from B.5.1 and turns it
+                into a force. Below 1.0 it uses Formula B.15, which scales the yield resistance by the
+                ratio. From 1.0 it uses Formula B.16 with the stress <Sym text="f_csm" /> of Formula
+                B.17, read from the hardening line. The result is <Sym text="N_csm,Rd" />.
+              </>,
+            ],
+            [
+              "Why it is needed",
+              <>
+                In compression a section can buckle locally before it gets anywhere near the
+                hardening. A stocky section reaches several times <Sym text="ε_y" /> and uses a lot
+                of it; a slender one is held below yield, and the resistance falls smoothly with the
+                slenderness instead of dropping at a class boundary.
+              </>,
+            ],
+            [
+              "You give",
+              <>
+                Nothing new. It uses the section type and the geometry from the Deformation group, the
+                area <Sym text="A" /> and <Sym text="γ_M0" /> from the Section group, and the material.
+              </>,
+            ],
+            [
+              "You get",
+              <>
+                <Sym text="ε_csm/ε_y" />, which formula applied, <Sym text="f_csm" /> (only with B.16)
+                and <Sym text="N_csm,Rd" />, each with its working.
+              </>,
+            ],
+            [
+              "Reading the charts",
+              <>
+                The first chart shows the resistance, as a multiple of <Sym text="A f_y / γ_M0" />,
+                against the slenderness, with the two formulas, the cap and your section. The ring
+                marks where the ratio is 1.0: Formula B.15 meets B.16 there. The second chart shows
+                the point <Sym text="f_csm" /> on the material curve, with the strength above{" "}
+                <Sym text="f_y" /> shaded.
+              </>,
+            ],
+            [
+              "Watch for",
+              <>
+                Beyond the B.5 slenderness limit there is no <Sym text="ε_csm" />, so the tool shows no
+                resistance and says why. B.6.2 has no clause about holes, so <Sym text="A" /> is the
+                area you enter. It is a cross-section resistance only: member buckling is outside Annex
+                B.
+              </>,
+            ],
+          ]}
+        />
+        <CompressionDiagram />
       </section>
     </div>
   );

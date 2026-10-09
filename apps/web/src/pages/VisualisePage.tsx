@@ -2,86 +2,64 @@ import type { UseQueryResult } from "@tanstack/react-query";
 import { Undo2 } from "lucide-react";
 import { Suspense, lazy, useMemo, useState } from "react";
 import type { ApiError } from "../api/client";
-import type { ComparisonResponse, GradeOut } from "../api/types";
+import type { ComparisonResponse } from "../api/types";
 import { BendingProfile } from "../components/BendingProfile";
 import { PlotlyChart } from "../components/PlotlyChart";
 import type { SceneItem } from "../components/SectionScene";
 import { renderSymbols } from "../components/Symbols";
 import { SymbolsPanel } from "../components/SymbolsPanel";
+import { MaterialProblem } from "../components/MaterialProblem";
 import { Collapsible, MetricCard, StatusBox } from "../components/ui";
+import { Waiting } from "../components/Waiting";
 import { formatNumber } from "../lib/format";
 import { ZONE_LABEL, nearestPoint, sceneSection, wrinkleAmount, withTrace } from "../lib/comparison";
-import { missingDeformation, type DeformationFormState } from "../lib/geometry";
-import { missingMaterial, type MaterialFormState } from "../lib/material";
-import { MaterialInputs } from "./MaterialPage";
-import { SectionInputs } from "./DeformationPage";
+import type { DeformationFormState } from "../lib/geometry";
+import type { MissingItem } from "../lib/inputs";
 
 const SectionScene = lazy(() => import("../components/SectionScene"));
 
 export function VisualisePage({
-  materialForm,
-  onMaterialChange,
-  grades,
-  form,
-  onChange,
+  waiting,
+  materialProblem,
+  typedStress,
+  onGo,
+  onOpenMaterial,
   query,
+  form,
   dark,
 }: {
-  materialForm: MaterialFormState;
-  onMaterialChange: (form: MaterialFormState) => void;
-  grades: GradeOut[];
-  form: DeformationFormState;
-  onChange: (form: DeformationFormState) => void;
+  waiting: MissingItem[];
+  materialProblem: boolean;
+  /** The section is a typed critical stress: nothing to draw, no thickness to change. */
+  typedStress: boolean;
+  onGo: (item: MissingItem) => void;
+  onOpenMaterial: () => void;
   query: UseQueryResult<ComparisonResponse, ApiError>;
+  form: DeformationFormState;
   dark: boolean;
 }) {
-  const materialMissing = missingMaterial(materialForm);
-  const sectionMissing = form.kind === "sigma_cr" ? [] : missingDeformation(form);
-  const ready = materialMissing.length === 0 && sectionMissing.length === 0 && form.kind !== "sigma_cr";
+  const ready = waiting.length === 0 && !materialProblem && !typedStress;
   const result = ready ? query.data : undefined;
 
   return (
-    <div className="page">
-      <section className="panel inputs" aria-label="Visualise inputs">
-        <h2>Material</h2>
-        <MaterialInputs
-          form={materialForm}
-          onChange={onMaterialChange}
-          grades={grades}
-          source={result?.material.source}
-          note={result?.material.note}
-        />
-        <h2>Section</h2>
-        <SectionInputs form={form} onChange={onChange} />
-      </section>
-
-      <section className="results" aria-label="Visualisation" aria-busy={query.isFetching}>
-        <h2>Stocky against slender, live</h2>
-        <p className="muted">
-          These are the same inputs as steps 1 and 3. Change any value and every picture below
-          redraws; the slider makes the same section thicker or thinner.
-        </p>
-        {materialMissing.length > 0 ? (
-          <StatusBox kind="info">
-            {renderSymbols(`Still to enter (material): ${materialMissing.join(", ")}.`)}
-          </StatusBox>
-        ) : null}
-        {form.kind === "sigma_cr" ? (
-          <StatusBox kind="info">
-            A typed σ_cr,cs has no plate or tube to draw and no thickness to change. Choose a
-            circular hollow section or flat plates.
-          </StatusBox>
-        ) : null}
-        {sectionMissing.length > 0 ? (
-          <StatusBox kind="info">{renderSymbols(`Still to enter (section): ${sectionMissing.join("; ")}.`)}</StatusBox>
-        ) : null}
-        {ready && query.isError ? <StatusBox kind="error">{query.error.message}</StatusBox> : null}
-        {ready && result && !query.isError ? (
-          <Live result={result} form={form} dark={dark} />
-        ) : null}
-        {ready && !result && !query.isError ? <p className="muted">Calculating...</p> : null}
-      </section>
-    </div>
+    <section className="results" aria-label="Explore" aria-busy={query.isFetching}>
+      <h2>Stocky against slender, live</h2>
+      <p className="muted">
+        These use the same inputs as the dock. Change any value there and every picture below
+        redraws; the slider makes the same section thicker or thinner.
+      </p>
+      {typedStress ? (
+        <StatusBox kind="info">
+          A typed σ_cr,cs has no plate or tube to draw and no thickness to change. In the
+          Deformation group, choose the section dimensions, the diameter and thickness, or flat plates.
+        </StatusBox>
+      ) : null}
+      {!typedStress ? <Waiting items={waiting} onGo={onGo} /> : null}
+      {materialProblem ? <MaterialProblem onOpenMaterial={onOpenMaterial} /> : null}
+      {ready && query.isError ? <StatusBox kind="error">{query.error.message}</StatusBox> : null}
+      {ready && result && !query.isError ? <Live result={result} form={form} dark={dark} /> : null}
+      {ready && !result && !query.isError ? <p className="muted">Calculating...</p> : null}
+    </section>
   );
 }
 
@@ -113,6 +91,7 @@ function Live({
         section,
         wrinkle: wrinkleAmount(point.slenderness, switchAt, upper),
         zone: point.zone,
+        governing: point.governing_label,
       };
       list.push({ item, point });
     };
@@ -232,6 +211,9 @@ function Live({
         method. All use your widths or diameter and differ only in thickness. The wave size is a
         picture of "more slender, more buckling": the CSM does not calculate a buckled shape.
         Orange arrows mark the compression.
+        {form.kind === "template"
+          ? " The section is assembled from the dimensions you typed (web and flanges in place, extruded); only the plate the engine reports as governing wrinkles. Fillets and weld triangles are left out of the 3D view."
+          : ""}
       </p>
       <div className="legend-cards">
         {entries.map(({ item, point }) => {

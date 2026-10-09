@@ -271,6 +271,40 @@ export function TensionDiagram() {
   );
 }
 
+/** B.6.2: a member in compression and the two branches of the resistance curve. */
+export function CompressionDiagram() {
+  return (
+    <Figure
+      label="A member in compression and the compression resistance against slenderness, with Formula B.16 for stocky sections and Formula B.15 for slender ones"
+      caption="Left: the member with area A and force N. Right: for a stocky section the strain limit is above ε_y and Formula B.16 uses the hardened stress f_csm. Where ε_csm/ε_y falls to 1.0 the curve changes to Formula B.15, which scales the yield resistance by the ratio. The two meet there with no jump. Not to scale."
+      width={560}
+      height={290}
+    >
+      <rect x={60} y={90} width={150} height={44} className="dg-plate" />
+      <line x1={20} y1={112} x2={58} y2={112} className="dg-line dg-orange" markerEnd={arrow} />
+      <line x1={250} y1={112} x2={212} y2={112} className="dg-line dg-orange" markerEnd={arrow} />
+      <T x={30} y={104} className="dg-text dg-orange-text">N</T>
+      <T x={240} y={104} className="dg-text dg-orange-text">N</T>
+      <line x1={135} y1={76} x2={135} y2={148} className="dg-guide dg-dash" />
+      <T x={135} y={172}>area A</T>
+      <T x={135} y={202} className="dg-text dg-muted">resistance N_csm,Rd</T>
+
+      <Axes x0={320} y0={250} x1={540} y1={30} xLabel="slenderness λ" yLabel="N_csm,Rd / (A f_y / γ_M0)" yOffset={68} />
+      <line x1={320} y1={74} x2={360} y2={74} className="dg-line dg-blue" />
+      <line x1={360} y1={74} x2={420} y2={140} className="dg-line dg-blue" />
+      <line x1={420} y1={140} x2={510} y2={210} className="dg-line dg-blue dg-dash" />
+      <line x1={320} y1={140} x2={420} y2={140} className="dg-guide" />
+      <line x1={420} y1={140} x2={420} y2={250} className="dg-guide" />
+      <circle cx={420} cy={140} r={6} className="dg-dot dg-orange-fill" />
+      <T x={312} y={144} anchor="end">1</T>
+      <T x={340} y={64} className="dg-text dg-muted">cap</T>
+      <T x={392} y={104} anchor="end" className="dg-text dg-blue-text">B.16, with f_csm</T>
+      <T x={512} y={196} anchor="end" className="dg-text dg-blue-text">B.15</T>
+      <T x={428} y={132} anchor="start" className="dg-text dg-orange-text">ε_csm/ε_y = 1</T>
+    </Figure>
+  );
+}
+
 /** How the three modules feed each other. */
 export function WorkflowDiagram() {
   const box = (x: number, y: number, w: number, title: string, line: string, built: boolean) => (
@@ -413,6 +447,7 @@ export const DIAGRAMS: Record<string, () => ReactNode> = {
   section: SectionDiagram,
   base_curve: BaseCurveDiagram,
   tension: TensionDiagram,
+  compression: CompressionDiagram,
 };
 
 /** Arrow heads shared by every sketch. Render it once on the page, outside any hidden section. */

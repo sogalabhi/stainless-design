@@ -29,6 +29,8 @@ export type SceneItem = {
   /** 0 flat, 1 at the upper limit of the method: how strong the wrinkles are drawn */
   wrinkle: number;
   zone: Zone;
+  /** section template: the plate role the engine reports as governing; only that plate wrinkles */
+  governing?: string;
 };
 
 const ZONE_COLOUR: Record<Zone, { light: string; dark: string }> = {
@@ -43,11 +45,13 @@ const PLATE_WAVES = 2;
 
 function footprint(section: SceneSection): number {
   if (section.kind === "chs") return section.d;
+  if (section.kind === "template") return section.width;
   const widest = Math.max(...section.plates.map((p) => p.width));
   return section.plates.reduce((sum, p) => sum + p.width, 0) + widest * 0.15 * (section.plates.length - 1);
 }
 
 function referenceWidth(section: SceneSection): number {
+  if (section.kind === "template") return Math.max(section.width, section.depth);
   return section.kind === "chs" ? section.d : Math.max(...section.plates.map((p) => p.width));
 }
 
@@ -92,6 +96,18 @@ function buildItem(item: SceneItem, length: number, material: MeshStandardMateri
   if (section.kind === "chs") {
     const amplitude = wrinkle * 0.04 * section.d;
     group.add(new Mesh(tubeGeometry(section.d, section.t, length, amplitude, TUBE_WAVES), material));
+    return group;
+  }
+  if (section.kind === "template") {
+    for (const plate of section.plates) {
+      const governs = plate.role === item.governing;
+      const amplitude = governs ? wrinkle * 0.18 * plate.width : 0;
+      const mesh = new Mesh(slabGeometry(plate.width, plate.thickness, length, amplitude, PLATE_WAVES), material);
+      if (plate.along === "z") mesh.rotation.y = Math.PI / 2;
+      mesh.position.set(plate.cx, 0, plate.cz);
+      group.add(mesh);
+    }
+    group.rotation.y = -0.7;
     return group;
   }
   const gap = referenceWidth(section) * 0.15;

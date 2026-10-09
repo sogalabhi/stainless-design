@@ -8,12 +8,17 @@ export function Working({
   title,
   steps,
   clauses,
+  alsoSymbols = [],
 }: {
   title: string;
   steps: TraceStepOut[];
   clauses?: string[];
+  /** steps kept even when their clause is not listed (a typed value, whose clause is "input") */
+  alsoSymbols?: string[];
 }) {
-  const shown = clauses ? steps.filter((step) => clauses.includes(step.clause)) : steps;
+  const shown = clauses
+    ? steps.filter((step) => clauses.includes(step.clause) || alsoSymbols.includes(step.symbol))
+    : steps;
   return (
     <Collapsible title={`Show working: ${title}`}>
       <ol className="working">

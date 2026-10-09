@@ -1,11 +1,14 @@
 import type { ComparisonPointOut, ComparisonRequest } from "../api/types";
 import type { DeformationFormState } from "./geometry";
-import { deformationRequest } from "./geometry";
+import { deformationRequest, dimsOf } from "./geometry";
+import { templateLayout, type TemplateLayout } from "./templateScene";
 
 /** A tube, or each plate drawn as its own slab (the plates carry no layout, so none is assumed). */
 export type SceneSection =
   | { kind: "chs"; d: number; t: number }
-  | { kind: "plates"; plates: { label: string; width: number; thickness: number }[] };
+  | { kind: "plates"; plates: { label: string; width: number; thickness: number }[] }
+  // a section template assembled from its plates (web and flanges in place), from the typed dimensions
+  | ({ kind: "template" } & TemplateLayout);
 
 /** The request, or null while something is missing or the section has no thickness to change. */
 export function comparisonRequest(
@@ -21,6 +24,18 @@ export function sceneSection(form: DeformationFormState, factor: number): SceneS
   if (form.kind === "chs") {
     if (form.d === null || form.t === null) return null;
     return { kind: "chs", d: form.d, t: form.t * factor };
+  }
+  if (form.kind === "template" && form.shape !== null) {
+    // the thickness factor multiplies t_w, t_f and t, as the engine does (h, b, r, s, d stay)
+    const dims = dimsOf(form);
+    const scaled = (value: number | null) => (value === null ? null : value * factor);
+    const layout = templateLayout(form.shape, {
+      ...dims,
+      tw: scaled(dims.tw),
+      tf: scaled(dims.tf),
+      t: scaled(dims.t),
+    });
+    return layout === null ? null : { kind: "template", ...layout };
   }
   if (form.kind === "plates") {
     const plates = [];

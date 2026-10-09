@@ -1,111 +1,58 @@
 import type { UseQueryResult } from "@tanstack/react-query";
 import type { ApiError } from "../api/client";
-import type { SectionType, TensionResponse } from "../api/types";
+import type { TensionResponse } from "../api/types";
 import { PlotlyChart } from "../components/PlotlyChart";
-import { CheckField, MetricCard, NumberField, SelectField, StatusBox } from "../components/ui";
+import { MaterialProblem } from "../components/MaterialProblem";
+import { MetricCard, StatusBox } from "../components/ui";
+import { Waiting } from "../components/Waiting";
 import { renderSymbols } from "../components/Symbols";
 import { SymbolsPanel } from "../components/SymbolsPanel";
 import { Working } from "../components/Working";
 import { formatKn, formatNumber } from "../lib/format";
+import type { MissingItem, ScopeCheck } from "../lib/inputs";
 
-/** Every number starts empty: nothing is assumed. */
-export type TensionFormState = {
-  area: number | null; // mm2
-  sectionType: SectionType | null; // only a label (B.2); no formula uses it
-  hasHoles: boolean;
-  gammaM0: number | null;
-};
-
-export const defaultTensionForm: TensionFormState = {
-  area: null,
-  sectionType: null,
-  hasHoles: false,
-  gammaM0: null,
-};
-
-export function missingTension(form: TensionFormState): string[] {
-  const missing: string[] = [];
-  if (form.area === null) missing.push("the area A");
-  if (form.gammaM0 === null) missing.push("γM0");
-  return missing;
-}
-
-const SECTIONS: { value: SectionType; label: string }[] = [
-  { value: "I-section", label: "I-section" },
-  { value: "channel", label: "Channel" },
-  { value: "T-section", label: "T-section" },
-  { value: "angle", label: "Angle" },
-  { value: "rectangular hollow section", label: "Rectangular hollow section" },
-  { value: "circular hollow section", label: "Circular hollow section" },
-];
+/** The engine adds this note because the tension call alone has no section to check. The page shows
+ * the B.2 check from the B.5 result instead, so the note is not repeated. */
+const ENGINE_SCOPE_NOTE = "B.2 requires the B.5 cross-section slenderness limits";
 
 export function TensionPage({
-  form,
-  onChange,
+  waiting,
+  materialProblem,
+  scope,
+  onGo,
+  onOpenMaterial,
   query,
-  materialReady,
   dark,
 }: {
-  form: TensionFormState;
-  onChange: (form: TensionFormState) => void;
+  waiting: MissingItem[];
+  scope: ScopeCheck;
+  materialProblem: boolean;
+  onGo: (item: MissingItem) => void;
+  onOpenMaterial: () => void;
   query: UseQueryResult<TensionResponse, ApiError>;
-  materialReady: boolean;
   dark: boolean;
 }) {
-  const missing = missingTension(form);
-  const ready = materialReady && missing.length === 0;
+  const ready = waiting.length === 0 && !materialProblem;
   const result = ready ? query.data : undefined;
   return (
-    <div className="page">
-      <section className="panel inputs" aria-label="Tension inputs">
-        <h2>Inputs</h2>
-        {result ? <p className="muted">Material: {result.material.source}</p> : null}
-        <NumberField
-          label="Area A"
-          unit="mm²"
-          value={form.area}
-          step={100}
-          onChange={(area) => onChange({ ...form, area })}
-        />
-        <NumberField
-          label="γM0"
-          value={form.gammaM0}
-          step={0.05}
-          onChange={(gammaM0) => onChange({ ...form, gammaM0 })}
-        />
-        <SelectField
-          label="Section type (B.2, label only)"
-          value={form.sectionType}
-          options={SECTIONS}
-          placeholder="not specified"
-          onChange={(sectionType) => onChange({ ...form, sectionType })}
-        />
-        <CheckField
-          label="Section has holes (bolt holes, slots)"
-          checked={form.hasHoles}
-          onChange={(hasHoles) => onChange({ ...form, hasHoles })}
-        />
-      </section>
-
-      <section className="results" aria-label="Tension results" aria-busy={query.isFetching}>
-        <h2>Results</h2>
-        {!materialReady ? (
-          <StatusBox kind="info">Complete step 1 (Material) first.</StatusBox>
-        ) : null}
-        {materialReady && missing.length > 0 ? (
-          <StatusBox kind="info">{renderSymbols(`Still to enter: ${missing.join(", ")}.`)}</StatusBox>
-        ) : null}
-        {ready && query.isError ? <StatusBox kind="error">{query.error.message}</StatusBox> : null}
-        {ready && result && !query.isError ? <TensionResults result={result} dark={dark} /> : null}
-        {ready && !result && !query.isError ? <p className="muted">Calculating...</p> : null}
-      </section>
-    </div>
+    <section className="results" aria-label="Tension results" aria-busy={query.isFetching}>
+      <h2>Tension (B.6.1)</h2>
+      <Waiting items={waiting} onGo={onGo} />
+      {materialProblem ? <MaterialProblem onOpenMaterial={onOpenMaterial} /> : null}
+      {ready && query.isError ? <StatusBox kind="error">{query.error.message}</StatusBox> : null}
+      {ready && !materialProblem ? <ScopeBox scope={scope} onGo={onGo} /> : null}
+      {ready && result && !query.isError && scope.state !== "beyond" ? (
+        <TensionResults result={result} dark={dark} />
+      ) : null}
+      {ready && !result && !query.isError ? <p className="muted">Calculating...</p> : null}
+    </section>
   );
 }
 
 function TensionResults({ result, dark }: { result: TensionResponse; dark: boolean }) {
   return (
     <>
+      <p className="muted">Material: {result.material.source}</p>
       <div className="metrics">
         <MetricCard
           title="ε_csm,t / ε_y"
@@ -129,7 +76,7 @@ function TensionResults({ result, dark }: { result: TensionResponse; dark: boole
         dark={dark}
         label="Stress-strain curve with the tension strain limit marked"
       />
-      {result.notes.map((note) => (
+      {result.notes.filter((note) => !note.startsWith(ENGINE_SCOPE_NOTE)).map((note) => (
         <StatusBox key={note} kind="info">
           {note}
         </StatusBox>
@@ -138,4 +85,47 @@ function TensionResults({ result, dark }: { result: TensionResponse; dark: boole
       <SymbolsPanel topic="tension" />
     </>
   );
+}
+
+/** B.2: whether the B.5 slenderness limit has been checked for this section, and what it found. */
+function ScopeBox({ scope, onGo }: { scope: ScopeCheck; onGo: (item: MissingItem) => void }) {
+  switch (scope.state) {
+    case "within":
+      return (
+        <StatusBox kind="info">
+          {renderSymbols(
+            `B.2: the section is within the B.5 limit (${scope.symbol} = ${formatNumber(scope.slenderness)} ≤ ${formatNumber(scope.upper)}), so Annex B applies.`,
+          )}
+        </StatusBox>
+      );
+    case "beyond":
+      return (
+        <StatusBox kind="error">
+          {renderSymbols(
+            `B.2: the section is beyond the B.5 limit (${scope.symbol} = ${formatNumber(scope.slenderness)} > ${formatNumber(scope.upper)}), so Annex B does not apply and there is no CSM tension resistance.`,
+          )}
+        </StatusBox>
+      );
+    case "unchecked":
+      return <StatusBox kind="info">{renderSymbols(`B.2: the B.5 slenderness limit could not be checked: ${scope.reason}`)}</StatusBox>;
+    case "waiting":
+      return (
+        <StatusBox kind="info">
+          <span>
+            {renderSymbols(
+              "B.2: Annex B applies only within the B.5 slenderness limits. The tension formulas do not use slenderness, so the result below stands, but the limit is not checked until B.5 has its inputs. Waiting for: ",
+            )}
+          </span>
+          {scope.items.map((item, index) => (
+            <span key={`${item.group}/${item.field}`}>
+              {index > 0 ? "; " : ""}
+              <button type="button" className="link-button" onClick={() => onGo(item)}>
+                {renderSymbols(item.label)}
+              </button>
+            </span>
+          ))}
+          <span>.</span>
+        </StatusBox>
+      );
+  }
 }

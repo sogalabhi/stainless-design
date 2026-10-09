@@ -1,4 +1,5 @@
 import type { GradeOut, MaterialInput, StainlessFamily } from "../api/types";
+import type { MissingItem } from "./inputs";
 
 export const CUSTOM = "custom";
 
@@ -22,13 +23,17 @@ export const defaultMaterialForm: MaterialFormState = {
 };
 
 /** What the user still has to give before the material can be calculated. */
-export function missingMaterial(form: MaterialFormState): string[] {
-  const missing: string[] = [];
-  if (form.fy === null) missing.push("f_y");
-  if (form.fu === null) missing.push("f_u");
-  if (form.elasticModulus === null) missing.push("E");
-  if (form.family === null) missing.push("the family");
+export function missingMaterialItems(form: MaterialFormState): MissingItem[] {
+  const missing: MissingItem[] = [];
+  if (form.fy === null) missing.push({ label: "f_y", group: "material", field: "fy" });
+  if (form.fu === null) missing.push({ label: "f_u", group: "material", field: "fu" });
+  if (form.elasticModulus === null) missing.push({ label: "E", group: "material", field: "E" });
+  if (form.family === null) missing.push({ label: "the family", group: "material", field: "family" });
   return missing;
+}
+
+export function missingMaterial(form: MaterialFormState): string[] {
+  return missingMaterialItems(form).map((item) => item.label);
 }
 
 export function materialInput(form: MaterialFormState): MaterialInput | null {
