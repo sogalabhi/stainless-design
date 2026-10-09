@@ -54,7 +54,7 @@
     "/api/v1/symbols": {
       "get": {
         "summary": "Symbols",
-        "description": "The symbol glossary: one line per symbol. `topic` is material, deformation or tension.",
+        "description": "The symbol glossary, one line per symbol. `topic` filters it (material, tension, ...).",
         "operationId": "symbols_api_v1_symbols_get",
         "parameters": [
           {
@@ -95,6 +95,29 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/input-help": {
+      "get": {
+        "summary": "Input Help",
+        "description": "The \"?\" help for every input: what, why, where to get it, and its source tag.",
+        "operationId": "input_help_api_v1_input_help_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/InputHelpOut"
+                  },
+                  "type": "array",
+                  "title": "Response Input Help Api V1 Input Help Get"
                 }
               }
             }
@@ -242,6 +265,84 @@
         }
       }
     },
+    "/api/v1/compression": {
+      "post": {
+        "summary": "Compression",
+        "description": "B.6.2: CSM compression resistance (B.5 for the section, then B.15 to B.17).",
+        "operationId": "compression_api_v1_compression_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompressionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompressionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/section-properties": {
+      "post": {
+        "summary": "Section Properties",
+        "description": "A, centroid, I, W_el, W_pl, plastic axes and shear centre from the template dimensions.\n\nReference values (geometry, not a rule of EN 1993-1-4): they enter no calculation unless the\nuser copies one into an input field.",
+        "operationId": "section_properties_api_v1_section_properties_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SectionPropertiesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SectionPropertiesResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/section-comparison": {
       "post": {
         "summary": "Section Comparison",
@@ -371,6 +472,11 @@
             ],
             "title": "Stress",
             "description": "Stress read from the B.4 curve at the strain [N/mm2]"
+          },
+          "governing_label": {
+            "type": "string",
+            "title": "Governing Label",
+            "description": "The plate that sets the slenderness at this point"
           }
         },
         "type": "object",
@@ -380,7 +486,8 @@
           "zone",
           "strain_ratio",
           "strain",
-          "stress"
+          "stress",
+          "governing_label"
         ],
         "title": "ComparisonPointOut"
       },
@@ -490,6 +597,155 @@
         ],
         "title": "ComparisonResponse"
       },
+      "CompressionFormulaKey": {
+        "type": "string",
+        "enum": [
+          "b15",
+          "b16"
+        ],
+        "title": "CompressionFormulaKey",
+        "description": "Which formula of B.6.2 gave the resistance (stable machine key)."
+      },
+      "CompressionRequest": {
+        "properties": {
+          "material": {
+            "$ref": "#/components/schemas/MaterialInput"
+          },
+          "geometry": {
+            "$ref": "#/components/schemas/GeometryInput"
+          },
+          "omega": {
+            "type": "number",
+            "title": "Omega",
+            "description": "Parameter Omega, an input"
+          },
+          "poisson_ratio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Poisson Ratio",
+            "description": "Poisson ratio nu, an input; not needed with sigma_cr"
+          },
+          "area": {
+            "type": "number",
+            "title": "Area",
+            "description": "Cross-section area A [mm2]"
+          },
+          "gamma_m0": {
+            "type": "number",
+            "title": "Gamma M0",
+            "description": "Partial factor gamma_M0, an input"
+          },
+          "graph_view": {
+            "$ref": "#/components/schemas/GraphView",
+            "default": "schematic"
+          }
+        },
+        "type": "object",
+        "required": [
+          "material",
+          "geometry",
+          "omega",
+          "area",
+          "gamma_m0"
+        ],
+        "title": "CompressionRequest",
+        "description": "The B.5 inputs of the section, plus the area and gamma_M0 (inputs, never assumed)."
+      },
+      "CompressionResponse": {
+        "properties": {
+          "material": {
+            "$ref": "#/components/schemas/MaterialOut"
+          },
+          "family": {
+            "$ref": "#/components/schemas/FamilyKey"
+          },
+          "slenderness": {
+            "$ref": "#/components/schemas/SlendernessOut"
+          },
+          "strain_limit": {
+            "$ref": "#/components/schemas/StrainLimitOut"
+          },
+          "strain_ratio": {
+            "type": "number",
+            "title": "Strain Ratio",
+            "description": "eps_csm / eps_y, from B.5.1"
+          },
+          "formula": {
+            "$ref": "#/components/schemas/CompressionFormulaKey"
+          },
+          "formula_label": {
+            "type": "string",
+            "title": "Formula Label",
+            "description": "B.15 or B.16"
+          },
+          "design_stress": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Design Stress",
+            "description": "f_csm [N/mm2] (Formula B.17); null when B.15 applies, where B.17 is not used"
+          },
+          "resistance": {
+            "type": "number",
+            "title": "Resistance",
+            "description": "N_csm,Rd [N]"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Notes"
+          },
+          "trace": {
+            "items": {
+              "$ref": "#/components/schemas/TraceStepOut"
+            },
+            "type": "array",
+            "title": "Trace"
+          },
+          "capacity_figure": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Capacity Figure",
+            "description": "Plotly figure: N_csm,Rd / (A f_y / gamma_M0) against slenderness"
+          },
+          "point_figure": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Point Figure",
+            "description": "Plotly figure: the compression point on the B.4 curve"
+          }
+        },
+        "type": "object",
+        "required": [
+          "material",
+          "family",
+          "slenderness",
+          "strain_limit",
+          "strain_ratio",
+          "formula",
+          "formula_label",
+          "design_stress",
+          "resistance",
+          "notes",
+          "trace",
+          "capacity_figure",
+          "point_figure"
+        ],
+        "title": "CompressionResponse"
+      },
       "DeformationRequest": {
         "properties": {
           "material": {
@@ -570,6 +826,35 @@
         ],
         "title": "DeformationResponse"
       },
+      "ElasticModulusOut": {
+        "properties": {
+          "value": {
+            "type": "number",
+            "title": "Value",
+            "description": "The smaller of the two [mm3]"
+          },
+          "smaller_side": {
+            "type": "string",
+            "title": "Smaller Side",
+            "description": "Which fibre gives the smaller modulus; 'equal' when the two sides are equal"
+          },
+          "sides": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Sides",
+            "description": "The modulus at each extreme fibre [mm3]"
+          }
+        },
+        "type": "object",
+        "required": [
+          "value",
+          "smaller_side",
+          "sides"
+        ],
+        "title": "ElasticModulusOut"
+      },
       "ErrorResponse": {
         "properties": {
           "detail": {
@@ -588,6 +873,14 @@
         ],
         "title": "ErrorResponse"
       },
+      "FabricationKey": {
+        "type": "string",
+        "enum": [
+          "rolled",
+          "welded"
+        ],
+        "title": "FabricationKey"
+      },
       "FamilyKey": {
         "type": "string",
         "enum": [
@@ -595,6 +888,34 @@
           "circular_hollow"
         ],
         "title": "FamilyKey"
+      },
+      "FibreDistancesOut": {
+        "properties": {
+          "top": {
+            "type": "number",
+            "title": "Top"
+          },
+          "bottom": {
+            "type": "number",
+            "title": "Bottom"
+          },
+          "left": {
+            "type": "number",
+            "title": "Left"
+          },
+          "right": {
+            "type": "number",
+            "title": "Right"
+          }
+        },
+        "type": "object",
+        "required": [
+          "top",
+          "bottom",
+          "left",
+          "right"
+        ],
+        "title": "FibreDistancesOut"
       },
       "GeometryInput": {
         "properties": {
@@ -655,6 +976,135 @@
               }
             ],
             "description": "With sigma_cr only"
+          },
+          "shape": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SectionType"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Section template: the shape"
+          },
+          "fabrication": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FabricationKey"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Template I-section, channel, T-section: rolled (r) or welded (s)"
+          },
+          "h": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "H",
+            "description": "Template: overall height h [mm]"
+          },
+          "b": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "B",
+            "description": "Template: overall width b [mm]"
+          },
+          "t_w": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "T W",
+            "description": "Template: web or stem thickness [mm]"
+          },
+          "t_f": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "T F",
+            "description": "Template: flange thickness [mm]"
+          },
+          "r": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "R",
+            "description": "Template: root radius r of a rolled section, or of an angle (properties and drawing only; 0 is sharp)"
+          },
+          "s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "S",
+            "description": "Template: weld leg s of a welded section"
+          },
+          "c_stem": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "C Stem",
+            "description": "Template T-section: flat width of the stem, typed [mm]"
+          },
+          "r_o": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "R O",
+            "description": "Template RHS: outer corner radius r_o [mm]; properties and drawing only, not c (0 is sharp)"
+          },
+          "k_sigma": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/KSigmaInput"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Template: k_sigma of each plate role"
           }
         },
         "type": "object",
@@ -662,14 +1112,15 @@
           "kind"
         ],
         "title": "GeometryInput",
-        "description": "The section. Which fields are needed depends on `kind` (the API says what is missing)."
+        "description": "The section. Which fields are needed depends on `kind` (the API says what is missing).\n\nWith kind \"template\" give `shape` and its dimensions in mm; the engine derives the flat width c\nof each plate as 8.2.2(5) and Tables 7.2 to 7.4 draw it. k_sigma of each plate is an input."
       },
       "GeometryKindKey": {
         "type": "string",
         "enum": [
           "chs",
           "plates",
-          "sigma_cr"
+          "sigma_cr",
+          "template"
         ],
         "title": "GeometryKindKey"
       },
@@ -770,6 +1221,106 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "InputHelpOut": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key",
+            "description": "The dock field key (plate fields: one entry each)"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "what": {
+            "type": "string",
+            "title": "What",
+            "description": "What the input is"
+          },
+          "why": {
+            "type": "string",
+            "title": "Why",
+            "description": "The clauses and formulas that use it"
+          },
+          "where": {
+            "type": "string",
+            "title": "Where",
+            "description": "Where to get it; never a number of its own"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "description": "'In EN 1993-1-4 (clause)' or 'Outside EN 1993-1-4: ...'"
+          },
+          "in_standard": {
+            "type": "boolean",
+            "title": "In Standard",
+            "description": "True when the value comes from EN 1993-1-4"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "name",
+          "what",
+          "why",
+          "where",
+          "source",
+          "in_standard"
+        ],
+        "title": "InputHelpOut"
+      },
+      "KSigmaInput": {
+        "properties": {
+          "web": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Web"
+          },
+          "flange": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Flange"
+          },
+          "stem": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stem"
+          },
+          "leg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Leg"
+          }
+        },
+        "type": "object",
+        "title": "KSigmaInput",
+        "description": "k_sigma of each kind of plate (EN 1993-1-5, outside Annex B): an input, one per role."
       },
       "MaterialInput": {
         "properties": {
@@ -1058,6 +1609,40 @@
           "governing": {
             "type": "boolean",
             "title": "Governing"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlateRoleKey"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Section template only: which part of the section this is"
+          },
+          "plate_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlateTypeKey"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Section template only: internal or outstand"
+          },
+          "c_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "C Source",
+            "description": "Section template only: where the flat width c comes from"
           }
         },
         "type": "object",
@@ -1072,6 +1657,119 @@
           "governing"
         ],
         "title": "PlateOut"
+      },
+      "PlateRoleKey": {
+        "type": "string",
+        "enum": [
+          "web",
+          "flange",
+          "stem",
+          "leg"
+        ],
+        "title": "PlateRoleKey"
+      },
+      "PlateTypeKey": {
+        "type": "string",
+        "enum": [
+          "internal",
+          "outstand"
+        ],
+        "title": "PlateTypeKey"
+      },
+      "PointOut": {
+        "properties": {
+          "y": {
+            "type": "number",
+            "title": "Y",
+            "description": "mm, from the origin to the right"
+          },
+          "z": {
+            "type": "number",
+            "title": "Z",
+            "description": "mm, from the origin upwards"
+          }
+        },
+        "type": "object",
+        "required": [
+          "y",
+          "z"
+        ],
+        "title": "PointOut"
+      },
+      "PrincipalAxesOut": {
+        "properties": {
+          "angle_deg": {
+            "type": "number",
+            "title": "Angle Deg",
+            "description": "Angle of the major axis u from the y axis, counter-clockwise, z up [degrees]"
+          },
+          "i_u": {
+            "type": "number",
+            "title": "I U"
+          },
+          "i_v": {
+            "type": "number",
+            "title": "I V"
+          }
+        },
+        "type": "object",
+        "required": [
+          "angle_deg",
+          "i_u",
+          "i_v"
+        ],
+        "title": "PrincipalAxesOut"
+      },
+      "PropertyRowOut": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key",
+            "description": "A stable machine key, for example A, I_y, W_pl_y"
+          },
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "value": {
+            "type": "number",
+            "title": "Value"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "group": {
+            "type": "string",
+            "title": "Group"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "symbol",
+          "name",
+          "value",
+          "unit",
+          "group"
+        ],
+        "title": "PropertyRowOut",
+        "description": "One line of the properties table. `value` has six significant figures (what Use copies)."
       },
       "ReferenceSectionOut": {
         "properties": {
@@ -1095,6 +1793,272 @@
         ],
         "title": "ReferenceSectionOut"
       },
+      "SectionPropertiesRequest": {
+        "properties": {
+          "shape": {
+            "$ref": "#/components/schemas/SectionType"
+          },
+          "fabrication": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FabricationKey"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "I-section, channel and T-section: rolled (r) or welded (s)"
+          },
+          "h": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "H",
+            "description": "Overall height h [mm] (longer leg: angle)"
+          },
+          "b": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "B",
+            "description": "Overall width b [mm] (shorter leg: angle)"
+          },
+          "t_w": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "T W",
+            "description": "Web or stem thickness [mm]"
+          },
+          "t_f": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "T F",
+            "description": "Flange thickness [mm]"
+          },
+          "t": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "T",
+            "description": "Wall or leg thickness [mm]"
+          },
+          "d": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "D",
+            "description": "Outer diameter [mm] (CHS)"
+          },
+          "r": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "R",
+            "description": "Root radius r [mm]: rolled I, channel, T-section, or an angle"
+          },
+          "s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "S",
+            "description": "Weld leg s [mm]: welded sections"
+          },
+          "r_o": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "R O",
+            "description": "Outer corner radius r_o [mm] of a rectangular hollow section"
+          }
+        },
+        "type": "object",
+        "required": [
+          "shape"
+        ],
+        "title": "SectionPropertiesRequest",
+        "description": "The typed template dimensions in mm. Which ones are needed depends on `shape`."
+      },
+      "SectionPropertiesResponse": {
+        "properties": {
+          "shape": {
+            "$ref": "#/components/schemas/SectionType"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label",
+            "description": "Where these numbers come from: geometry, not the standard"
+          },
+          "method": {
+            "type": "string",
+            "title": "Method"
+          },
+          "origin": {
+            "type": "string",
+            "title": "Origin",
+            "description": "Where the coordinates start"
+          },
+          "width": {
+            "type": "number",
+            "title": "Width",
+            "description": "Bounding box along y [mm]"
+          },
+          "height": {
+            "type": "number",
+            "title": "Height",
+            "description": "Bounding box along z [mm]"
+          },
+          "area": {
+            "type": "number",
+            "title": "Area",
+            "description": "A [mm2]"
+          },
+          "centroid": {
+            "$ref": "#/components/schemas/PointOut"
+          },
+          "fibres": {
+            "$ref": "#/components/schemas/FibreDistancesOut",
+            "description": "Centroid to the extreme fibres [mm]"
+          },
+          "i_y": {
+            "type": "number",
+            "title": "I Y",
+            "description": "[mm4], about the centroidal axis parallel to y"
+          },
+          "i_z": {
+            "type": "number",
+            "title": "I Z"
+          },
+          "i_yz": {
+            "type": "number",
+            "title": "I Yz"
+          },
+          "w_el_y": {
+            "$ref": "#/components/schemas/ElasticModulusOut"
+          },
+          "w_el_z": {
+            "$ref": "#/components/schemas/ElasticModulusOut"
+          },
+          "plastic_axis_y": {
+            "type": "number",
+            "title": "Plastic Axis Y",
+            "description": "z of the equal-area line parallel to y, for bending about y-y [mm]"
+          },
+          "plastic_axis_z": {
+            "type": "number",
+            "title": "Plastic Axis Z",
+            "description": "y of the equal-area line parallel to z, for bending about z-z [mm]"
+          },
+          "w_pl_y": {
+            "type": "number",
+            "title": "W Pl Y",
+            "description": "[mm3]"
+          },
+          "w_pl_z": {
+            "type": "number",
+            "title": "W Pl Z"
+          },
+          "shear_centre": {
+            "$ref": "#/components/schemas/ShearCentreOut"
+          },
+          "principal": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PrincipalAxesOut"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Angles only"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/PropertyRowOut"
+            },
+            "type": "array",
+            "title": "Rows"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Notes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "shape",
+          "label",
+          "method",
+          "origin",
+          "width",
+          "height",
+          "area",
+          "centroid",
+          "fibres",
+          "i_y",
+          "i_z",
+          "i_yz",
+          "w_el_y",
+          "w_el_z",
+          "plastic_axis_y",
+          "plastic_axis_z",
+          "w_pl_y",
+          "w_pl_z",
+          "shear_centre",
+          "rows",
+          "notes"
+        ],
+        "title": "SectionPropertiesResponse"
+      },
       "SectionType": {
         "type": "string",
         "enum": [
@@ -1107,6 +2071,29 @@
         ],
         "title": "SectionType",
         "description": "Section families Annex B applies to (B.2)."
+      },
+      "ShearCentreOut": {
+        "properties": {
+          "point": {
+            "$ref": "#/components/schemas/PointOut"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label",
+            "description": "Always 'thin-walled approximation'"
+          },
+          "note": {
+            "type": "string",
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "point",
+          "label",
+          "note"
+        ],
+        "title": "ShearCentreOut"
       },
       "SigmaCrSourceKey": {
         "type": "string",

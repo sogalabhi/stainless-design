@@ -1,13 +1,18 @@
 import type {
   CoefficientsOut,
+  CompressionRequest,
+  CompressionResponse,
   ComparisonRequest,
   ComparisonResponse,
   DeformationRequest,
   DeformationResponse,
   GradeOut,
+  InputHelpOut,
   SymbolOut,
   MaterialModelRequest,
   MaterialModelResponse,
+  SectionPropertiesRequest,
+  SectionPropertiesResponse,
   TensionRequest,
   TensionResponse,
 } from "./types";
@@ -82,12 +87,17 @@ export const api = {
   coefficients: () => request<CoefficientsOut[]>("/api/v1/csm-coefficients"),
   symbols: (topic?: string) =>
     request<SymbolOut[]>(topic ? `/api/v1/symbols?topic=${topic}` : "/api/v1/symbols"),
+  inputHelp: () => request<InputHelpOut[]>("/api/v1/input-help"),
   materialModel: (body: MaterialModelRequest, signal?: AbortSignal) =>
     post<MaterialModelResponse>("/api/v1/material-model", body, signal),
   tension: (body: TensionRequest, signal?: AbortSignal) =>
     post<TensionResponse>("/api/v1/tension", body, signal),
   deformationCapacity: (body: DeformationRequest, signal?: AbortSignal) =>
     post<DeformationResponse>("/api/v1/deformation-capacity", body, signal),
+  compression: (body: CompressionRequest, signal?: AbortSignal) =>
+    post<CompressionResponse>("/api/v1/compression", body, signal),
+  sectionProperties: (body: SectionPropertiesRequest, signal?: AbortSignal) =>
+    post<SectionPropertiesResponse>("/api/v1/section-properties", body, signal),
   sectionComparison: (body: ComparisonRequest, signal?: AbortSignal) =>
     post<ComparisonResponse>("/api/v1/section-comparison", body, signal),
 };

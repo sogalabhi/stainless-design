@@ -50,9 +50,29 @@ export interface paths {
         };
         /**
          * Symbols
-         * @description The symbol glossary: one line per symbol. `topic` is material, deformation or tension.
+         * @description The symbol glossary, one line per symbol. `topic` filters it (material, tension, ...).
          */
         get: operations["symbols_api_v1_symbols_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/input-help": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Input Help
+         * @description The "?" help for every input: what, why, where to get it, and its source tag.
+         */
+        get: operations["input_help_api_v1_input_help_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -141,6 +161,49 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/compression": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Compression
+         * @description B.6.2: CSM compression resistance (B.5 for the section, then B.15 to B.17).
+         */
+        post: operations["compression_api_v1_compression_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/section-properties": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Section Properties
+         * @description A, centroid, I, W_el, W_pl, plastic axes and shear centre from the template dimensions.
+         *
+         *     Reference values (geometry, not a rule of EN 1993-1-4): they enter no calculation unless the
+         *     user copies one into an input field.
+         */
+        post: operations["section_properties_api_v1_section_properties_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/section-comparison": {
         parameters: {
             query?: never;
@@ -204,6 +267,11 @@ export interface components {
              * @description Stress read from the B.4 curve at the strain [N/mm2]
              */
             stress: number | null;
+            /**
+             * Governing Label
+             * @description The plate that sets the slenderness at this point
+             */
+            governing_label: string;
         };
         /**
          * ComparisonRequest
@@ -249,6 +317,88 @@ export interface components {
             /** Notes */
             notes: string[];
         };
+        /**
+         * CompressionFormulaKey
+         * @description Which formula of B.6.2 gave the resistance (stable machine key).
+         * @enum {string}
+         */
+        CompressionFormulaKey: "b15" | "b16";
+        /**
+         * CompressionRequest
+         * @description The B.5 inputs of the section, plus the area and gamma_M0 (inputs, never assumed).
+         */
+        CompressionRequest: {
+            material: components["schemas"]["MaterialInput"];
+            geometry: components["schemas"]["GeometryInput"];
+            /**
+             * Omega
+             * @description Parameter Omega, an input
+             */
+            omega: number;
+            /**
+             * Poisson Ratio
+             * @description Poisson ratio nu, an input; not needed with sigma_cr
+             */
+            poisson_ratio?: number | null;
+            /**
+             * Area
+             * @description Cross-section area A [mm2]
+             */
+            area: number;
+            /**
+             * Gamma M0
+             * @description Partial factor gamma_M0, an input
+             */
+            gamma_m0: number;
+            /** @default schematic */
+            graph_view?: components["schemas"]["GraphView"];
+        };
+        /** CompressionResponse */
+        CompressionResponse: {
+            material: components["schemas"]["MaterialOut"];
+            family: components["schemas"]["FamilyKey"];
+            slenderness: components["schemas"]["SlendernessOut"];
+            strain_limit: components["schemas"]["StrainLimitOut"];
+            /**
+             * Strain Ratio
+             * @description eps_csm / eps_y, from B.5.1
+             */
+            strain_ratio: number;
+            formula: components["schemas"]["CompressionFormulaKey"];
+            /**
+             * Formula Label
+             * @description B.15 or B.16
+             */
+            formula_label: string;
+            /**
+             * Design Stress
+             * @description f_csm [N/mm2] (Formula B.17); null when B.15 applies, where B.17 is not used
+             */
+            design_stress: number | null;
+            /**
+             * Resistance
+             * @description N_csm,Rd [N]
+             */
+            resistance: number;
+            /** Notes */
+            notes: string[];
+            /** Trace */
+            trace: components["schemas"]["TraceStepOut"][];
+            /**
+             * Capacity Figure
+             * @description Plotly figure: N_csm,Rd / (A f_y / gamma_M0) against slenderness
+             */
+            capacity_figure: {
+                [key: string]: unknown;
+            };
+            /**
+             * Point Figure
+             * @description Plotly figure: the compression point on the B.4 curve
+             */
+            point_figure: {
+                [key: string]: unknown;
+            };
+        };
         /** DeformationRequest */
         DeformationRequest: {
             material: components["schemas"]["MaterialInput"];
@@ -279,6 +429,26 @@ export interface components {
                 [key: string]: unknown;
             };
         };
+        /** ElasticModulusOut */
+        ElasticModulusOut: {
+            /**
+             * Value
+             * @description The smaller of the two [mm3]
+             */
+            value: number;
+            /**
+             * Smaller Side
+             * @description Which fibre gives the smaller modulus; 'equal' when the two sides are equal
+             */
+            smaller_side: string;
+            /**
+             * Sides
+             * @description The modulus at each extreme fibre [mm3]
+             */
+            sides: {
+                [key: string]: number;
+            };
+        };
         /** ErrorResponse */
         ErrorResponse: {
             /** Detail */
@@ -287,13 +457,32 @@ export interface components {
             error_type: string;
         };
         /**
+         * FabricationKey
+         * @enum {string}
+         */
+        FabricationKey: "rolled" | "welded";
+        /**
          * FamilyKey
          * @enum {string}
          */
         FamilyKey: "flat_plates" | "circular_hollow";
+        /** FibreDistancesOut */
+        FibreDistancesOut: {
+            /** Top */
+            top: number;
+            /** Bottom */
+            bottom: number;
+            /** Left */
+            left: number;
+            /** Right */
+            right: number;
+        };
         /**
          * GeometryInput
          * @description The section. Which fields are needed depends on `kind` (the API says what is missing).
+         *
+         *     With kind "template" give `shape` and its dimensions in mm; the engine derives the flat width c
+         *     of each plate as 8.2.2(5) and Tables 7.2 to 7.4 draw it. k_sigma of each plate is an input.
          */
         GeometryInput: {
             kind: components["schemas"]["GeometryKindKey"];
@@ -316,12 +505,58 @@ export interface components {
             sigma_cr_cs?: number | null;
             /** @description With sigma_cr only */
             family?: components["schemas"]["FamilyKey"] | null;
+            /** @description Section template: the shape */
+            shape?: components["schemas"]["SectionType"] | null;
+            /** @description Template I-section, channel, T-section: rolled (r) or welded (s) */
+            fabrication?: components["schemas"]["FabricationKey"] | null;
+            /**
+             * H
+             * @description Template: overall height h [mm]
+             */
+            h?: number | null;
+            /**
+             * B
+             * @description Template: overall width b [mm]
+             */
+            b?: number | null;
+            /**
+             * T W
+             * @description Template: web or stem thickness [mm]
+             */
+            t_w?: number | null;
+            /**
+             * T F
+             * @description Template: flange thickness [mm]
+             */
+            t_f?: number | null;
+            /**
+             * R
+             * @description Template: root radius r of a rolled section, or of an angle (properties and drawing only; 0 is sharp)
+             */
+            r?: number | null;
+            /**
+             * S
+             * @description Template: weld leg s of a welded section
+             */
+            s?: number | null;
+            /**
+             * C Stem
+             * @description Template T-section: flat width of the stem, typed [mm]
+             */
+            c_stem?: number | null;
+            /**
+             * R O
+             * @description Template RHS: outer corner radius r_o [mm]; properties and drawing only, not c (0 is sharp)
+             */
+            r_o?: number | null;
+            /** @description Template: k_sigma of each plate role */
+            k_sigma?: components["schemas"]["KSigmaInput"] | null;
         };
         /**
          * GeometryKindKey
          * @enum {string}
          */
-        GeometryKindKey: "chs" | "plates" | "sigma_cr";
+        GeometryKindKey: "chs" | "plates" | "sigma_cr" | "template";
         /**
          * GoverningKey
          * @description Which term of Formula B.14 governs the tensile strain limit (stable machine key).
@@ -355,6 +590,55 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** InputHelpOut */
+        InputHelpOut: {
+            /**
+             * Key
+             * @description The dock field key (plate fields: one entry each)
+             */
+            key: string;
+            /** Name */
+            name: string;
+            /**
+             * What
+             * @description What the input is
+             */
+            what: string;
+            /**
+             * Why
+             * @description The clauses and formulas that use it
+             */
+            why: string;
+            /**
+             * Where
+             * @description Where to get it; never a number of its own
+             */
+            where: string;
+            /**
+             * Source
+             * @description 'In EN 1993-1-4 (clause)' or 'Outside EN 1993-1-4: ...'
+             */
+            source: string;
+            /**
+             * In Standard
+             * @description True when the value comes from EN 1993-1-4
+             */
+            in_standard: boolean;
+        };
+        /**
+         * KSigmaInput
+         * @description k_sigma of each kind of plate (EN 1993-1-5, outside Annex B): an input, one per role.
+         */
+        KSigmaInput: {
+            /** Web */
+            web?: number | null;
+            /** Flange */
+            flange?: number | null;
+            /** Stem */
+            stem?: number | null;
+            /** Leg */
+            leg?: number | null;
         };
         /**
          * MaterialInput
@@ -484,6 +768,73 @@ export interface components {
             slenderness: number;
             /** Governing */
             governing: boolean;
+            /** @description Section template only: which part of the section this is */
+            role?: components["schemas"]["PlateRoleKey"] | null;
+            /** @description Section template only: internal or outstand */
+            plate_type?: components["schemas"]["PlateTypeKey"] | null;
+            /**
+             * C Source
+             * @description Section template only: where the flat width c comes from
+             */
+            c_source?: string | null;
+        };
+        /**
+         * PlateRoleKey
+         * @enum {string}
+         */
+        PlateRoleKey: "web" | "flange" | "stem" | "leg";
+        /**
+         * PlateTypeKey
+         * @enum {string}
+         */
+        PlateTypeKey: "internal" | "outstand";
+        /** PointOut */
+        PointOut: {
+            /**
+             * Y
+             * @description mm, from the origin to the right
+             */
+            y: number;
+            /**
+             * Z
+             * @description mm, from the origin upwards
+             */
+            z: number;
+        };
+        /** PrincipalAxesOut */
+        PrincipalAxesOut: {
+            /**
+             * Angle Deg
+             * @description Angle of the major axis u from the y axis, counter-clockwise, z up [degrees]
+             */
+            angle_deg: number;
+            /** I U */
+            i_u: number;
+            /** I V */
+            i_v: number;
+        };
+        /**
+         * PropertyRowOut
+         * @description One line of the properties table. `value` has six significant figures (what Use copies).
+         */
+        PropertyRowOut: {
+            /**
+             * Key
+             * @description A stable machine key, for example A, I_y, W_pl_y
+             */
+            key: string;
+            /** Symbol */
+            symbol: string;
+            /** Name */
+            name: string;
+            /** Value */
+            value: number;
+            /** Unit */
+            unit: string;
+            /** Group */
+            group: string;
+            /** Note */
+            note?: string | null;
         };
         /** ReferenceSectionOut */
         ReferenceSectionOut: {
@@ -494,11 +845,145 @@ export interface components {
             point: components["schemas"]["ComparisonPointOut"];
         };
         /**
+         * SectionPropertiesRequest
+         * @description The typed template dimensions in mm. Which ones are needed depends on `shape`.
+         */
+        SectionPropertiesRequest: {
+            shape: components["schemas"]["SectionType"];
+            /** @description I-section, channel and T-section: rolled (r) or welded (s) */
+            fabrication?: components["schemas"]["FabricationKey"] | null;
+            /**
+             * H
+             * @description Overall height h [mm] (longer leg: angle)
+             */
+            h?: number | null;
+            /**
+             * B
+             * @description Overall width b [mm] (shorter leg: angle)
+             */
+            b?: number | null;
+            /**
+             * T W
+             * @description Web or stem thickness [mm]
+             */
+            t_w?: number | null;
+            /**
+             * T F
+             * @description Flange thickness [mm]
+             */
+            t_f?: number | null;
+            /**
+             * T
+             * @description Wall or leg thickness [mm]
+             */
+            t?: number | null;
+            /**
+             * D
+             * @description Outer diameter [mm] (CHS)
+             */
+            d?: number | null;
+            /**
+             * R
+             * @description Root radius r [mm]: rolled I, channel, T-section, or an angle
+             */
+            r?: number | null;
+            /**
+             * S
+             * @description Weld leg s [mm]: welded sections
+             */
+            s?: number | null;
+            /**
+             * R O
+             * @description Outer corner radius r_o [mm] of a rectangular hollow section
+             */
+            r_o?: number | null;
+        };
+        /** SectionPropertiesResponse */
+        SectionPropertiesResponse: {
+            shape: components["schemas"]["SectionType"];
+            /**
+             * Label
+             * @description Where these numbers come from: geometry, not the standard
+             */
+            label: string;
+            /** Method */
+            method: string;
+            /**
+             * Origin
+             * @description Where the coordinates start
+             */
+            origin: string;
+            /**
+             * Width
+             * @description Bounding box along y [mm]
+             */
+            width: number;
+            /**
+             * Height
+             * @description Bounding box along z [mm]
+             */
+            height: number;
+            /**
+             * Area
+             * @description A [mm2]
+             */
+            area: number;
+            centroid: components["schemas"]["PointOut"];
+            /** @description Centroid to the extreme fibres [mm] */
+            fibres: components["schemas"]["FibreDistancesOut"];
+            /**
+             * I Y
+             * @description [mm4], about the centroidal axis parallel to y
+             */
+            i_y: number;
+            /** I Z */
+            i_z: number;
+            /** I Yz */
+            i_yz: number;
+            w_el_y: components["schemas"]["ElasticModulusOut"];
+            w_el_z: components["schemas"]["ElasticModulusOut"];
+            /**
+             * Plastic Axis Y
+             * @description z of the equal-area line parallel to y, for bending about y-y [mm]
+             */
+            plastic_axis_y: number;
+            /**
+             * Plastic Axis Z
+             * @description y of the equal-area line parallel to z, for bending about z-z [mm]
+             */
+            plastic_axis_z: number;
+            /**
+             * W Pl Y
+             * @description [mm3]
+             */
+            w_pl_y: number;
+            /** W Pl Z */
+            w_pl_z: number;
+            shear_centre: components["schemas"]["ShearCentreOut"];
+            /** @description Angles only */
+            principal?: components["schemas"]["PrincipalAxesOut"] | null;
+            /** Rows */
+            rows: components["schemas"]["PropertyRowOut"][];
+            /** Notes */
+            notes: string[];
+        };
+        /**
          * SectionType
          * @description Section families Annex B applies to (B.2).
          * @enum {string}
          */
         SectionType: "I-section" | "channel" | "T-section" | "angle" | "rectangular hollow section" | "circular hollow section";
+        /** ShearCentreOut */
+        ShearCentreOut: {
+            point: components["schemas"]["PointOut"];
+            /**
+             * Label
+             * @description Always 'thin-walled approximation'
+             */
+            label: string;
+            /** Note */
+            note: string;
+        };
         /**
          * SigmaCrSourceKey
          * @enum {string}
@@ -763,6 +1248,26 @@ export interface operations {
             };
         };
     };
+    input_help_api_v1_input_help_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InputHelpOut"][];
+                };
+            };
+        };
+    };
     csm_coefficients_api_v1_csm_coefficients_get: {
         parameters: {
             query?: never;
@@ -869,6 +1374,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DeformationResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    compression_api_v1_compression_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompressionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompressionResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    section_properties_api_v1_section_properties_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SectionPropertiesRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SectionPropertiesResponse"];
                 };
             };
             /** @description Unprocessable Content */
