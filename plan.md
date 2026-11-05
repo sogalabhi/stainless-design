@@ -23,7 +23,7 @@ Rules that stay in force (from the README and the project notes):
 | B.3 | B.1, B.2, B.3 | CSM resistances replace N_t,Rd, N_c,Rd, M_c,Rd of 8.2; f_ya and f_ua may replace f_y and f_u | f_ya and f_ua typed in; the replacement is only stated, not wired into a summary |
 | B.4 | B.4, B.5, Table B.1, Figure B.1 | Bilinear material model | done |
 | B.5.1 | B.6, B.7 | Base curve ε_csm/ε_y for plates and CHS, with the Ω cap | done |
-| B.5.2 | B.8 to B.11 | λ_p,cs, λ_c,cs, σ_cr,p, σ_cr,c | done (conservative most-slender-plate route, or a typed σ_cr,cs) |
+| B.5.2 | B.8 to B.11 | λ_p,cs, λ_c,cs, σ_cr,p, σ_cr,c | done (conservative most-slender-plate route, or a typed σ_cr,cs); a numerical σ_cr,cs by finite strip (B.5.2(2)) is phase 2b, section 4g |
 | B.6.1 | B.12 to B.14 | Tension resistance | done |
 | B.6.2 | B.15 to B.17 | Compression resistance | done (phase 1, 2026-10-09); the extra charts of section 5 remain |
 | B.6.3.1 | B.18 | Gate on λ_LT, and interpolation for 0.2 < λ_LT <= 0.4 | gate done (phase 2: B.19 or B.20 up to 0.2, refusal above 0.4); B.18 to do (phase 3) |
@@ -133,6 +133,7 @@ README row marked done. A contract test (service against API) covers every new e
 | 1c | section properties and the geometry modal, DONE 2026-10-09 | `sections/properties.py`: A, centroid, I, W_el, W_pl, plastic neutral axis, principal axes, shear centre from the template dimensions; `POST /api/v1/section-properties` | the Section geometry modal with layer checkboxes, editable dimensions and a properties table with Use buttons. Spec in section 4d |
 | 1d | "?" help on every input, DONE 2026-10-09 | `data/input_help.json` keyed by field key, served at `GET /api/v1/input-help`; a test that every dock field has an entry | a "?" button beside every input label opening a short panel. Spec in section 4e |
 | 2 | B.6.3.2 bending, Table B.2, DONE 2026-10-09 | `data/bending_parameters.json`, a lookup by type, axis and h/b; `csm/bending.py`: B.19, B.20, with the λ_LT gate of B.6.3.1(1). Channel minor axis, T-section major axis and all angles, and 0.2 < λ_LT <= 0.4, answer "arrives in phase 3" (`NotBuiltYetError`, not a refusal); λ_LT > 0.4 is refused | step "Bending (B.6.3)"; the Bending group and tab; moment against ε_csm/ε_y; strain and stress blocks across the depth |
+| 2b | B.5.2(2) numerical σ_cr,cs by finite strip | starts with a spike. `buckling/`: pyCUFSM (pinned 0.2.0) behind one module; the strip model of the five plate templates; the signature curve, the cFSM mode shares and the mode shapes; σ_cr,cs from the first local minimum; a `finite_strip` route for B.5, B.6.2 and B.6.3; `POST /api/v1/buckling` | "Finite strip analysis" under Slenderness from; the signature curve coloured by mode; pick a point to see the cross-section mode in 2D, the G, D, L, O shares and the member in 3D; Help topic "Buckling modes". Spec in section 4g |
 | 3 | B.6.3.1 and B.6.3.3 | B.6.3.3(1) for channel minor axis, T-section major axis and angles (B.19 or B.20 with ε_csm,max, the first-yield fibre); B.18 (needs λ_LT and M_c,Rd as inputs); ε_csm,max and ε_csm,t from the linear strain assumption. ε_csm,t first uses the elastic neutral axis; if ε_csm,max > ε_y, it is recalculated at the midway point between the elastic and plastic axes (the approximation printed in B.6.3.3(3)), with both axis positions typed in. Equilibrium is out for now (section 9) | interpolation chart; neutral-axis shift diagram for angles, channels, T-sections |
 | 4 | B.6.4.1 RHS | `csm/combined.py`: B.21 to B.24 for RHS. Refuses bending with tension, and channels, T-sections and angles (outside B.6.4, B.3(2)). I-sections and CHS show "not built yet (phase 5)", which is not a refusal | interaction curve; biaxial surface |
 | 5 | B.6.4.2 and B.6.4.3 | B.25 to B.27, I-section values for B.23, B.28 and B.29. Refuses channels, T-sections and angles, which fall under EN 1993-1-1 8.2.9 (outside the Annex) | I-section and CHS interaction curves |
@@ -537,6 +538,187 @@ Facts the text must use (checked against the PDF):
   example I-section, labelled example), λ_LT 0.15 (example only), bending k_σ 23.9 for the web
   (EN 1993-1-5, pure bending) and 0.43 for the flange outstand (example only).
 
+## 4g. Phase 2b spec: finite strip buckling (B.5.2(2))
+
+Decided 2026-10-21. B.5.2(2) lets σ_cr,cs come from a numerical method. This phase adds a finite strip
+analysis of the section template, as CUFSM does it:
+- the signature curve: the critical stress against the half-wavelength;
+- the mode at every point of the curve, split into global, distortional, local and other (constrained
+  finite strip, cFSM);
+- the buckled shape in 2D and 3D.
+
+Its local buckling stress becomes a third source of σ_cr,cs, beside the most slender plate (B.9) and a
+typed value. Nothing changes for a user who does not choose it.
+
+The solver is pyCUFSM, a Python port of CUFSM by ClearCalcs (not affiliated with Prof. Schafer or Johns
+Hopkins). A numpy-only prototype was written and checked on 2026-10-21. Its results are the test values
+below, and it is the fallback if the spike fails.
+
+Why pyCUFSM and not our own solver: its cFSM (the G, D, L, O split) is complete and tested, and that split
+is the hardest part to get right. "pyCUFSM, a port of CUFSM" is also a source engineers already trust.
+Equation constraints, springs and general boundary conditions are untested upstream; this phase does not
+use them.
+
+### Step 1: spike (before any other work)
+
+- **Dependency.** Add `pycufsm==0.2.0` (pinned, because the version is 0.x) to `dependencies` in
+  `pyproject.toml`. It brings numpy and SciPy. Add a mypy override for `pycufsm.*`, as for plotly.
+  - Wheels exist for CPython 3.10 to 3.14 on Linux (x86_64, aarch64, musl), macOS and Windows.
+  - Vercel is only the demo host; production moves elsewhere. Its 500 MB Python limit and the slower cold
+    start (SciPy) decide nothing.
+- **Licence.** Read its LICENSE file (AFL-3.0 according to PyPI). Add a "Third-party software" line to the
+  README that keeps its notice.
+- **Results.** Run the sections of the test list below through pyCUFSM. They must match the prototype
+  values within 1 %.
+- **Classification of outstands.** Find out how its cFSM classifies the local minimum of the I-section.
+  - In the Ádány and Schafer definition, the free edge of an outstand is a main node. Flange outstand
+    buckling may therefore come out partly distortional.
+  - Record the shares. They decide the Help text, and whether the σ_cr,cs rule below must change.
+- **Speed.** Time 80 half-wavelengths for a five-plate section. The prototype found that BLAS threads made
+  small eigen solves slow (85 ms against 6 ms per solve). If pyCUFSM shows the same, set
+  `OPENBLAS_NUM_THREADS=1` and `OMP_NUM_THREADS=1` in the API process before numpy loads.
+- **Record the calls.** Write into the hand-off the pyCUFSM calls used: functions, arguments, and the
+  classification normalisation chosen.
+- **If pyCUFSM fails any of this, stop and report.** The fallback is the numpy-only prototype: the signature
+  curve, a local-only curve with the fold lines held, and an approximate G, D, L split from the junction
+  translations. It would then have to be added to the repository.
+
+### Engine (`src/stainless_csm/buckling/`)
+
+- `solver.py` is the only file that imports pycufsm. Everything else uses the engine's own dataclasses, so
+  the solver can be swapped.
+- `strip_model.py` builds the strip model of a template from the typed dimensions: plate centrelines with
+  sharp corners.
+
+  | Shape | Centreline model |
+  |---|---|
+  | I-section | flanges at ±(h − t_f)/2, width b; the web between the flange centrelines |
+  | Channel | web at t_w/2 from the back; flanges b − t_w/2 long |
+  | T-section | flange at t_f/2 below the top; the stem from the flange centreline to the stem tip |
+  | Angle | legs h − t/2 and b − t/2 long, meeting at (t/2, t/2) |
+  | RHS | the (b − t) × (h − t) centreline rectangle |
+
+  - Root radii, weld legs, the corner radius r_o and the flat widths c of 8.2.2(5) do not enter the model
+    (section 9). The working says so.
+  - CHS is not modelled: B.11 already gives σ_cr,c.
+  - Six strips per plate. In the prototype that was converged to 0.03 %: the I-section below gives
+    209.17 N/mm² with six strips and 209.11 with twelve.
+- **Stress cases.** Stress is positive in compression.
+  - Compression: 1 N/mm² on every node, so the load factor is the critical stress itself.
+  - Bending about an axis of symmetry (the phase 2 scope: I-section major and minor, RHS major and minor,
+    channel major, T-section minor):
+    - the stress is linear about the centroidal axis, with 1 N/mm² at the extreme compression fibre of
+      the real section (h/2 for major-axis bending of an I-section, not the flange centreline);
+    - σ_cr,cs is then compared with f_y at the fibre where W_el f_y is (section 9);
+    - other axes answer "B.6.3.3: arrives in phase 3", as the Bending tab does.
+- **Half-wavelengths.** 80 values, log-spaced from 0.2 × the narrowest plate to 50 × the larger of h and b.
+  Each minimum is refined by a golden-section search. These are fixed numerical settings, shown in the
+  working, not inputs (section 9).
+- **Outputs** (`BucklingResult`):
+  - the section nodes;
+  - for each half-wavelength ℓ: the critical stress σ_cr(ℓ), the shares p_G, p_D, p_L, p_O (summing to
+    1), and the mode shape (nodal displacements, scaled so the largest is 1);
+  - the minima, each with ℓ, σ_cr and the dominant mode;
+  - σ_cr,cs and the rule that gave it, or none with the reason;
+  - notes and the trace.
+- **The σ_cr,cs rule** (section 9):
+  - Take the first minimum of the unconstrained curve, when its dominant mode is local. This is what the
+    CSM literature does with CUFSM.
+  - If the curve has no such minimum, give no value and say why. Examples: a stocky section where local
+    buckling runs into global; an angle, where leg buckling and torsion are one mode. The message points
+    to the plate route or a typed value. No rule is invented.
+- **Source and trace.** A new source, `SigmaCrSource.FINITE_STRIP = "finite strip analysis of the section
+  (B.5.2(2))"`. Its trace step has clause "B.5.2(2)" and names the solver and its version, ℓ and the
+  dominant mode. λ_p,cs then follows by B.8, as today.
+- **Service.** `run_buckling(geometry, E, ν, case)`.
+  - A new geometry route, `GeometryKind.FINITE_STRIP`, for B.5, B.6.2 and B.6.3. B.5 and B.6.2 use the
+    compression case and B.6.3 the bending case.
+  - Cache results keyed by the inputs (a frozen key), because one run takes about 0.3 s.
+
+### API
+
+- **New endpoint.** `POST /api/v1/buckling` takes the template dimensions, E, ν and the case (compression,
+  or bending about an axis). It returns:
+  - the whole curve with every mode shape (about 80 × nodes × 4 numbers, so the browser can move along the
+    curve without another request);
+  - the minima;
+  - σ_cr,cs, or the reason there is none;
+  - the trace.
+- **Existing endpoints.** The deformation, compression and bending requests accept the new route
+  (`geometry.kind = "finite_strip"`), with the same template fields as `template` and no k_σ.
+- **Errors.** Domain errors are a 422, as today: a missing dimension, an impossible shape, a CHS on this
+  route, or a bending axis that is not one of symmetry ("arrives in phase 3").
+- **Tests.** Contract tests for the new endpoint and the route.
+
+### Website
+
+- **The route.** "Slenderness from" (Deformation group, and the same in the Bending group) gets a new
+  choice: "Finite strip analysis of the section (B.5.2(2))".
+  - It is offered for the five plate shapes once every dimension is in.
+  - Choosing it is the user's click. It asks for E and ν and no k_σ.
+- **Buckling view.** In the Deformation tab (and in the Bending tab for the bending case), when the route
+  is chosen:
+  - **Signature curve** (Plotly):
+    - x is the half-wavelength ℓ in mm on a log axis; y is σ_cr in N/mm²;
+    - the line is coloured by the dominant mode, with the shares as a thin stacked band under it;
+    - f_y is a horizontal line;
+    - the minima are marked and labelled, and the point that gives σ_cr,cs is highlighted.
+  - **Picking a point.** Click on the curve, or use a slider along it (keyboard-operable). Without another
+    request, this shows:
+    - the cross-section mode in 2D (SVG): the undeformed centreline dashed and the buckled shape solid,
+      scaled to a fixed share of the section size and labelled "shape only, not a displacement";
+    - the shares G, D, L, O as a bar;
+    - the member in 3D (the existing three.js scene): the mode times sin(π y / ℓ) over three half-waves.
+  - **Label.** The tab says once: "computed from your dimensions by the finite strip method (pyCUFSM): a
+    numerical method B.5.2(2) allows, not a formula of EN 1993-1-4".
+- **Debounce.** Requests wait 300 ms after the last change and show a "calculating" state, because each run
+  takes a few tenths of a second.
+- **Explore.** With this route, the thickness sweep shows a message, as the typed σ_cr,cs route does today:
+  a sweep would need one analysis per point. The sweep with the finite strip is phase 7. The README
+  sentence "the CSM does not calculate a buckled shape" gets a pointer to the new view.
+- **Help.** A "Buckling modes" topic:
+  - what the signature curve is;
+  - local, distortional and global buckling, with the three test sections below as pictures;
+  - why the finite strip σ_cr,cs is higher than the most slender plate (the plates restrain each other);
+  - the limits of the model: centrelines, sharp corners, simply supported ends.
+- **Symbols.** ℓ for the half-wavelength (not a, which B.25 uses), σ_cr(ℓ), and p_G, p_D, p_L, p_O. The
+  "route" entry of the input help gets the new choice.
+- **Load example.** Unchanged: the example keeps the plate route.
+
+### Test values
+
+From the prototype: E 200 000 N/mm², ν 0.3, centreline model, six strips per plate. k is σ_cr b² 12(1 − ν²)
+/ (π² E t²).
+
+- **Internal plate** (a square tube, centreline 100 × 100, t 1): k = 4.00 at ℓ = b (theory 4.000), within
+  0.5 %.
+- **Outstand** (b 100, t 1, one long edge held, through `solver.py` with explicit nodes): k = 0.425 + (b/ℓ)²
+  within 1 % at ℓ = 500, 2000 and 10 000 mm. The prototype gives 0.4642, 0.4280 and 0.4256.
+- **I-section** h 300, b 200, t_w 4, t_f 6:
+  - Compression: the first minimum is σ_cr = 209.2 N/mm² at ℓ ≈ 231 mm, local.
+    - B.9 gives 139.5 for the web (k_σ 4, c 288) and 291.4 for the flange (k_σ 0.43, c 98). The plate
+      route takes 139.5.
+    - With f_y 230: λ_p,cs is 1.049 against 1.284, and ε_csm/ε_y is 0.750 against 0.638 (B.15 gives
+      18 % more).
+  - Long half-wavelengths: the minor-axis Euler stress, π² E I_z / (A ℓ²), with I_z and A of the
+    centreline model, within 1 % at ℓ = 10 000 mm.
+  - Major-axis bending, with 1 N/mm² at the extreme fibre: σ_cr = 388.3 N/mm² at ℓ ≈ 367 mm, local.
+- **Stocky I-section** h 200, b 200, t_w 9, t_f 15, compression: σ_cr = 2087 N/mm² at ℓ ≈ 405 mm, local.
+- **Lipped channel** 200 × 75 × 20 × 1.5 (not a template; through `solver.py` with explicit nodes, as
+  CUFSM's classic check): minima at ℓ ≈ 155 mm, σ_cr 56.9 (local), and at ℓ ≈ 810 mm, σ_cr 141.4
+  (distortional), then global.
+- **Mesh.** Six against twelve strips per plate agree within 0.5 %.
+- **Shares.** Every set sums to 1. The I-section local minimum comes out local (wording to be fixed after the
+  spike shows how pyCUFSM classifies outstands).
+- **Front end.** The route; the chart; picking a point updates the 2D shape and the bar without a request.
+  WebGL is mocked, as in the Visualise test.
+
+### Who does what (section 4a)
+
+- **Opus:** the spike, the σ_cr,cs rule and the review of the engine.
+- **Sonnet:** the engine, the route, the buckling view and the 3D member.
+- **Haiku:** the API boilerplate, the types, the symbols, the input help and the Help draft.
+
 ## 4a. Who does what (model split and hand-off)
 
 Each phase is split by model tier. Use one chat per task, not one chat switched between models, so each
@@ -582,6 +764,7 @@ in Help stay as they are.
 - Plates against CHS base curves on one chart, normalised.
 - Heatmap: ε_csm/ε_y over (b̄/t, f_y), and over (λ, Ω).
 - Plate-buckling mode animation (3D): the half-sine wave of B.9 growing as λ rises. Illustrative, labelled as such.
+- Phase 2b (section 4g): the signature curve from the finite strip analysis, with the mode at each point as a 2D cross-section, the G, D, L, O shares and a 3D member. These are computed shapes, not illustrations.
 
 ### B.6.1 Tension (B.12 to B.14)
 - done in step 2: tension point on the B.4 curve, the two caps with the governing one marked.
@@ -635,6 +818,7 @@ the gain surface, the 3D stub column and the stocky-against-slender view with re
 |---|---|
 | `data/` | `bending_parameters.json` (Table B.2) |
 | `csm/` | `compression.py`, `bending.py`, `combined.py`, an `applicability.py` for B.1 to B.3 |
+| `buckling/` (phase 2b) | `solver.py` (the only import of pyCUFSM), `strip_model.py`; `run_buckling` in `services.py`; `POST /api/v1/buckling`; the `finite_strip` geometry route |
 | `services.py` | `run_compression`, `run_bending`, `run_combined`, `run_summary` |
 | `api/` | `POST /api/v1/compression`, `/bending`, `/combined`, `/summary`; schemas and mappers |
 | `viz/` | one figure function per chart above; Plotly for 2D and surfaces, three.js for members |
@@ -683,6 +867,11 @@ the gain surface, the 3D stub column and the stocky-against-slender view with re
 | B.6.3.3 neutral-axis inputs | Take the elastic and plastic axis positions and the extreme-fibre distances as inputs. The midway approximation is printed in B.6.3.3, so it may be offered as a choice the user selects. Solving the neutral axis by equilibrium needs section-geometry rules that are not in the PDF, so it is out for now. |
 | n_csm ≥ 1 (B.21, B.25, B.27 and B.28 give a moment capacity of zero or less) | Show "not satisfied" with the reason, never a negative capacity. This is the one row you confirm before phase 4. |
 | Where the printed Annex lives in the repo | Keep a short transcription (this section 2) in the plan and the clause numbers in the code; do not commit the PDF. |
+| Finite strip (phase 2b): a route or a Use button | A route under "Slenderness from", so the value follows the dimensions as they change. A copied value would go stale when t changes. Choosing the route is the user's click, so nothing enters a calculation unasked. |
+| Finite strip: the section model | Plate centrelines with sharp corners. Root radii, welds, r_o and the c of 8.2.2(5) are left out, and the working says so. Corner strips for r_o can come later if wanted. |
+| Finite strip: the reference stress in bending | 1 N/mm² at the extreme compression fibre of the real section. Then σ_cr,cs is compared with f_y at the same fibre as W_el f_y in B.19 and B.20. |
+| Finite strip: which minimum is σ_cr,cs | The first minimum of the unconstrained curve, when its mode is local. Otherwise no value, with the reason: no rule is invented for a curve without a local minimum. Look at this again after the spike shows how pyCUFSM classifies outstands. |
+| Finite strip: mesh and half-wavelength range | Fixed numerical settings (six strips per plate, 80 log-spaced half-wavelengths), shown in the working. They are not inputs: they are settings of the method, not engineering values, and the tests show the answer does not depend on them. |
 
 ## 10. Definition of done for each clause
 
