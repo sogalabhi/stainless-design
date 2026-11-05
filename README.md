@@ -35,7 +35,7 @@ argument). The working shows such a value as "input", never as a clause.
 | E | B.4 (ε_y), B.9, B.11 |
 | ν (Poisson's ratio), unless σ_cr,cs is entered | B.9, B.11 |
 | γ_M0 | B.12, B.15, B.16, B.19, B.20 |
-| Ω | B.6, B.7 |
+| Ω (defined in 7.4.3.5(3); the NOTE gives 15 unless the National Annex gives another value; still typed, never pre-filled) | B.6, B.7 |
 | k_σ of each plate role (web, flange, stem, leg) | B.9 |
 | Section dimensions h, b, t_w, t_f, t, r (rolled) or s (welded), d, and for a T-section the stem width c_stem | 8.2.2(5), B.9, B.11 |
 | Outer corner radius r_o of a rectangular hollow section, root radius r of an angle (0 is sharp) | the section properties and the drawing only; never c |
@@ -114,7 +114,7 @@ generated from it (`python -m stainless_csm.symbols`) and a test keeps the two i
 | ε_csm/ε_y | Strain limit ratio: The CSM strain limit as a multiple of the yield strain; above 1 the section can strain-harden. | - | B.5.1 |
 | (ε_csm/ε_y) base curve | Base curve value: The value read from the base curve (B.6 or B.7) before the cap is applied. | - | B.5.1 |
 | min(Ω, C₁ε_u/ε_y) | Strain cap: The cap on the stocky branch: the smaller of Ω and the material ductility cap. | - | B.5.1 |
-| Ω | Plastic deformation parameter: Limit on the permitted plastic strain; an input. | - | input |
+| Ω | Plastic deformation parameter: Limit on the permitted plastic strain (7.4.3.5(3)); 15 unless the National Annex differs. An input. | - | 7.4.3.5 |
 
 **Section dimensions**
 

@@ -1,5 +1,7 @@
 **STANDING RULE, DO NOT FORGET: every value that is not in the PDF (EN 1993-1-4:2025) must be an input field that the user fills in. For now, nothing is taken automatically from an external source: no value from another clause or another standard, no library or lookup, no assumed or pre-filled default, no suggested constant, and no quantity computed with a rule that is not in the PDF (for example section properties such as A, W_el and W_pl, neutral-axis positions, or k_σ). Such inputs start empty, the calculation waits until they are given, and the working labels them "input", never a clause. Nothing is pre-filled; a complete worked example is loaded only when the user clicks Load example, and every example value shows its source.**
 
+**Amendment 2026-11-05 (user decision): "it's fine if we are doing outside the code, but properly mention the source of the calculation, and no AI-generated math magic." A calculation from outside EN 1993-1-4:2025 is now allowed, but only with a cited source (a textbook equation with its page, or a paper) that the working shows, as set out in section 4h. Inputs still start empty and nothing is pre-filled: an outside rule is a route the user chooses, never a value that enters a calculation unasked. The rule above stays in force for everything else.**
+
 # Plan: complete Annex B, with every visualisation
 
 Source: EN 1993-1-4:2025, Annex B (normative), printed pages 59 to 66, which are PDF pages 63 to 70 of
@@ -105,7 +107,7 @@ The user picks the section type and axis; the aspect ratio comes from their h an
 | λ_LT | B.6.3.1 gate, B.18 | Typed input for every bending check. It selects the route: λ_LT ≤ 0.2 gives B.19 or B.20; 0.2 < λ_LT ≤ 0.4 gives B.18; above 0.4 CSM does not apply (section 8, item 6). From member design, outside Annex B |
 | M_c,Rd | B.18 | Needed only for 0.2 < λ_LT ≤ 0.4, from 8.2.4: outside Annex B |
 | N_Ed, M_Ed, M_y,Ed, M_z,Ed | B.21 to B.29 | design actions, typed by the user |
-| Elastic and plastic neutral axis positions, distances to the extreme fibres, first-yield fibre | B.6.3.3 | section properties, typed by the user |
+| Elastic and plastic neutral axis positions, distances to the extreme fibres, first-yield fibre | B.6.3.3 | section properties, typed by the user. The design axis is then the midway position printed in B.6.3.3(3), or a cross-section equilibrium solve (B.6.3.3(3) allows it; the method is cited, section 9); the user chooses |
 | γ_M0, Ω, ν, k_σ, E | as today | already inputs |
 
 ## 4. Build order
@@ -124,7 +126,7 @@ README row marked done. A contract test (service against API) covers every new e
 - Phases 0 and 1 are built, reviewed and green (388 Python tests passed before 1b started; web: 86 passing plus the 20 deferred failures). Not yet looked at in a browser, not committed.
 - Phase 1b was stopped part-way by its agent: `src/stainless_csm/sections/templates.py` exists and the template kind is partly wired into `services.py` and `api/schemas.py`; no tests, no web work (no SectionSketch, no sectionTemplates.ts). Python is green again (388 passed, 2026-10-09: the two failures were a stale kinds list in test_api.py and a symbol line one character too long). Next session: review the partial 1b engine work against section 4c, then finish 1b (engine tests, API, all web work).
 - Added after 1b, before phase 2 (user request 2026-10-09):
-  - "Load example" button in the dock: fills every field with one worked example only when clicked; banner "Example values: replace them with your own"; each value shows its source (E, ν: 5.1.5; γM0 1.10: 8.1 NOTE; grade 1.4301: Table 5.1; Ω 15 and k_σ 4.0 / 0.43: example only, outside the PDF; rolled I 200 x 100 x 5.6 x 8.5, r 12, A 2848 mm²). Reword the standing rule to "nothing is pre-filled; an example is loaded only on request" once the user confirms the wording.
+  - "Load example" button in the dock: fills every field with one worked example only when clicked; banner "Example values: replace them with your own"; each value shows its source (E, ν: 5.1.5; γM0 1.10: 8.1 NOTE; grade 1.4301: Table 5.1; Ω 15: 7.4.3.5(3) NOTE, which gives 15 unless the National Annex gives another value (the source text in `example.ts` still says "example only"; to be corrected, section 4h); k_σ 4.0 / 0.43: example only, outside the PDF; rolled I 200 x 100 x 5.6 x 8.5, r 12, A 2848 mm²). Reword the standing rule to "nothing is pre-filled; an example is loaded only on request" once the user confirms the wording.
   - Done 2026-10-09: the Load example button is built (`apps/web/src/lib/example.ts`, banner with Clear all and the source list in the dock, `App.example.test.tsx`), and the standing rule above carries the new sentence.
   - A "?" button on every input: what it is, why (the clauses that use it), where to get it, and whether it is in the PDF. Text in `data/symbols.json` (one source for Help, symbols panels and the "?"), opens on click, no suggested values.
 - Phase 1d done 2026-10-09: `data/input_help.json` (28 entries; the dock key `rO` is the outer corner radius; plate width, thickness and k_σ are `plateWidth`, `plateThickness`, `kSigma`, matched by suffix in `helpKeyOf`), `input_help.py`, `GET /api/v1/input-help`, `components/FieldHelp.tsx` (provider, "?" button, panel; Esc closes the panel before a drawer or the geometry window), tests `tests/test_input_help.py` and `App.help.test.tsx`. The "Used in" line is gone from under the fields (it is the Why part of the panel); `usedIn` was removed from `DimField`. Not yet seen in a browser.
@@ -134,7 +136,7 @@ README row marked done. A contract test (service against API) covers every new e
 | 1d | "?" help on every input, DONE 2026-10-09 | `data/input_help.json` keyed by field key, served at `GET /api/v1/input-help`; a test that every dock field has an entry | a "?" button beside every input label opening a short panel. Spec in section 4e |
 | 2 | B.6.3.2 bending, Table B.2, DONE 2026-10-09 | `data/bending_parameters.json`, a lookup by type, axis and h/b; `csm/bending.py`: B.19, B.20, with the λ_LT gate of B.6.3.1(1). Channel minor axis, T-section major axis and all angles, and 0.2 < λ_LT <= 0.4, answer "arrives in phase 3" (`NotBuiltYetError`, not a refusal); λ_LT > 0.4 is refused | step "Bending (B.6.3)"; the Bending group and tab; moment against ε_csm/ε_y; strain and stress blocks across the depth |
 | 2b | B.5.2(2) numerical σ_cr,cs by finite strip | starts with a spike. `buckling/`: pyCUFSM (pinned 0.2.0) behind one module; the strip model of the five plate templates; the signature curve, the cFSM mode shares and the mode shapes; σ_cr,cs from the first local minimum; a `finite_strip` route for B.5, B.6.2 and B.6.3; `POST /api/v1/buckling` | "Finite strip analysis" under Slenderness from; the signature curve coloured by mode; pick a point to see the cross-section mode in 2D, the G, D, L, O shares and the member in 3D; Help topic "Buckling modes". Spec in section 4g |
-| 3 | B.6.3.1 and B.6.3.3 | B.6.3.3(1) for channel minor axis, T-section major axis and angles (B.19 or B.20 with ε_csm,max, the first-yield fibre); B.18 (needs λ_LT and M_c,Rd as inputs); ε_csm,max and ε_csm,t from the linear strain assumption. ε_csm,t first uses the elastic neutral axis; if ε_csm,max > ε_y, it is recalculated at the midway point between the elastic and plastic axes (the approximation printed in B.6.3.3(3)), with both axis positions typed in. Equilibrium is out for now (section 9) | interpolation chart; neutral-axis shift diagram for angles, channels, T-sections |
+| 3 | B.6.3.1 and B.6.3.3 | B.6.3.3(1) for channel minor axis, T-section major axis and angles (B.19 or B.20 with ε_csm,max, the first-yield fibre); B.18 (needs λ_LT and M_c,Rd as inputs); ε_csm,max and ε_csm,t from the linear strain assumption. ε_csm,t first uses the elastic neutral axis; if ε_csm,max > ε_y, it is recalculated at the midway point between the elastic and plastic axes (the approximation printed in B.6.3.3(3)), with both axis positions typed in. B.6.3.3(3) also allows the design axis from cross-section equilibrium; the code gives no procedure for it, so it uses the cited method of section 9 and is the user's choice beside the midway approximation | interpolation chart; neutral-axis shift diagram for angles, channels, T-sections |
 | 4 | B.6.4.1 RHS | `csm/combined.py`: B.21 to B.24 for RHS. Refuses bending with tension, and channels, T-sections and angles (outside B.6.4, B.3(2)). I-sections and CHS show "not built yet (phase 5)", which is not a refusal | interaction curve; biaxial surface |
 | 5 | B.6.4.2 and B.6.4.3 | B.25 to B.27, I-section values for B.23, B.28 and B.29. Refuses channels, T-sections and angles, which fall under EN 1993-1-1 8.2.9 (outside the Annex) | I-section and CHS interaction curves |
 | 6 | B.1 to B.3 wrapper | an applicability gate (section type, slenderness limits, a reminder of the member limits), and a summary that places N_csm,t,Rd, N_csm,Rd, M_csm,c,Rd where 8.2 uses N_t,Rd, N_c,Rd, M_c,Rd | "Summary" page: all resistances in one place, with the flow diagram |
@@ -492,7 +494,7 @@ Facts the text must use (checked against the PDF):
   sections the averages f_ya, f_ua of 5.1.2.3 may be used (B.3(3)).
 - E and ν: 5.1.5 gives E = 200 000 N/mm² and ν = 0.3.
 - γM0: 8.1 NOTE gives 1.10 unless the National Annex gives another value.
-- Ω: 7.4.3.5, a project-specific limit on plastic strain; the PDF gives no value.
+- Ω: defined in 7.4.3.5(3) as a project-specific parameter that sets the maximum permissible plastic strain; the NOTE there gives 15 unless the National Annex gives a different value. It is a nationally determined parameter with a code value. The field stays empty until the user decides (section 9).
 - k_σ: EN 1993-1-5:2024, 6.4.1, by plate support (internal or outstand) and stress ratio ψ;
   outside EN 1993-1-4.
 - σ_cr,cs: numerical methods (for example a finite strip program) or the analytical expressions
@@ -719,6 +721,40 @@ From the prototype: E 200 000 N/mm², ν 0.3, centreline model, six strips per p
 - **Sonnet:** the engine, the route, the buckling view and the 3D member.
 - **Haiku:** the API boilerplate, the types, the symbols, the input help and the Help draft.
 
+## 4h. Source rule: every number names its source
+
+Decided 2026-11-05 (see the amendment at the top). Calculations from outside EN 1993-1-4:2025 are allowed
+when their source is cited. No AI-generated formula or "math magic": a rule enters the tool only from a
+source a reader can open.
+
+Every derived value (each `CalcStep`) and every chart or 3D view carries exactly one source kind, shown in
+the UI as a badge:
+
+- **Code:** an EN clause or formula, for example "EN 1993-1-4:2025, B.6.3.3(3)" or "EN 1993-1-4:2025,
+  Formula (9.1)".
+- **Textbook:** author, edition, equation and page, for example "Gere & Timoshenko, Mechanics of Materials,
+  2nd ed., eq. (10-28), p. 538".
+- **Paper:** a numbered reference from the standard's Bibliography, or a full citation, for example "ref. [10]
+  Fieber, Gardner and Macorini (2019)".
+- **Input:** a value the user typed, or copied with a Use click.
+- **Derived:** allowed only when every step shown cites one of the kinds above; the steps are shown in the
+  working.
+
+A value or picture with no source is not shown. Illustrative drawings say "illustrative" and give no numbers.
+
+Still true: inputs start empty and nothing is pre-filled. A cited outside rule is a route the user chooses
+(for example the equilibrium neutral axis of section 9, or the 9.2 deflection), never a hidden default.
+
+To do (future work, not built):
+- a `source` field on `CalcStep` (kind plus the citation text), and the badge in the working and on each chart
+  and 3D view;
+- review the existing steps and views and give each one a source, or stop showing it;
+- the Ω label in `apps/web/src/lib/example.ts` and the Ω source tag in `data/input_help.json` ("Outside EN
+  1993-1-4: you provide it") still describe Ω as outside the standard; they change when the Ω decision in
+  section 9 is made (the tests that check the tag change with them);
+- the equilibrium neutral axis of B.6.3.3(3), from the Gere chapter named in section 9;
+- the serviceability deflection of 9.2 (Formulae 9.1 and 9.2, Table 9.1), if displacements are wanted.
+
 ## 4a. Who does what (model split and hand-off)
 
 Each phase is split by model tier. Use one chat per task, not one chat switched between models, so each
@@ -782,19 +818,19 @@ the gain surface, the 3D stub column and the stocky-against-slender view with re
 - Continuity marker at ε_csm/ε_y = 1 (B.15 meets B.16 there).
 - Sensitivity chart (tornado): how much N_csm,Rd moves for a change of p % in each input (f_y, f_u, t, Ω, E). The step p is a user setting, empty until typed, never a fixed 10 %.
 - Gain surface (3D): f_csm / f_y over (λ, f_y/f_u), and over (λ, Ω), with contours.
-- 3D stub column, illustrative: local waves from the live slenderness, coloured by N_csm,Rd / (A f_y / γ_M0). The column length is a typed input that sets only the drawing's proportions. No shortening is calculated or shown, since Annex B gives no displacement rule.
+- 3D stub column, illustrative: local waves from the live slenderness, coloured by N_csm,Rd / (A f_y / γ_M0). The column length is a typed input that sets only the drawing's proportions. No shortening is calculated or shown. Annex B has no displacement rule; clause 9.2 gives a serviceability deflection method (secant modulus, Formulae 9.1 and 9.2, Table 9.1), which the tool does not use yet, so the drawing stays illustrative and shows no displacement value.
 - Stocky against slender side by side, as in the Visualise tab, now with real resistances.
 
 ### B.6.3 Bending (B.18 to B.20, Table B.2)
-- Cross-section drawing to scale from the entered dimensions, with the neutral axes at the positions the user enters (never computed from the shape), and strain and stress blocks at ε_csm. Replaces today's shape-agnostic picture with real moments.
+- Cross-section drawing to scale from the entered dimensions, with the neutral axes at the positions the user enters (or, when the user chooses the equilibrium route of section 9, solved by the cited method, with the source shown), and strain and stress blocks at ε_csm. Replaces today's shape-agnostic picture with real moments.
 - M_csm,c,Rd against ε_csm/ε_y, with M_el and M_pl as reference lines, so the CSM gain above M_pl is seen at once.
 - Effect of α: curves for α = 1.0, 1.2, 1.5 and 2.0 on one chart, the selected one highlighted; Table B.2 beside it with the selected row lit.
 - Shape-factor effect: M_csm,c,Rd / M_el over (ε_csm/ε_y, W_pl/W_el), a 3D surface with a contour.
 - M_csm,c,Rd / M_pl against λ (follows the base curve).
 - B.18 interpolation line: M_csm,int,Rd against λ_LT between 0.2 and 0.4, with M_csm,c,Rd and M_c,Rd as its ends.
-- B.6.3.3 neutral-axis shift diagram: the elastic axis, the plastic axis, the design axis midway, and ε_csm,t against ε_csm.
+- B.6.3.3 neutral-axis shift diagram: the elastic axis, the plastic axis, the design axis (midway, or by equilibrium when chosen), and ε_csm,t against ε_csm.
 - Continuity marker: B.19 meets B.20 at ε_csm/ε_y = 1 (both equal W_el f_y / γ_M0).
-- 3D beam, illustrative: a deflected shape coloured by strain, with local wrinkling on the compression flange from the live slenderness. The span and load are typed inputs that only draw the shape. No displacement value is calculated or shown, since Annex B gives no displacement rule.
+- 3D beam, illustrative: a deflected shape coloured by strain, with local wrinkling on the compression flange from the live slenderness. The span and load are typed inputs that only draw the shape. No displacement value is calculated or shown. Annex B has no displacement rule; EN 1993-1-4:2025, 9.2 estimates deflections with the secant modulus E_s,ser = (E_s,1 + E_s,2)/2 (Formula 9.1), with E_s,i from Formula 9.2 and the exponent n from Table 9.1 (ferritic 14, austenitic 7, duplex 8); 9.2(9) allows the finite element methods of FprEN 1993-1-14:2025 instead. The tool does not use 9.2 yet, so the drawing is illustrative and carries no displacement value. Using 9.2 would be a code-sourced addition (section 4h).
 
 ### B.6.4 Combined bending and axial force (B.21 to B.29)
 - Interaction curve, M_N / M against n_csm, for the selected criterion (RHS, I-section major and minor axes, CHS), with the design point inside or outside.
@@ -846,7 +882,7 @@ the gain surface, the 3D stub column and the stocky-against-slender view with re
 1. B.24 writes N_csm,c,Rd while B.15 and B.16 write N_csm,Rd. B.3 equates N_c,Rd with N_csm,c,Rd, so they are taken as the same quantity. Confirm against the standard.
 2. B.25 prints "but M_N,csm,y,Rd < M_csm,y,Rd" (strict) where B.21 prints "<=". Implement as a cap at M_csm,y,Rd; the result is the same.
 3. The Annex does not define b, h, t or t_f. From the formulas: for an RHS (B.21, B.22), a_w = (A - 2bt)/A and a_f = (A - 2ht)/A, so b and h are the outer width and height and t is the uniform wall thickness. For an I-section (B.25), a = (A - 2bt_f)/A, so b is the flange width and t_f the flange thickness. Confirm against the section-dimension figure of EN 1993-1-1, and put a labelled sketch beside the fields.
-4. B.6.3.3 gives a procedure, not a formula. The outer-fibre tensile strain follows from a linear strain distribution about the neutral axis (ε_csm,t = ε_csm times the distance to the tension fibre over the distance to the compression fibre). That relation is derived, not printed, so the working states it.
+4. B.6.3.3 gives a procedure, not a formula. The outer-fibre tensile strain follows from a linear strain distribution about the neutral axis (ε_csm,t = ε_csm times the distance to the tension fibre over the distance to the compression fibre). That relation is derived, not printed, so the working states it. B.6.3.3(3) lets the design neutral axis come from cross-section equilibrium or, as an approximation, from the midway position; the code gives no procedure for the equilibrium solve, so that route needs a cited source (section 9).
 5. B.6.3.1 (1) says "from B.6.3.1 or B.6.3.2" where B.6.3.2 and B.6.3.3 appear meant. Follow the intent: B.6.3.2 for an axis of symmetry, B.6.3.3 otherwise.
 6. B.18 is silent for λ_LT above 0.4 and when M_csm,c,Rd does not exceed M_c,Rd. Report "CSM does not apply" or "use the 8.2.4 value" instead of inventing a rule.
 7. B.2 requires the member slenderness limits of 8.3.2.1(3) and 8.3.3.1(3). Those are outside Annex B, so the tool states the requirement and does not check it.
@@ -864,7 +900,8 @@ the gain surface, the 3D stub column and the stocky-against-slender view with re
 | B.6.4 is a pass/fail criterion (≤ 1) and needs the design actions N_Ed and M_Ed. You removed the pass/fail verdict and utilisation on 2026-10-06, and the README says "no pass/fail verdict, no force check". | Allow it for B.6.4 only. The criterion is defined inside Annex B; the loads are typed inputs. Show the criterion value and "satisfied / not satisfied" labelled as the Annex B criterion alone, and say in the README that this is the one exception. |
 | Section dimensions (b, h, t, t_f) and W_el, W_pl | Plain inputs with a labelled sketch, no section presets, as today. |
 | λ_LT drives the bending route (B.6.3.1(1)), and M_c,Rd is needed only for B.18 | λ_LT is an input on every bending check. M_c,Rd is an input, shown only when λ_LT is in the 0.2 to 0.4 range. |
-| B.6.3.3 neutral-axis inputs | Take the elastic and plastic axis positions and the extreme-fibre distances as inputs. The midway approximation is printed in B.6.3.3, so it may be offered as a choice the user selects. Solving the neutral axis by equilibrium needs section-geometry rules that are not in the PDF, so it is out for now. |
+| B.6.3.3 neutral-axis inputs | Take the elastic and plastic axis positions and the extreme-fibre distances as inputs. B.6.3.3(3) itself allows the design neutral axis "based on cross-section equilibrium" and gives the midway position between the elastic and plastic axes as the permitted approximation. Offer both as a choice the user selects; the axis positions may still be typed in. The code gives no procedure for the equilibrium solve, so the method comes from a cited source: Gere and Timoshenko, Mechanics of Materials, 2nd ed., CBS Publishers, Chapter 10 "Inelastic Bending", section 10.7: Formula (10-28), ∫σ b dε = 0 over the section, and for a T-section equations (f), (g) and (h) on p. 538, with σ taken from the B.4 bilinear material (Figure B.1). The working names this source (section 4h). |
+| Ω (7.4.3.5(3)) | The NOTE gives 15 unless the National Annex gives a different value. Question for you: should the app now offer Ω as "15 (EN 1993-1-4:2025, 7.4.3.5 NOTE), or your National Annex value"? Until you decide, Ω stays an empty input and the Load example value keeps its own label. |
 | n_csm ≥ 1 (B.21, B.25, B.27 and B.28 give a moment capacity of zero or less) | Show "not satisfied" with the reason, never a negative capacity. This is the one row you confirm before phase 4. |
 | Where the printed Annex lives in the repo | Keep a short transcription (this section 2) in the plan and the clause numbers in the code; do not commit the PDF. |
 | Finite strip (phase 2b): a route or a Use button | A route under "Slenderness from", so the value follows the dimensions as they change. A copied value would go stale when t changes. Choosing the route is the user's click, so nothing enters a calculation unasked. |

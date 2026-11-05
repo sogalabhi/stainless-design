@@ -447,15 +447,15 @@
       "symbol": "Ω",
       "latex": "\\Omega",
       "name": "Plastic deformation parameter",
-      "meaning": "Limit on the permitted plastic strain; an input.",
+      "meaning": "Limit on the permitted plastic strain (7.4.3.5(3)); 15 unless the National Annex differs. An input.",
       "unit": "-",
-      "clause": "input",
+      "clause": "7.4.3.5",
       "topics": [
         "deformation",
         "compression",
         "bending"
       ],
-      "detail": "Ω sets how much plastic strain the designer is willing to allow for the section. It is not defined inside the Annex B formulas, so it is an input. A lower Ω is more conservative. It only matters when it is smaller than the material limit C₁ε_u/ε_y.",
+      "detail": "Ω sets how much plastic strain the designer is willing to allow for the section. It is defined in 7.4.3.5(3), not in Annex B; the NOTE there gives 15 unless the National Annex gives a different value, so it is a nationally determined parameter. Here it is an input that starts empty. A lower Ω is more conservative. It only matters when it is smaller than the material limit C₁ε_u/ε_y.",
       "diagram": "base_curve"
     },
     {
