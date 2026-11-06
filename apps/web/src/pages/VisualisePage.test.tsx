@@ -198,9 +198,27 @@ describe("Explore with a section template", () => {
     expect(section.plates.find((p) => p.role === "web")?.thickness).toBeCloseTo(5.6 * factor);
   });
 
-  it("says in a caption that fillets and weld triangles are left out of the 3D view", async () => {
+  it("says in a caption that the section is drawn with the radii and weld legs typed, and the waves are illustrative", async () => {
     live();
     await screen.findByLabelText("3D scene");
-    expect(screen.getByText(/Fillets and weld triangles are left out of the 3D view/)).toBeInTheDocument();
+    expect(screen.getByText(/with the root radii, weld legs and corner radii you gave/)).toBeInTheDocument();
+    expect(screen.getByText(/The waves are illustrative/)).toBeInTheDocument();
+  });
+
+  it("hands the scene the shape, the fabrication and the scaled dimensions, so it can draw the true outline", async () => {
+    live();
+    const slider = await screen.findByRole("slider");
+    fireEvent.change(slider, { target: { value: "0" } });
+    const factor = (comparisonTemplate as ComparisonResponse).points[0].factor;
+    expect(scene.items[0].section).toMatchObject({ shape: "I-section", fabrication: "rolled" });
+    const dims = (scene.items[0].section as { dims: Record<string, number> }).dims;
+    expect(dims.r).toBe(12);
+    expect(dims.tw).toBeCloseTo(5.6 * factor);
+  });
+
+  it("the 3D subtitles carry no number: the drawing is illustrative", async () => {
+    live();
+    await screen.findByLabelText("3D scene");
+    for (const item of scene.items as unknown as { detail: string }[]) expect(item.detail).not.toMatch(/\d/);
   });
 });

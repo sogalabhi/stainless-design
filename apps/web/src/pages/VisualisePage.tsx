@@ -5,7 +5,6 @@ import type { ApiError } from "../api/client";
 import type { ComparisonResponse } from "../api/types";
 import { BendingProfile } from "../components/BendingProfile";
 import { PlotlyChart } from "../components/PlotlyChart";
-import type { SceneItem } from "../components/SectionScene";
 import { renderSymbols } from "../components/Symbols";
 import { SymbolsPanel } from "../components/SymbolsPanel";
 import { MaterialProblem } from "../components/MaterialProblem";
@@ -13,6 +12,7 @@ import { Collapsible, MetricCard, StatusBox } from "../components/ui";
 import { Waiting } from "../components/Waiting";
 import { formatNumber } from "../lib/format";
 import { ZONE_LABEL, nearestPoint, sceneSection, wrinkleAmount, withTrace } from "../lib/comparison";
+import type { SceneItem } from "../lib/exploreScene";
 import type { DeformationFormState } from "../lib/geometry";
 import type { MissingItem } from "../lib/inputs";
 
@@ -87,7 +87,8 @@ function Live({
       const item: SceneItem = {
         id,
         label,
-        detail: `λ ${point.slenderness.toFixed(2)} · ${ZONE_LABEL[point.zone]}`,
+        // the drawing is illustrative, so it carries no number: λ_cs is in the cards below
+        detail: ZONE_LABEL[point.zone],
         section,
         wrinkle: wrinkleAmount(point.slenderness, switchAt, upper),
         zone: point.zone,
@@ -207,12 +208,12 @@ function Live({
         <SectionScene items={items} dark={dark} />
       </Suspense>
       <p className="muted">
-        Drag to turn, scroll to zoom. Blue: stocky, grey: slender, red: beyond the limit of the
-        method. All use your widths or diameter and differ only in thickness. The wave size is a
-        picture of "more slender, more buckling": the CSM does not calculate a buckled shape.
-        Orange arrows mark the compression.
+        Each section has its own view, all drawn to the same scale and turned together. Blue: stocky,
+        grey: slender, red: beyond the limit of the method. All use your widths or diameter and differ
+        only in thickness. The waves are illustrative: their size is a picture of "more slender, more
+        buckling", and the CSM does not calculate a buckled shape. Orange arrows mark the compression.
         {form.kind === "template"
-          ? " The section is assembled from the dimensions you typed (web and flanges in place, extruded); only the plate the engine reports as governing wrinkles. Fillets and weld triangles are left out of the 3D view."
+          ? " The section is drawn from the dimensions you typed, with the root radii, weld legs and corner radii you gave (a corner left empty is drawn sharp); only the plate the engine reports as governing wrinkles."
           : ""}
       </p>
       <div className="legend-cards">

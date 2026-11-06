@@ -2,6 +2,7 @@ import { CircleAlert } from "lucide-react";
 import type { ReactNode } from "react";
 import type { SectionPropertiesResponse, SectionType } from "../api/types";
 import { DEFAULT_LAYERS, type SketchLayers } from "../lib/layers";
+import { pathData, sectionOutline } from "../lib/sectionOutline";
 import {
   ANGLE,
   CHANNEL,
@@ -286,23 +287,6 @@ function fmt(n: number): string {
   return Number(n.toFixed(2)).toString();
 }
 
-/** The corner at the web: a fillet of radius R (rolled) or a weld triangle of leg R (welded). */
-function arc(r: number, x: number, y: number): string {
-  return `A ${fmt(r)} ${fmt(r)} 0 0 0 ${fmt(x)} ${fmt(y)}`;
-}
-
-/** A closed rectangle path, its corners rounded with radius R (0 keeps them sharp). */
-function roundedRect(x0: number, y0: number, x1: number, y1: number, R: number): string {
-  if (R <= 0) return `M ${fmt(x0)} ${fmt(y0)} H ${fmt(x1)} V ${fmt(y1)} H ${fmt(x0)} Z`;
-  const a = (x: number, y: number) => `A ${fmt(R)} ${fmt(R)} 0 0 1 ${fmt(x)} ${fmt(y)}`;
-  return [
-    `M ${fmt(x0 + R)} ${fmt(y0)} H ${fmt(x1 - R)} ${a(x1, y0 + R)}`,
-    `V ${fmt(y1 - R)} ${a(x1 - R, y1)}`,
-    `H ${fmt(x0 + R)} ${a(x0, y1 - R)}`,
-    `V ${fmt(y0 + R)} ${a(x0 + R, y0)} Z`,
-  ].join(" ");
-}
-
 function drawShape(
   shape: SectionType,
   fabrication: Fabrication | null,
@@ -313,19 +297,18 @@ function drawShape(
 ): Drawn {
   const v = (key: DimKey) => (d[key] ?? 0) * scale;
   const rolled = fabrication !== "welded";
+  // the outline comes from the one geometry source the 3D view extrudes too, in drawing units
+  const scaled = Object.fromEntries(
+    Object.entries(d).map(([key, value]) => [key, value === null ? null : value * scale]),
+  ) as SketchDims;
+  const drawn = sectionOutline(shape, fabrication, scaled, { corners: ctx.layers.corners });
 
   if (shape === CHS) {
     const ro = v("d") / 2;
     const ri = Math.max(ro - v("t"), 0);
     const ang = Math.PI / 4;
     return {
-      outline: (
-        <path
-          fillRule="evenodd"
-          d={`M ${fmt(-ro)} 0 a ${fmt(ro)} ${fmt(ro)} 0 1 0 ${fmt(2 * ro)} 0 a ${fmt(ro)} ${fmt(ro)} 0 1 0 ${fmt(-2 * ro)} 0 Z M ${fmt(-ri)} 0 a ${fmt(ri)} ${fmt(ri)} 0 1 0 ${fmt(2 * ri)} 0 a ${fmt(ri)} ${fmt(ri)} 0 1 0 ${fmt(-2 * ri)} 0 Z`}
-          className="sk-solid"
-        />
-      ),
+      outline: <path fillRule="evenodd" d={pathData(drawn.paths)} className="sk-solid" />,
       extras: (
         <>
           <Dim id="d" a={[-ro, 0]} b={[ro, 0]} off={[0, ro + 22]} side="below" ctx={ctx} />
@@ -354,13 +337,10 @@ function drawShape(
     const bandW = Math.max(H - 3 * T, 0); // where c is measured on the web: a drawing position
     const bandF = Math.max(B - 3 * T, 0);
     // the outer corner radius r_o; the inner one is max(r_o - t, 0). Drawing only: c does not change.
-    const ro = ctx.layers.corners ? Math.min(v("rO"), Math.min(H, B) / 2) : 0;
-    const ri = Math.max(ro - T, 0);
-    const outer = roundedRect(x0, yT, x1, yB, ro);
-    const inner = roundedRect(x0 + T, yT + T, x1 - T, yB - T, ri);
+    const ro = drawn.corner;
     const mid = ro * (1 - Math.SQRT1_2);
     return {
-      outline: <path fillRule="evenodd" d={`${outer} ${inner}`} className="sk-solid" />,
+      outline: <path fillRule="evenodd" d={pathData(drawn.paths)} className="sk-solid" />,
       extras: (
         <>
           {ro > 0 ? (
@@ -386,19 +366,10 @@ function drawShape(
     const yT = -H / 2;
     const yB = H / 2;
     // the root radius r at the inside corner; drawing only: b-bar = h does not change
-    const K = ctx.layers.corners ? Math.max(Math.min(v("r"), B - T, H - T), 0) : 0;
-    const root =
-      K > 0
-        ? `V ${fmt(yB - T - K)} ${arc(K, x0 + T + K, yB - T)}`
-        : `V ${fmt(yB - T)}`;
+    const K = drawn.corner;
     const arcMid = K * (1 - Math.SQRT1_2);
     return {
-      outline: (
-        <path
-          d={`M ${fmt(x0)} ${fmt(yT)} H ${fmt(x0 + T)} ${root} H ${fmt(x1)} V ${fmt(yB)} H ${fmt(x0)} Z`}
-          className="sk-solid"
-        />
-      ),
+      outline: <path d={pathData(drawn.paths)} className="sk-solid" />,
       extras: (
         <>
           {K > 0 ? (
@@ -428,58 +399,16 @@ function drawShape(
   const x1 = B / 2;
   const yT = -H / 2;
   const yB = H / 2;
-  const cornerRaw = rolled ? v("r") : v("s");
-  const room =
-    shape === T_SECTION
-      ? Math.max((B - TW) / 2, 0)
-      : shape === CHANNEL
-        ? Math.max(B - TW, 0)
-        : Math.max((B - TW) / 2, 0);
-  const K = ctx.layers.corners
-    ? Math.max(Math.min(cornerRaw, room, shape === T_SECTION ? H - TF : (H - 2 * TF) / 2), 0)
-    : 0;
+  const K = drawn.corner;
   const cornerLabel: DimKey = rolled ? "r" : "s";
-
-  let wL = -TW / 2;
-  let wR = TW / 2;
-  let path: string;
-  const welds: string[] = [];
-  const tri = (x: number, y: number, sx: number, sy: number) =>
-    `M ${fmt(x)} ${fmt(y)} L ${fmt(x + sx * K)} ${fmt(y)} L ${fmt(x)} ${fmt(y + sy * K)} Z`;
-
-  // a corner of size 0 (or the corners layer off) is a sharp corner: no arc, no weld triangle
-  const filleted = rolled && K > 0;
-  const welded = !rolled && K > 0;
-  if (shape === I_SECTION) {
-    if (filleted) {
-      path = `M ${fmt(x0)} ${fmt(yT)} H ${fmt(x1)} V ${fmt(yT + TF)} H ${fmt(wR + K)} ${arc(K, wR, yT + TF + K)} V ${fmt(yB - TF - K)} ${arc(K, wR + K, yB - TF)} H ${fmt(x1)} V ${fmt(yB)} H ${fmt(x0)} V ${fmt(yB - TF)} H ${fmt(wL - K)} ${arc(K, wL, yB - TF - K)} V ${fmt(yT + TF + K)} ${arc(K, wL - K, yT + TF)} H ${fmt(x0)} Z`;
-    } else {
-      path = `M ${fmt(x0)} ${fmt(yT)} H ${fmt(x1)} V ${fmt(yT + TF)} H ${fmt(wR)} V ${fmt(yB - TF)} H ${fmt(x1)} V ${fmt(yB)} H ${fmt(x0)} V ${fmt(yB - TF)} H ${fmt(wL)} V ${fmt(yT + TF)} H ${fmt(x0)} Z`;
-      if (welded) {
-        welds.push(tri(wR, yT + TF, 1, 1), tri(wR, yB - TF, 1, -1), tri(wL, yT + TF, -1, 1), tri(wL, yB - TF, -1, -1));
-      }
-    }
-  } else if (shape === CHANNEL) {
-    wL = x0;
-    wR = x0 + TW;
-    if (filleted) {
-      path = `M ${fmt(x0)} ${fmt(yT)} H ${fmt(x1)} V ${fmt(yT + TF)} H ${fmt(wR + K)} ${arc(K, wR, yT + TF + K)} V ${fmt(yB - TF - K)} ${arc(K, wR + K, yB - TF)} H ${fmt(x1)} V ${fmt(yB)} H ${fmt(x0)} Z`;
-    } else {
-      path = `M ${fmt(x0)} ${fmt(yT)} H ${fmt(x1)} V ${fmt(yT + TF)} H ${fmt(wR)} V ${fmt(yB - TF)} H ${fmt(x1)} V ${fmt(yB)} H ${fmt(x0)} Z`;
-      if (welded) welds.push(tri(wR, yT + TF, 1, 1), tri(wR, yB - TF, 1, -1));
-    }
-  } else if (filleted) {
-    path = `M ${fmt(x0)} ${fmt(yT)} H ${fmt(x1)} V ${fmt(yT + TF)} H ${fmt(wR + K)} ${arc(K, wR, yT + TF + K)} V ${fmt(yB)} H ${fmt(wL)} V ${fmt(yT + TF + K)} ${arc(K, wL - K, yT + TF)} H ${fmt(x0)} Z`;
-  } else {
-    path = `M ${fmt(x0)} ${fmt(yT)} H ${fmt(x1)} V ${fmt(yT + TF)} H ${fmt(wR)} V ${fmt(yB)} H ${fmt(wL)} V ${fmt(yT + TF)} H ${fmt(x0)} Z`;
-    if (welded) welds.push(tri(wR, yT + TF, 1, 1), tri(wL, yT + TF, -1, 1));
-  }
+  const wL = shape === CHANNEL ? x0 : -TW / 2;
+  const wR = shape === CHANNEL ? x0 + TW : TW / 2;
 
   const outline = (
     <>
-      <path d={path} className="sk-solid" />
-      {welds.map((w, i) => (
-        <path key={i} d={w} className="sk-solid" />
+      <path d={pathData(drawn.paths)} className="sk-solid" />
+      {drawn.welds.map((w, i) => (
+        <path key={i} d={pathData([w])} className="sk-solid" />
       ))}
     </>
   );

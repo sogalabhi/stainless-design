@@ -1,14 +1,16 @@
-import type { ComparisonPointOut, ComparisonRequest } from "../api/types";
+import type { ComparisonPointOut, ComparisonRequest, SectionType } from "../api/types";
 import type { DeformationFormState } from "./geometry";
 import { deformationRequest, dimsOf } from "./geometry";
+import type { Fabrication, SketchDims } from "./sectionTemplates";
 import { templateLayout, type TemplateLayout } from "./templateScene";
 
 /** A tube, or each plate drawn as its own slab (the plates carry no layout, so none is assumed). */
 export type SceneSection =
   | { kind: "chs"; d: number; t: number }
   | { kind: "plates"; plates: { label: string; width: number; thickness: number }[] }
-  // a section template assembled from its plates (web and flanges in place), from the typed dimensions
-  | ({ kind: "template" } & TemplateLayout);
+  // a section template from the typed dimensions (thicknesses scaled): its outline is drawn from
+  // `dims`, and `plates` says where each plate role stands (for the wave of the governing plate)
+  | ({ kind: "template"; shape: SectionType; fabrication: Fabrication | null; dims: SketchDims } & TemplateLayout);
 
 /** The request, or null while something is missing or the section has no thickness to change. */
 export function comparisonRequest(
@@ -27,15 +29,13 @@ export function sceneSection(form: DeformationFormState, factor: number): SceneS
   }
   if (form.kind === "template" && form.shape !== null) {
     // the thickness factor multiplies t_w, t_f and t, as the engine does (h, b, r, s, d stay)
-    const dims = dimsOf(form);
+    const typed = dimsOf(form);
     const scaled = (value: number | null) => (value === null ? null : value * factor);
-    const layout = templateLayout(form.shape, {
-      ...dims,
-      tw: scaled(dims.tw),
-      tf: scaled(dims.tf),
-      t: scaled(dims.t),
-    });
-    return layout === null ? null : { kind: "template", ...layout };
+    const dims = { ...typed, tw: scaled(typed.tw), tf: scaled(typed.tf), t: scaled(typed.t) };
+    const layout = templateLayout(form.shape, dims);
+    return layout === null
+      ? null
+      : { kind: "template", shape: form.shape, fabrication: form.fabrication, dims, ...layout };
   }
   if (form.kind === "plates") {
     const plates = [];

@@ -2,10 +2,10 @@ import type { SectionType } from "../api/types";
 import { ANGLE, CHANNEL, I_SECTION, RHS, T_SECTION, type PlateRoleKey, type SketchDims } from "./sectionTemplates";
 
 /**
- * Where each plate of a section template stands in the 3D scene. This is drawing layout from the
- * typed dimensions (web and flanges in place, extruded along y): no engineering value comes out of
- * it. Fillets and weld triangles are left out. The section's height h runs along z and its width b
- * along x.
+ * Where each plate of a section template stands, for the 3D view: which plate a wave is drawn on and
+ * where its label goes. Drawing layout from the typed dimensions only: no engineering value comes out
+ * of it. (The 3D outline itself, with fillets and welds, comes from sectionOutline.) The section's
+ * height h runs along z (up) and its width b along x, centred on the bounding box.
  */
 export type PlacedPlate = {
   role: PlateRoleKey;
