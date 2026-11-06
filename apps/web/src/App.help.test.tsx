@@ -214,7 +214,7 @@ describe("the ? button on every input", () => {
     expect(within(dock()).queryByText(/Used in/)).not.toBeInTheDocument();
   });
 
-  it("states the facts for gamma M0 and Omega, and says which inputs are outside the standard", async () => {
+  it("states the facts for gamma M0 and Omega, and tags both as in the standard (a NOTE value)", async () => {
     const user = userEvent.setup();
     renderApp();
     await openGroup(user, /^Section/);
@@ -224,8 +224,9 @@ describe("the ? button on every input", () => {
     await user.selectOptions(within(dock()).getByLabelText(/^Section type/), "I-section");
     await openGroup(user, /^Deformation capacity/);
     await user.click(await helpButton("Ω"));
-    expect(field("omega")).toHaveTextContent(/7\.4\.3\.5/);
-    expect(field("omega")).toHaveTextContent("Outside EN 1993-1-4: you provide it");
+    expect(field("omega")).toHaveTextContent(/7\.4\.3\.5\(3\)/);
+    expect(field("omega")).toHaveTextContent("Its NOTE gives 15 unless the National Annex gives a different value.");
+    expect(field("omega")).toHaveTextContent("In EN 1993-1-4 (7.4.3.5(3) NOTE)");
   });
 
   it("is drawn in the Section geometry window as well, and Escape closes the panel before the window", async () => {

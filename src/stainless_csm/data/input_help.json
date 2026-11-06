@@ -167,7 +167,7 @@
       "what": "A limit on the plastic strain you accept in the section, written as a multiple of the yield strain ε_y.",
       "why": "B.6 and B.7 cap the strain ratio at min(Ω, C₁ε_u/ε_y), so a smaller Ω gives a more conservative result.",
       "where": "7.4.3.5(3) defines it as the project-specific maximum permissible plastic strain. Its NOTE gives 15 unless the National Annex gives a different value.",
-      "source": "Outside EN 1993-1-4: you provide it"
+      "source": "In EN 1993-1-4 (7.4.3.5(3) NOTE)"
     },
     "sigmaCr": {
       "name": "Critical stress σ_cr,cs",

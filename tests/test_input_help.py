@@ -1,4 +1,3 @@
-
 from fastapi.testclient import TestClient
 
 from stainless_csm.api.main import create_app
@@ -55,6 +54,10 @@ def test_values_quoted_from_the_standard_sit_on_the_right_entries() -> None:
     assert "200 000" in mentions("E") and by_key["E"].source == "In EN 1993-1-4 (5.1.5)"
     assert "0.3" in mentions("nu") and by_key["nu"].source == "In EN 1993-1-4 (5.1.5)"
     assert "1.10" in mentions("gammaM0") and "8.1 NOTE" in by_key["gammaM0"].source
+    # Ω: 7.4.3.5(3) NOTE gives 15 unless the National Annex differs; the user still types it
+    assert "15" in by_key["omega"].where
+    assert by_key["omega"].source == "In EN 1993-1-4 (7.4.3.5(3) NOTE)"
+    assert by_key["omega"].in_standard
     # no other entry quotes a value of its own
     for key, entry in by_key.items():
         text = f"{entry.what} {entry.why} {entry.where}"
@@ -68,7 +71,7 @@ def test_values_quoted_from_the_standard_sit_on_the_right_entries() -> None:
 
 def test_what_the_facts_say_about_the_inputs_outside_annex_b() -> None:
     by_key = {e.key: e for e in load_input_help()}
-    assert by_key["omega"].source == OUTSIDE_STANDARD and "7.4.3.5" in by_key["omega"].where
+    assert "7.4.3.5(3)" in by_key["omega"].where
     assert by_key["kSigma"].source == OUTSIDE_STANDARD and "6.4.1" in by_key["kSigma"].where
     assert by_key["sigmaCr"].source == OUTSIDE_STANDARD and "B.5.2(2)" in by_key["sigmaCr"].where
     assert "B.6.1(2)" in by_key["hasHoles"].where and "8.1.2" in by_key["hasHoles"].where
@@ -109,4 +112,6 @@ def test_api_serves_the_help() -> None:
     assert set(entry) == {"key", "name", "what", "why", "where", "source", "in_standard"}
     assert entry["in_standard"] is True
     omega = next(item for item in body if item["key"] == "omega")
-    assert omega["in_standard"] is False
+    assert omega["in_standard"] is True  # 7.4.3.5(3) NOTE, like γM0 and 8.1 NOTE
+    k_sigma = next(item for item in body if item["key"] == "kSigma")
+    assert k_sigma["in_standard"] is False

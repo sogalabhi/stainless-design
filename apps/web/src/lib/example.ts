@@ -37,7 +37,7 @@ export const EXAMPLE_SOURCES: string[] = [
   "E = 200 000 N/mm² and ν = 0.3: EN 1993-1-4, 5.1.5",
   "γM0 = 1.10: EN 1993-1-4, 8.1 NOTE (a National Annex may give another value)",
   "Grade 1.4301 (f_y, f_u, family): EN 1993-1-4, Table 5.1",
-  "Ω = 15: example only. 7.4.3.5 calls Ω project specific and gives no value",
+  "Ω = 15: EN 1993-1-4, 7.4.3.5(3) NOTE (15 unless the National Annex gives a different value)",
   "k_σ = 4.0 (internal web) and 0.43 (outstand flange): EN 1993-1-5, uniform compression; outside EN 1993-1-4, example only",
   "Bending: the major axis y-y is a choice (Table B.2 then gives α). W_el,y = 194 300 mm³ and W_pl,y = 220 600 mm³ are the published section-table values of the example I-section; they match the geometry window within 0.5 %. Example only.",
   "λ_LT = 0.15: example only. Member design (8.3) is outside Annex B",
