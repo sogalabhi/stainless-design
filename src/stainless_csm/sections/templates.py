@@ -17,7 +17,7 @@ from enum import Enum
 from stainless_csm.core import units
 from stainless_csm.core.errors import InvalidSectionError
 from stainless_csm.core.latex import tex
-from stainless_csm.core.trace import CalcStep
+from stainless_csm.core.trace import CalcStep, Source, code, user_input
 
 CLAUSE = "8.2.2(5)"
 _LENGTH = r"\,\mathrm{mm}"
@@ -105,10 +105,11 @@ def _c_step(
     substituted: str,
     value: float,
     latex: str,
+    source: Source,
     clause: str = CLAUSE,
 ) -> CalcStep:
     return CalcStep(
-        symbol, description, clause, formula, substituted, value, units.LENGTH, latex
+        symbol, description, clause, formula, substituted, value, units.LENGTH, latex, source
     )
 
 
@@ -164,6 +165,7 @@ class ISection:
                 r"c_w = h - 2t_f - 2<n> = <h> - 2 \times <tf> - 2 \times <k> = <v>" + _LENGTH,
                 n=name, h=h, tf=tf, k=k, v=c_w,
             ),
+            code("8.2.2(5) and Table 7.2 (c as drawn for I-sections)"),
         )
         flange = _c_step(
             "c_f",
@@ -176,6 +178,7 @@ class ISection:
                 + _LENGTH,
                 n=name, b=b, tw=tw, k=k, v=c_f,
             ),
+            code("8.2.2(5) and Table 7.3 (c as drawn for I-sections)"),
         )
         return (
             TemplatePlate(PlateRole.WEB, PlateType.INTERNAL, c_w, tw, web_source, web),
@@ -234,6 +237,7 @@ class Channel:
                 r"c_w = h - 2t_f - 2<n> = <h> - 2 \times <tf> - 2 \times <k> = <v>" + _LENGTH,
                 n=name, h=h, tf=tf, k=k, v=c_w,
             ),
+            code("8.2.2(5) and Table 7.2 (the I-section web, by analogy for a channel)"),
         )
         flange = _c_step(
             "c_f",
@@ -245,6 +249,7 @@ class Channel:
                 r"c_f = b - t_w - <n> = <b> - <tw> - <k> = <v>" + _LENGTH,
                 n=name, b=b, tw=tw, k=k, v=c_f,
             ),
+            code("8.2.2(5) and Table 7.3 (c as drawn for a rolled channel)"),
         )
         return (
             TemplatePlate(PlateRole.WEB, PlateType.INTERNAL, c_w, tw, web_source, web),
@@ -322,6 +327,7 @@ class TSection:
                 + _LENGTH,
                 n=name, b=b, tw=tw, k=k, v=c_f,
             ),
+            code("8.2.2(5) and Table 7.3 (the I-section flange, by analogy for a T-section)"),
         )
         stem = _c_step(
             "c_stem",
@@ -330,6 +336,7 @@ class TSection:
             _num(c_stem),
             c_stem,
             tex(r"c_{stem} = <v>" + _LENGTH + r"\quad(\text{input})", v=c_stem),
+            user_input(),
             clause="input",
         )
         return (
@@ -384,6 +391,7 @@ class Angle:
             _num(h),
             h,
             tex(r"\bar b = h = <v>" + _LENGTH, v=h),
+            code("8.2.2(5) (b̄ = h for equal-leg and unequal-leg angles)"),
         )
         return (TemplatePlate(PlateRole.LEG, PlateType.OUTSTAND, h, t, source, step),)
 
@@ -433,6 +441,7 @@ class RHS:
             f"{_num(h)} − 3 × {_num(t)}",
             c_web,
             tex(r"c_w = h - 3t = <h> - 3 \times <t> = <v>" + _LENGTH, h=h, t=t, v=c_web),
+            code("8.2.2(5) and Table 7.2 (c = h − 3t)"),
         )
         flange = _c_step(
             "c_f",
@@ -441,6 +450,7 @@ class RHS:
             f"{_num(b)} − 3 × {_num(t)}",
             c_flange,
             tex(r"c_f = b - 3t = <b> - 3 \times <t> = <v>" + _LENGTH, b=b, t=t, v=c_flange),
+            code("8.2.2(5) and Table 7.2 (c = b − 3t)"),
         )
         return (
             TemplatePlate(PlateRole.WEB, PlateType.INTERNAL, c_web, t, source, web),

@@ -10,6 +10,7 @@ from typing import Any, Self
 from pydantic import BaseModel, Field, model_validator
 
 from stainless_csm.core.enums import SectionType, StainlessFamily
+from stainless_csm.core.trace import SourceKind
 
 
 class GoverningKey(StrEnum):
@@ -106,6 +107,15 @@ class ModelValuesOut(BaseModel):
     strain_limit_ratio_c1: float
 
 
+class SourceOut(BaseModel):
+    """Where a step comes from (plan.md, section 4h)."""
+
+    kind: SourceKind = Field(description="code, textbook, paper, input or derived")
+    citation: str = Field(
+        description="What a reader can open, e.g. 'EN 1993-1-4:2025, B.6.1(1), Formula (B.12)'"
+    )
+
+
 class TraceStepOut(BaseModel):
     symbol: str
     description: str
@@ -116,6 +126,7 @@ class TraceStepOut(BaseModel):
     unit: str
     line: str = Field(description="The step as one readable line of working")
     latex: str = Field(description="The step as one LaTeX equation (render with KaTeX)")
+    source: SourceOut = Field(description="The kind of source and its citation")
 
 
 class MaterialModelResponse(BaseModel):

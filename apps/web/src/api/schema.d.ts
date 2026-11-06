@@ -1168,6 +1168,25 @@ export interface components {
             plates: components["schemas"]["PlateOut"][];
         };
         /**
+         * SourceKind
+         * @description Where a step's rule or value comes from: the five kinds of plan.md, section 4h.
+         * @enum {string}
+         */
+        SourceKind: "code" | "textbook" | "paper" | "input" | "derived";
+        /**
+         * SourceOut
+         * @description Where a step comes from (plan.md, section 4h).
+         */
+        SourceOut: {
+            /** @description code, textbook, paper, input or derived */
+            kind: components["schemas"]["SourceKind"];
+            /**
+             * Citation
+             * @description What a reader can open, e.g. 'EN 1993-1-4:2025, B.6.1(1), Formula (B.12)'
+             */
+            citation: string;
+        };
+        /**
          * StainlessFamily
          * @enum {string}
          */
@@ -1311,6 +1330,8 @@ export interface components {
              * @description The step as one LaTeX equation (render with KaTeX)
              */
             latex: string;
+            /** @description The kind of source and its citation */
+            source: components["schemas"]["SourceOut"];
         };
         /** ValidationError */
         ValidationError: {

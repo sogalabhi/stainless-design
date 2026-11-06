@@ -16,7 +16,7 @@ from enum import Enum
 from stainless_csm.core import units
 from stainless_csm.core.errors import InvalidSectionError
 from stainless_csm.core.latex import tex, text_tex
-from stainless_csm.core.trace import CalcStep, CalcTrace
+from stainless_csm.core.trace import CalcStep, CalcTrace, Source, code, user_input
 from stainless_csm.materials.material import Material
 
 
@@ -100,9 +100,18 @@ def chs_critical_stress(
 
 
 def _step(
-    symbol: str, description: str, clause: str, formula: str, value: float, unit: str, latex: str
+    symbol: str,
+    description: str,
+    clause: str,
+    formula: str,
+    value: float,
+    unit: str,
+    latex: str,
+    source: Source,
 ) -> CalcStep:
-    return CalcStep(symbol, description, clause, formula, f"{value:.6g}", value, unit, latex)
+    return CalcStep(
+        symbol, description, clause, formula, f"{value:.6g}", value, unit, latex, source
+    )
 
 
 _STRESS = r"\,\mathrm{N/mm^2}"
@@ -147,6 +156,7 @@ def plates_slenderness(
                     b=plate.width,
                     v=sigma,
                 ),
+                code("B.5.2(3), Formula (B.9)"),
             )
         )
         trace.add(
@@ -165,6 +175,7 @@ def plates_slenderness(
                     s=sigma,
                     v=lam,
                 ),
+                code("8.2.2(5), Formula (8.5)"),
             )
         )
 
@@ -185,6 +196,7 @@ def plates_slenderness(
                 v=sigma_cs,
                 n=text_tex(governing.plate.label),
             ),
+            code("B.5.2(3)"),
         )
     )
     trace.add(
@@ -202,6 +214,7 @@ def plates_slenderness(
                 s=sigma_cs,
                 v=lam_cs,
             ),
+            code("B.5.2(1), Formula (B.8)"),
         )
     )
     return SlendernessResult(
@@ -236,6 +249,7 @@ def chs_slenderness(
                     d=diameter,
                     v=sigma,
                 ),
+                code("B.5.2(5), Formula (B.11)"),
             ),
             _step(
                 "λ_c,cs",
@@ -251,6 +265,7 @@ def chs_slenderness(
                     s=sigma,
                     v=lam,
                 ),
+                code("B.5.2(4), Formula (B.10)"),
             ),
         ]
     )
@@ -273,6 +288,7 @@ def direct_slenderness(sigma_cr_cs: float, material: Material) -> SlendernessRes
                 sigma_cr_cs,
                 units.STRESS,
                 tex(r"\sigma_{cr,cs} = <v>" + _STRESS + r"\quad(\text{entered})", v=sigma_cr_cs),
+                user_input("Entered by the user (a numerical value, EN 1993-1-4:2025, B.5.2(2))"),
             ),
             _step(
                 "λ_p,cs",
@@ -288,6 +304,7 @@ def direct_slenderness(sigma_cr_cs: float, material: Material) -> SlendernessRes
                     s=sigma_cr_cs,
                     v=lam,
                 ),
+                code("B.5.2(1), Formula (B.8)"),
             ),
         ]
     )

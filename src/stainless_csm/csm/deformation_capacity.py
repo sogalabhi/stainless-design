@@ -12,7 +12,7 @@ from enum import Enum
 from stainless_csm.core import units
 from stainless_csm.core.errors import InvalidSectionError, NotApplicableError
 from stainless_csm.core.latex import tex
-from stainless_csm.core.trace import CalcStep, CalcTrace
+from stainless_csm.core.trace import CalcStep, CalcTrace, Source, code
 from stainless_csm.material_models.csm_bilinear import CSMBilinearModel
 
 _CLAUSE = "B.5.1"
@@ -135,7 +135,13 @@ class CSMDeformationCapacity:
         trace = CalcTrace()
 
         def step(
-            symbol: str, description: str, formula: str, substituted: str, value: float, latex: str
+            symbol: str,
+            description: str,
+            formula: str,
+            substituted: str,
+            value: float,
+            latex: str,
+            source: Source,
         ) -> None:
             trace.add(
                 CalcStep(
@@ -147,8 +153,12 @@ class CSMDeformationCapacity:
                     value,
                     units.DIMENSIONLESS,
                     latex,
+                    source,
                 )
             )
+
+        # B.6 for sections of flat plates, B.7 for circular hollow sections (B.5.1(1)).
+        base_curve = "B.5.1(1), Formula (B.6)" if plates else "B.5.1(1), Formula (B.7)"
 
         step(
             "λ_cs",
@@ -157,6 +167,7 @@ class CSMDeformationCapacity:
             f"{lam:.6g}",
             lam,
             tex(sym + r" = <v>", v=lam),
+            code("B.5.2(1), Formula (B.8)" if plates else "B.5.2(4), Formula (B.10)"),
         )
         step(
             "min(Ω, C₁ε_u/ε_y)",
@@ -172,6 +183,7 @@ class CSMDeformationCapacity:
                 c1=model.strain_limit_ratio_c1,
                 v=cap,
             ),
+            code(base_curve + ": the limit min(Ω, C₁ε_u/ε_y), Ω (typed) as defined in 7.4.3.5"),
         )
 
         if lam > limits.upper:
@@ -232,6 +244,7 @@ class CSMDeformationCapacity:
             f"λ = {lam:.6g}",
             raw,
             r"\frac{\varepsilon_{csm}}{\varepsilon_y} = " + tex(raw_tex, l=lam, v=raw),
+            code(base_curve),
         )
         if stocky:
             step(
@@ -246,6 +259,7 @@ class CSMDeformationCapacity:
                     c=cap,
                     v=ratio,
                 ),
+                code(base_curve),
             )
         strain = ratio * model.yield_strain
         step(
@@ -261,6 +275,7 @@ class CSMDeformationCapacity:
                 ey=model.yield_strain,
                 v=strain,
             ),
+            code(base_curve + ", with ε_y from B.4(1)"),
         )
         zone = Zone.STOCKY if stocky else Zone.SLENDER
         return DeformationResult(

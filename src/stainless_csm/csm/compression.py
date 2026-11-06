@@ -15,7 +15,7 @@ from enum import Enum
 from stainless_csm.core import units
 from stainless_csm.core.errors import InvalidMaterialError
 from stainless_csm.core.latex import tex
-from stainless_csm.core.trace import CalcStep, CalcTrace
+from stainless_csm.core.trace import CalcStep, CalcTrace, Source, code
 from stainless_csm.csm.deformation_capacity import DeformationResult
 from stainless_csm.material_models.csm_bilinear import CSMBilinearModel
 
@@ -125,10 +125,19 @@ class CSMCompression:
             value: float,
             unit: str,
             latex: str,
+            source: Source,
         ) -> None:
             trace.add(
                 CalcStep(
-                    symbol, description, _CLAUSE, formula_text, substituted, value, unit, latex
+                    symbol,
+                    description,
+                    _CLAUSE,
+                    formula_text,
+                    substituted,
+                    value,
+                    unit,
+                    latex,
+                    source,
                 )
             )
 
@@ -148,6 +157,7 @@ class CSMCompression:
                 r=ratio,
                 f=formula.value,
             ),
+            code("B.6.2(1), Formulae (B.15) and (B.16)"),
         )
 
         design_stress: float | None = None
@@ -170,6 +180,7 @@ class CSMCompression:
                     g=data.gamma_m0,
                     v=n_rd,
                 ),
+                code("B.6.2(1), Formula (B.15)"),
             )
         else:
             design_stress = hardened_stress(model, ratio)
@@ -190,6 +201,7 @@ class CSMCompression:
                     r=ratio,
                     v=design_stress,
                 ),
+                code("B.6.2(1), Formula (B.17)"),
             )
             n_rd = self.resistance_b16(design_stress)
             step(
@@ -207,6 +219,7 @@ class CSMCompression:
                     g=data.gamma_m0,
                     v=n_rd,
                 ),
+                code("B.6.2(1), Formula (B.16)"),
             )
 
         notes = [MEMBER_NOTE]

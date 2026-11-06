@@ -10,7 +10,7 @@ The model *has a* Material (composition); it is not one.
 from stainless_csm.core import units
 from stainless_csm.core.errors import InvalidMaterialError
 from stainless_csm.core.latex import tex
-from stainless_csm.core.trace import CalcStep, CalcTrace
+from stainless_csm.core.trace import CalcStep, CalcTrace, Source, code, user_input
 from stainless_csm.data.repository import csm_coefficients_for
 from stainless_csm.material_models.base import MaterialModel, Point
 from stainless_csm.material_models.csm_coefficients import CSMCoefficients
@@ -145,9 +145,12 @@ class CSMBilinearModel(MaterialModel):
             value: float,
             unit: str,
             latex: str,
+            source: Source,
             clause: str = _CLAUSE,
         ) -> CalcStep:
-            return CalcStep(symbol, description, clause, formula, substituted, value, unit, latex)
+            return CalcStep(
+                symbol, description, clause, formula, substituted, value, unit, latex, source
+            )
 
         stress = r"\,\mathrm{N/mm^2}"
         return CalcTrace(
@@ -160,6 +163,7 @@ class CSMBilinearModel(MaterialModel):
                     m.elastic_modulus,
                     units.STRESS,
                     tex(r"E = <e>" + stress + r"\quad(\text{input})", e=m.elastic_modulus),
+                    user_input(),
                     clause="input",
                 ),
                 step(
@@ -170,6 +174,7 @@ class CSMBilinearModel(MaterialModel):
                     c.c1,
                     dimless,
                     tex(r"C_1 = <v>\quad(\text{Table B.1, <f>})", v=c.c1, f=m.family.value),
+                    code("B.4(1), Table B.1"),
                 ),
                 step(
                     "C₂",
@@ -179,6 +184,7 @@ class CSMBilinearModel(MaterialModel):
                     c.c2,
                     dimless,
                     tex(r"C_2 = <v>\quad(\text{Table B.1, <f>})", v=c.c2, f=m.family.value),
+                    code("B.4(1), Table B.1"),
                 ),
                 step(
                     "C₃",
@@ -188,6 +194,7 @@ class CSMBilinearModel(MaterialModel):
                     c.c3,
                     dimless,
                     tex(r"C_3 = <v>\quad(\text{Table B.1, <f>})", v=c.c3, f=m.family.value),
+                    code("B.4(1), Table B.1"),
                 ),
                 step(
                     "ε_y",
@@ -202,6 +209,7 @@ class CSMBilinearModel(MaterialModel):
                         e=m.elastic_modulus,
                         v=eps_y,
                     ),
+                    code("B.4(1), Figure B.1 (ε_y = f_y / E)"),
                 ),
                 step(
                     "ε_u",
@@ -218,6 +226,7 @@ class CSMBilinearModel(MaterialModel):
                         fu=m.fu,
                         v=eps_u,
                     ),
+                    code("B.4(1), Formula (B.5)"),
                 ),
                 step(
                     "E_sh",
@@ -236,6 +245,7 @@ class CSMBilinearModel(MaterialModel):
                         ey=eps_y,
                         v=e_sh,
                     ),
+                    code("B.4(1), Formula (B.4)"),
                 ),
                 step(
                     "C₁ε_u",
@@ -250,6 +260,7 @@ class CSMBilinearModel(MaterialModel):
                         eu=eps_u,
                         v=self._strain_limit_c1,
                     ),
+                    code("B.4(1), Figure B.1 (the strain C₁ε_u)"),
                 ),
                 step(
                     "C₂ε_u",
@@ -264,6 +275,7 @@ class CSMBilinearModel(MaterialModel):
                         eu=eps_u,
                         v=self._strain_end,
                     ),
+                    code("B.4(1), Figure B.1 (the strain C₂ε_u)"),
                 ),
                 step(
                     "σ(C₁ε_u)",
@@ -282,6 +294,7 @@ class CSMBilinearModel(MaterialModel):
                         ey=eps_y,
                         v=self._stress_at_strain_limit_c1,
                     ),
+                    code("B.4(1), Figure B.1 (the hardening line at C₁ε_u)"),
                 ),
                 step(
                     "E_sh/E",
@@ -296,6 +309,7 @@ class CSMBilinearModel(MaterialModel):
                         e=m.elastic_modulus,
                         v=self._hardening_ratio,
                     ),
+                    code("B.6.3.2(1), Formula (B.20) (the ratio E_sh / E)"),
                 ),
                 step(
                     "C₁ε_u/ε_y",
@@ -310,6 +324,7 @@ class CSMBilinearModel(MaterialModel):
                         ey=eps_y,
                         v=self._strain_limit_ratio_c1,
                     ),
+                    code("Formulae (B.6), (B.7) and (B.14) (the ratio C₁ε_u / ε_y)"),
                 ),
             ]
         )

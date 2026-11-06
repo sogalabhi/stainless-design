@@ -126,7 +126,7 @@ README row marked done. A contract test (service against API) covers every new e
 - Phases 0 and 1 are built, reviewed and green (388 Python tests passed before 1b started; web: 86 passing plus the 20 deferred failures). Not yet looked at in a browser, not committed.
 - Phase 1b was stopped part-way by its agent: `src/stainless_csm/sections/templates.py` exists and the template kind is partly wired into `services.py` and `api/schemas.py`; no tests, no web work (no SectionSketch, no sectionTemplates.ts). Python is green again (388 passed, 2026-10-09: the two failures were a stale kinds list in test_api.py and a symbol line one character too long). Next session: review the partial 1b engine work against section 4c, then finish 1b (engine tests, API, all web work).
 - Added after 1b, before phase 2 (user request 2026-10-09):
-  - "Load example" button in the dock: fills every field with one worked example only when clicked; banner "Example values: replace them with your own"; each value shows its source (E, ν: 5.1.5; γM0 1.10: 8.1 NOTE; grade 1.4301: Table 5.1; Ω 15: 7.4.3.5(3) NOTE, which gives 15 unless the National Annex gives another value (the source text in `example.ts` still says "example only"; to be corrected, section 4h); k_σ 4.0 / 0.43: example only, outside the PDF; rolled I 200 x 100 x 5.6 x 8.5, r 12, A 2848 mm²). Reword the standing rule to "nothing is pre-filled; an example is loaded only on request" once the user confirms the wording.
+  - "Load example" button in the dock: fills every field with one worked example only when clicked; banner "Example values: replace them with your own"; each value shows its source (E, ν: 5.1.5; γM0 1.10: 8.1 NOTE; grade 1.4301: Table 5.1; Ω 15: 7.4.3.5(3) NOTE, which gives 15 unless the National Annex gives another value (`example.ts` cites this since 2026-11-06); k_σ 4.0 / 0.43: example only, outside the PDF; rolled I 200 x 100 x 5.6 x 8.5, r 12, A 2848 mm²). Reword the standing rule to "nothing is pre-filled; an example is loaded only on request" once the user confirms the wording.
   - Done 2026-10-09: the Load example button is built (`apps/web/src/lib/example.ts`, banner with Clear all and the source list in the dock, `App.example.test.tsx`), and the standing rule above carries the new sentence.
   - A "?" button on every input: what it is, why (the clauses that use it), where to get it, and whether it is in the PDF. Text in `data/symbols.json` (one source for Help, symbols panels and the "?"), opens on click, no suggested values.
 - Phase 1d done 2026-10-09: `data/input_help.json` (28 entries; the dock key `rO` is the outer corner radius; plate width, thickness and k_σ are `plateWidth`, `plateThickness`, `kSigma`, matched by suffix in `helpKeyOf`), `input_help.py`, `GET /api/v1/input-help`, `components/FieldHelp.tsx` (provider, "?" button, panel; Esc closes the panel before a drawer or the geometry window), tests `tests/test_input_help.py` and `App.help.test.tsx`. The "Used in" line is gone from under the fields (it is the Why part of the panel); `usedIn` was removed from `DimField`. Not yet seen in a browser.
@@ -745,13 +745,28 @@ A value or picture with no source is not shown. Illustrative drawings say "illus
 Still true: inputs start empty and nothing is pre-filled. A cited outside rule is a route the user chooses
 (for example the equilibrium neutral axis of section 9, or the 9.2 deflection), never a hidden default.
 
-To do (future work, not built):
-- a `source` field on `CalcStep` (kind plus the citation text), and the badge in the working and on each chart
-  and 3D view;
-- review the existing steps and views and give each one a source, or stop showing it;
-- the Ω label in `apps/web/src/lib/example.ts` and the Ω source tag in `data/input_help.json` ("Outside EN
-  1993-1-4: you provide it") still describe Ω as outside the standard; they change when the Ω decision in
-  section 9 is made (the tests that check the tag change with them);
+Status (2026-11-06):
+- Done: a `source` field on `CalcStep` (`SourceKind` code, textbook, paper, input, derived, plus the citation
+  text), returned by the API on every step and shown as a badge with the citation in the working panel.
+  Every engine step sets its source explicitly (tests/test_sources.py). Today only Code and Input are used;
+  λ_LT is Input (typed, member design), with B.6.3.1(1) named as the 0.2 gate.
+- Done: chart hover text names the unit and clause of every value, reference lines hover, and each figure
+  carries a `readout` (value tables with the source kind, CSV export, pin card, linked pins across tabs);
+  tests/test_viz_hover.py, tests/test_viz_readout.py.
+- Done: the 3D view on the Explore tab carries an "Illustrative" badge on the view itself; a computed shape
+  (phase 2b) will say "Computed (finite strip, B.5.2(2))".
+- Done: the Ω label in `apps/web/src/lib/example.ts` and the Ω tag in `data/input_help.json` now cite
+  7.4.3.5(3) NOTE (15 unless the National Annex gives a different value). Ω is still typed, never pre-filled.
+- Done: textbook hand checks in tests/test_gere_checks.py (Gere Prob. 10.3-7 section properties; B.20 with
+  E_sh = 0 against eq. (10-17); B.20 against the bilinear rectangle of Prob. 10.7-7, marked Derived).
+
+To do:
+- a source badge on each chart and 3D view itself (today the value tables show the source kind, and the
+  hover text names the clause);
+- review the steps flagged as unsure when the sources were assigned: the flat widths of the channel web and
+  the T-section flange ("by analogy", section 8 item 11), σ at C1 ε_u read from the Figure B.1 hardening
+  line, M_el and M_pl (B.19 and B.20, or 8.2.4(1) Formula (8.8)), and the elastic-perfectly plastic ε_y
+  (EN 1993-1-1:2022 Figure 7.9 is not available to check);
 - the equilibrium neutral axis of B.6.3.3(3), from the Gere chapter named in section 9;
 - the serviceability deflection of 9.2 (Formulae 9.1 and 9.2, Table 9.1), if displacements are wanted.
 

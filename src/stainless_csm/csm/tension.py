@@ -12,7 +12,7 @@ from stainless_csm.core import units
 from stainless_csm.core.enums import SectionType
 from stainless_csm.core.errors import InvalidMaterialError, NotApplicableError
 from stainless_csm.core.latex import tex
-from stainless_csm.core.trace import CalcStep, CalcTrace
+from stainless_csm.core.trace import CalcStep, CalcTrace, Source, code
 from stainless_csm.material_models.csm_bilinear import CSMBilinearModel
 
 _CLAUSE = "B.6.1"
@@ -113,9 +113,12 @@ class CSMTension:
             value: float,
             unit: str,
             latex: str,
+            source: Source,
         ) -> None:
             trace.add(
-                CalcStep(symbol, description, _CLAUSE, formula, substituted, value, unit, latex)
+                CalcStep(
+                    symbol, description, _CLAUSE, formula, substituted, value, unit, latex, source
+                )
             )
 
         stress = r"\,\mathrm{N/mm^2}"
@@ -135,6 +138,7 @@ class CSMTension:
                 c1=model.strain_limit_ratio_c1,
                 v=ratio,
             ),
+            code("B.6.1(1), Formula (B.14)"),
         )
         step(
             "ε_csm,t",
@@ -150,6 +154,7 @@ class CSMTension:
                 ey=eps_y,
                 v=strain,
             ),
+            code("B.6.1(1), Formula (B.14), with ε_y from B.4(1)"),
         )
         step(
             "f_csm,t",
@@ -168,6 +173,7 @@ class CSMTension:
                 r=ratio,
                 v=f_csm_t,
             ),
+            code("B.6.1(1), Formula (B.13)"),
         )
         step(
             "N_csm,t,Rd",
@@ -184,6 +190,7 @@ class CSMTension:
                 g=data.gamma_m0,
                 v=n_rd,
             ),
+            code("B.6.1(1), Formula (B.12)"),
         )
         return TensionResult(
             strain_ratio=ratio,

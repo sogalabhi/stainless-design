@@ -4,7 +4,7 @@ from stainless_csm import formatting as fmt
 from stainless_csm import services
 from stainless_csm.api import schemas as s
 from stainless_csm.core.enums import SectionType, StainlessFamily
-from stainless_csm.core.trace import CalcTrace
+from stainless_csm.core.trace import CalcStep, CalcTrace, source_of
 from stainless_csm.csm.bending import BendingAxis, BendingResult, table_b2_rows
 from stainless_csm.csm.deformation_capacity import LIMITS, DeformationResult, SectionFamily
 from stainless_csm.csm.slenderness import SlendernessResult
@@ -82,6 +82,11 @@ def coefficients(selected: StainlessFamily | None = None) -> list[s.Coefficients
     return rows
 
 
+def step_source(step: CalcStep) -> s.SourceOut:
+    source = source_of(step)
+    return s.SourceOut(kind=source.kind, citation=source.citation)
+
+
 def trace_steps(trace: CalcTrace) -> list[s.TraceStepOut]:
     return [
         s.TraceStepOut(
@@ -94,6 +99,7 @@ def trace_steps(trace: CalcTrace) -> list[s.TraceStepOut]:
             unit=step.unit,
             line=fmt.step_line(step),
             latex=step.latex,
+            source=step_source(step),
         )
         for step in trace
     ]

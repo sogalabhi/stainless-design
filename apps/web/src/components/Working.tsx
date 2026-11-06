@@ -1,9 +1,35 @@
-import type { CoefficientsOut, TraceStepOut } from "../api/types";
+import type { CoefficientsOut, SourceKind, SourceOut, TraceStepOut } from "../api/types";
 import { Latex } from "./Latex";
 import { Collapsible } from "./ui";
 import { renderSymbols } from "./Symbols";
 
-/** Every step of the calculation, each with a clause chip. `clauses` limits which are shown. */
+export const SOURCE_LABELS: Record<SourceKind, string> = {
+  code: "Code",
+  textbook: "Textbook",
+  paper: "Paper",
+  input: "Input",
+  derived: "Derived",
+};
+
+/**
+ * The source of one step (plan.md, section 4h): a small badge for the kind, then the citation.
+ * Steps recorded before the API sent a source have none; they show no badge.
+ */
+export function SourceBadge({ source }: { source?: SourceOut | null }) {
+  if (!source) return null;
+  const label = SOURCE_LABELS[source.kind] ?? source.kind;
+  return (
+    <span className="step-source">
+      <span className="sr-only">Source: </span>
+      <span className={`source-badge source-${source.kind}`} title={source.citation}>
+        {label}
+      </span>{" "}
+      <span className="source-citation">{source.citation}</span>
+    </span>
+  );
+}
+
+/** Every step of the calculation, with its clause chip and source. `clauses` limits which are shown. */
 export function Working({
   title,
   steps,
@@ -25,6 +51,7 @@ export function Working({
         {shown.map((step) => (
           <li key={step.symbol}>
             <span className="chip">{step.clause}</span> {renderSymbols(step.description)}
+            <SourceBadge source={step.source} />
             <Latex tex={step.latex} />
           </li>
         ))}

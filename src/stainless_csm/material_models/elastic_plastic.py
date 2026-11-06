@@ -3,7 +3,7 @@
 from stainless_csm.core import units
 from stainless_csm.core.errors import InvalidMaterialError
 from stainless_csm.core.latex import tex
-from stainless_csm.core.trace import CalcStep, CalcTrace
+from stainless_csm.core.trace import CalcStep, CalcTrace, code
 from stainless_csm.material_models.base import MaterialModel
 from stainless_csm.materials.material import Material
 
@@ -35,6 +35,12 @@ class ElasticPerfectlyPlasticModel(MaterialModel):
                         fy=material.fy,
                         e=material.elastic_modulus,
                         v=self._yield_strain,
+                    ),
+                    # The comparison model is the elastic, perfectly plastic relationship that
+                    # 7.4.3.3(1) points to; its yield strain is the ε_y = f_y / E of B.4.
+                    source=code(
+                        "7.4.3.3(1) (elastic, perfectly plastic model of EN 1993-1-1:2022, "
+                        "Figure 7.9) and B.4(1) (ε_y = f_y / E)"
                     ),
                 )
             ]

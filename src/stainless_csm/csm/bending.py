@@ -27,7 +27,7 @@ from stainless_csm.core.errors import (
     NotBuiltYetError,
 )
 from stainless_csm.core.latex import tex
-from stainless_csm.core.trace import CalcStep, CalcTrace
+from stainless_csm.core.trace import CalcStep, CalcTrace, Source, code, user_input
 from stainless_csm.csm.deformation_capacity import DeformationResult
 from stainless_csm.data.repository import BendingParameterRow, bending_parameter_rows
 from stainless_csm.material_models.csm_bilinear import CSMBilinearModel
@@ -306,11 +306,20 @@ class CSMBending:
             value: float,
             unit: str,
             latex: str,
+            source: Source,
             clause: str = _CLAUSE,
         ) -> None:
             trace.add(
                 CalcStep(
-                    symbol, description, clause, formula_text, substituted, value, unit, latex
+                    symbol,
+                    description,
+                    clause,
+                    formula_text,
+                    substituted,
+                    value,
+                    unit,
+                    latex,
+                    source,
                 )
             )
 
@@ -327,6 +336,8 @@ class CSMBending:
                 r"\text{Formulas B.19 or B.20}",
                 l=data.lambda_lt,
             ),
+            # the value is typed (member design, outside Annex B); B.6.3.1(1) is the 0.2 gate
+            user_input("Entered by the user (member design); B.6.3.1(1) applies λ_LT ≤ 0.2"),
             clause=_GATE_CLAUSE,
         )
 
@@ -342,6 +353,7 @@ class CSMBending:
             row.alpha,
             dimless,
             tex(r"\alpha = <a> \quad \text{(Table B.2)}", a=row.alpha),
+            code("B.6.3.2(1), Table B.2"),
         )
 
         elastic_moment = data.w_el * fy / data.gamma_m0
@@ -362,6 +374,7 @@ class CSMBending:
                 g=data.gamma_m0,
                 v=elastic_moment,
             ),
+            code("B.6.3.2(1), Formula (B.19) at ε_csm/ε_y = 1.0"),
         )
         step(
             "M_pl",
@@ -379,6 +392,7 @@ class CSMBending:
                 g=data.gamma_m0,
                 v=plastic_moment,
             ),
+            code("B.6.3.2(1), Formula (B.20), the factor W_pl f_y / γ_M0"),
         )
 
         formula = formula_for(ratio)
@@ -397,6 +411,7 @@ class CSMBending:
                 r=ratio,
                 f=formula.value,
             ),
+            code("B.6.3.2(1), Formulae (B.19) and (B.20)"),
         )
 
         resistance = moment_at(model, ratio, data.w_el, data.w_pl, row.alpha, data.gamma_m0)
@@ -418,6 +433,7 @@ class CSMBending:
                     g=data.gamma_m0,
                     v=resistance,
                 ),
+                code("B.6.3.2(1), Formula (B.19)"),
             )
         else:
             e_sh_over_e = e_sh / e
@@ -447,6 +463,7 @@ class CSMBending:
                     a=row.alpha,
                     v=resistance,
                 ),
+                code("B.6.3.2(1), Formula (B.20)"),
             )
 
         notes = [MEMBER_NOTE]

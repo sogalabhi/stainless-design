@@ -2419,6 +2419,38 @@
         ],
         "title": "SlendernessOut"
       },
+      "SourceKind": {
+        "type": "string",
+        "enum": [
+          "code",
+          "textbook",
+          "paper",
+          "input",
+          "derived"
+        ],
+        "title": "SourceKind",
+        "description": "Where a step's rule or value comes from: the five kinds of plan.md, section 4h."
+      },
+      "SourceOut": {
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/SourceKind",
+            "description": "code, textbook, paper, input or derived"
+          },
+          "citation": {
+            "type": "string",
+            "title": "Citation",
+            "description": "What a reader can open, e.g. 'EN 1993-1-4:2025, B.6.1(1), Formula (B.12)'"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "citation"
+        ],
+        "title": "SourceOut",
+        "description": "Where a step comes from (plan.md, section 4h)."
+      },
       "StainlessFamily": {
         "type": "string",
         "enum": [
@@ -2752,6 +2784,10 @@
             "type": "string",
             "title": "Latex",
             "description": "The step as one LaTeX equation (render with KaTeX)"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceOut",
+            "description": "The kind of source and its citation"
           }
         },
         "type": "object",
@@ -2764,7 +2800,8 @@
           "value",
           "unit",
           "line",
-          "latex"
+          "latex",
+          "source"
         ],
         "title": "TraceStepOut"
       },
