@@ -6,6 +6,7 @@ import type { BendingAxisKey, GraphView, SectionType } from "./api/types";
 import { AreaNote, ModulusNote } from "./components/AreaNote";
 import { Dock, type FocusRequest } from "./components/Dock";
 import { InputHelpProvider } from "./components/FieldHelp";
+import { ChartLinkProvider } from "./lib/chartLinks";
 import { GeometryModal } from "./components/GeometryModal";
 import { StatusIcon } from "./components/Waiting";
 import { Segmented } from "./components/ui";
@@ -350,6 +351,7 @@ export function App() {
 
   return (
     <InputHelpProvider>
+      <ChartLinkProvider>
       <div className="app">
         <header className="topbar">
           <h1>Stainless steel: Continuous Strength Method</h1>
@@ -517,6 +519,7 @@ export function App() {
           />
         ) : null}
       </div>
+      </ChartLinkProvider>
     </InputHelpProvider>
   );
 }
