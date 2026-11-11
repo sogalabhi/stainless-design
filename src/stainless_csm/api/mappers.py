@@ -8,6 +8,7 @@ from stainless_csm.core.trace import CalcStep, CalcTrace, source_of
 from stainless_csm.csm.bending import BendingAxis, BendingResult, table_b2_rows
 from stainless_csm.csm.deformation_capacity import LIMITS, DeformationResult, SectionFamily
 from stainless_csm.csm.slenderness import SlendernessResult
+from stainless_csm.csm.stage import StageFrames
 from stainless_csm.data.repository import GradeRepository, csm_coefficients_for
 from stainless_csm.material_models.csm_bilinear import CSMBilinearModel
 from stainless_csm.materials.material import Material
@@ -103,6 +104,29 @@ def trace_steps(trace: CalcTrace) -> list[s.TraceStepOut]:
         )
         for step in trace
     ]
+
+
+def stage_frames_out(frames: StageFrames) -> s.StageFramesOut:
+    return s.StageFramesOut(
+        load_case=s.LoadCaseKey(frames.load_case.value),
+        yield_strain=frames.yield_strain,
+        yield_stress=frames.yield_stress,
+        frames=[
+            s.StageFrameOut(
+                ratio=f.ratio,
+                strain=f.strain,
+                stress=f.stress,
+                stress_over_yield=f.stress_over_yield,
+                depth=list(f.depth),
+                strain_profile=list(f.strain_profile),
+                stress_profile=list(f.stress_profile),
+                resistance=f.resistance,
+                marks=[s.FrameMarkKey(m.value) for m in f.marks],
+            )
+            for f in frames.frames
+        ],
+        source=s.SourceOut(kind=frames.source.kind, citation=frames.source.citation),
+    )
 
 
 def tension_form(data: s.TensionInput) -> services.TensionForm:

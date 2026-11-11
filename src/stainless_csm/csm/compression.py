@@ -17,6 +17,7 @@ from stainless_csm.core.errors import InvalidMaterialError
 from stainless_csm.core.latex import tex
 from stainless_csm.core.trace import CalcStep, CalcTrace, Source, code
 from stainless_csm.csm.deformation_capacity import DeformationResult
+from stainless_csm.csm.stage import StageFrames, compression_frames
 from stainless_csm.material_models.csm_bilinear import CSMBilinearModel
 
 _CLAUSE = "B.6.2"
@@ -57,6 +58,9 @@ class CompressionResult:
     formula: CompressionFormula
     design_stress: float | None  # f_csm (B.17), N/mm²; None when B.15 applies (B.17 is not used)
     resistance: float  # N_csm,Rd, N
+    yield_resistance: float  # A f_y / γM0, N: the reference the headline is compared with
+    above_yield: float  # N_csm,Rd / (A f_y / γM0) − 1, a fraction (negative on the B.15 branch)
+    frames: StageFrames  # the section loaded from zero strain to ε_csm (the Section Stage slider)
     notes: tuple[str, ...]
     trace: CalcTrace
 
@@ -229,11 +233,15 @@ class CSMCompression:
                 "ε_csm/ε_y is below 1.0, so Formula B.15 applies and f_csm (Formula B.17) is "
                 "not used: it is defined only from ε_csm/ε_y = 1.0.",
             )
+        yield_resistance = data.area * fy / data.gamma_m0
         return CompressionResult(
             strain_ratio=ratio,
             formula=formula,
             design_stress=design_stress,
             resistance=n_rd,
+            yield_resistance=yield_resistance,
+            above_yield=n_rd / yield_resistance - 1,
+            frames=compression_frames(model, ratio),
             notes=tuple(notes),
             trace=trace,
         )

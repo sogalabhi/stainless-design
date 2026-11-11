@@ -9,7 +9,7 @@ client = TestClient(create_app())
 # fields (flat width, thickness, k_sigma) are one entry each, matched by suffix on the website.
 DOCK_KEYS = {
     "grade", "fy", "fu", "family", "E", "enhanced",
-    "sectionType", "fabrication",
+    "sectionType", "fabrication", "geometry",
     "h", "b", "tw", "tf", "t", "r", "s", "rO", "d", "cStem",
     "area", "gammaM0", "hasHoles",
     "route", "nu", "omega", "sigmaCr",

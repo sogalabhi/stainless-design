@@ -29,6 +29,7 @@ from stainless_csm.core.errors import (
 from stainless_csm.core.latex import tex
 from stainless_csm.core.trace import CalcStep, CalcTrace, Source, code, user_input
 from stainless_csm.csm.deformation_capacity import DeformationResult
+from stainless_csm.csm.stage import StageFrames, bending_frames
 from stainless_csm.data.repository import BendingParameterRow, bending_parameter_rows
 from stainless_csm.material_models.csm_bilinear import CSMBilinearModel
 
@@ -268,6 +269,9 @@ class BendingResult:
     elastic_moment: float  # W_el f_y / γM0, N mm (what B.19 gives at ε_csm/ε_y = 1)
     plastic_moment: float  # W_pl f_y / γM0, N mm (the factor in front of B.20)
     resistance: float  # M_csm,c,Rd, N mm
+    above_elastic: float  # M_csm,c,Rd / M_el − 1, a fraction
+    above_plastic: float  # M_csm,c,Rd / M_pl − 1, a fraction (negative on the B.19 branch)
+    frames: StageFrames  # the section loaded from zero strain to ε_csm (the Section Stage slider)
     notes: tuple[str, ...]
     trace: CalcTrace
 
@@ -473,6 +477,12 @@ class CSMBending:
                 "ε_csm/ε_y is below 1.0, so Formula B.19 applies: the section buckles before it "
                 "yields, W_pl and α are not used, and the resistance stays below W_el f_y / γM0.",
             )
+        frames = bending_frames(
+            model,
+            ratio,
+            lambda r: moment_at(model, r, data.w_el, data.w_pl, row.alpha, data.gamma_m0),
+            plastic_moment,
+        )
         return BendingResult(
             strain_ratio=ratio,
             formula=formula,
@@ -481,6 +491,9 @@ class CSMBending:
             elastic_moment=elastic_moment,
             plastic_moment=plastic_moment,
             resistance=resistance,
+            above_elastic=resistance / elastic_moment - 1,
+            above_plastic=resistance / plastic_moment - 1,
+            frames=frames,
             notes=tuple(notes),
             trace=trace,
         )

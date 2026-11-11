@@ -1059,3 +1059,145 @@ def test_section_properties_do_not_feed_any_calculation_on_their_own() -> None:
     for key in ("r", "r_o", "h", "b", "t", "d", "s"):
         assert request[key].get("default") is None
     assert "r_o" in schemas["GeometryInput"]["properties"]
+
+
+# --- the Section Stage frames (csm/stage.py) ----------------------------------------------
+
+
+def api_frames(frames: dict[str, object]) -> list[dict[str, object]]:
+    listed = frames["frames"]
+    assert isinstance(listed, list)
+    return listed
+
+
+def test_tension_frames_contract_equals_service() -> None:
+    api = client.post(f"{V1}/tension", json=tension_body("1.4404")).json()
+    model = CSMBilinearModel(services.build_material(services.MaterialForm("1.4404", E)))
+    result = services.run_tension(
+        model, services.TensionForm(1000.0, SectionType.I_SECTION, GAMMA_M0)
+    )
+    frames = api["frames"]
+    assert frames["load_case"] == "tension"
+    assert frames["yield_strain"] == result.frames.yield_strain
+    assert frames["yield_stress"] == result.frames.yield_stress
+    assert frames["source"]["kind"] == "code"
+    assert "B.4" in frames["source"]["citation"]
+    listed = api_frames(frames)
+    assert len(listed) == len(result.frames.frames)
+    for out, frame in zip(listed, result.frames.frames, strict=True):
+        assert out["ratio"] == frame.ratio
+        assert out["stress"] == frame.stress
+        assert out["stress_over_yield"] == frame.stress_over_yield
+        assert out["strain_profile"] == list(frame.strain_profile)
+        assert out["stress_profile"] == list(frame.stress_profile)
+        assert out["resistance"] is None
+        assert out["marks"] == [m.value for m in frame.marks]
+    assert listed[-1]["ratio"] == api["strain_ratio"]
+    assert listed[-1]["stress"] == api["design_stress"]
+    assert api["yield_resistance"] == result.yield_resistance
+    assert api["above_yield"] == result.above_yield
+
+
+def test_compression_frames_contract_equals_service() -> None:
+    api = client.post(f"{V1}/compression", json=compression_body()).json()
+    listed = api_frames(api["frames"])
+    assert api["frames"]["load_case"] == "compression"
+    assert listed[0]["marks"] == ["unloaded"]
+    assert listed[-1]["marks"] == ["limit"]
+    assert listed[-1]["ratio"] == api["strain_ratio"]
+    assert listed[-1]["stress"] == api["design_stress"]  # B.16: the stress f_csm of B.17
+    assert api["above_yield"] == api["resistance"] / api["yield_resistance"] - 1
+    assert api["yield_resistance"] == pytest.approx(1000 * 210 / GAMMA_M0)
+    ratios = [f["ratio"] for f in listed]
+    assert ratios == sorted(ratios)
+    assert any(f["marks"] == ["first_yield"] and f["stress"] == 210 for f in listed)
+
+
+def test_compression_slender_frames_end_below_yield() -> None:
+    api = client.post(
+        f"{V1}/compression", json=compression_body(geometry=slender_plate_geometry())
+    ).json()
+    assert api["formula"] == "b15"
+    listed = api_frames(api["frames"])
+    assert listed[-1]["ratio"] < 1
+    assert listed[-1]["stress_over_yield"] is None
+    assert not any("first_yield" in f["marks"] for f in listed)
+    assert api["above_yield"] < 0
+
+
+def slender_plate_geometry() -> dict[str, object]:
+    return {"kind": "plates", "plates": [plate_input(width=250)]}
+
+
+def test_bending_frames_contract_equals_service() -> None:
+    from stainless_csm.csm.bending import BendingAxis
+
+    plates = (services.PlateForm("web", 138, 4, 8.0), services.PlateForm("flange", 88, 4, 0.43))
+    form = services.BendingForm(
+        services.DeformationForm(
+            services.GeometryForm(kind=services.GeometryKind.PLATES, plates=plates), OMEGA, NU
+        ),
+        SectionType.I_SECTION,
+        BendingAxis.MINOR,
+        12_345.0,
+        20_000.0,
+        GAMMA_M0,
+        0.1,
+    )
+    model = CSMBilinearModel(services.build_material(services.MaterialForm("1.4404", E)))
+    result = services.run_bending(model, form).result
+    body = bending_body(
+        "1.4404",
+        geometry={
+            "kind": "plates",
+            "plates": [plate_input("web", 138, 4, 8.0), plate_input("flange", 88, 4, 0.43)],
+        },
+        axis="minor",
+        w_el=12_345,
+        w_pl=20_000,
+        lambda_lt=0.1,
+    )
+    api = client.post(f"{V1}/bending", json=body).json()
+    frames = api["frames"]
+    assert frames["load_case"] == "bending"
+    assert frames["source"]["kind"] == "derived"
+    assert "Gere & Timoshenko" in frames["source"]["citation"]
+    listed = api_frames(frames)
+    assert len(listed) == len(result.frames.frames)
+    for out, frame in zip(listed, result.frames.frames, strict=True):
+        assert out["ratio"] == frame.ratio
+        assert out["depth"] == list(frame.depth)
+        assert out["stress_profile"] == list(frame.stress_profile)
+        assert out["resistance"] == frame.resistance
+        assert out["marks"] == [m.value for m in frame.marks]
+    assert listed[-1]["resistance"] == api["resistance"]  # the last frame is the reported result
+    assert api["above_elastic"] == result.above_elastic
+    assert api["above_plastic"] == result.above_plastic
+
+
+def test_bending_frames_pass_first_yield_and_m_pl_exactly() -> None:
+    api = client.post(f"{V1}/bending", json=bending_body()).json()
+    assert api["formula"] == "b20"
+    listed = api_frames(api["frames"])
+    first_yield = next(f for f in listed if "first_yield" in f["marks"])
+    assert first_yield["ratio"] == 1.0
+    assert first_yield["stress"] == 210
+    assert first_yield["resistance"] == pytest.approx(api["elastic_moment"], rel=1e-12)
+    passes = next(f for f in listed if "passes_mpl" in f["marks"])
+    assert passes["resistance"] == pytest.approx(api["plastic_moment"], rel=1e-9)
+    assert first_yield["ratio"] < passes["ratio"] < listed[-1]["ratio"]
+    assert api["above_plastic"] == api["resistance"] / api["plastic_moment"] - 1
+
+
+def test_frames_have_no_emoji_and_no_verdict() -> None:
+    from test_no_emoji import EMOJI
+
+    for path, body in (
+        ("tension", tension_body()),
+        ("compression", compression_body()),
+        ("bending", bending_body()),
+    ):
+        text = client.post(f"{V1}/{path}", json=body).text
+        assert not EMOJI.search(text)
+        out = json.loads(text)
+        assert not {"utilisation", "passes", "verdict", "gain"} & set(out)

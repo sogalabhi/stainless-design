@@ -13,6 +13,7 @@ from stainless_csm.core.enums import SectionType
 from stainless_csm.core.errors import InvalidMaterialError, NotApplicableError
 from stainless_csm.core.latex import tex
 from stainless_csm.core.trace import CalcStep, CalcTrace, Source, code
+from stainless_csm.csm.stage import StageFrames, tension_frames
 from stainless_csm.material_models.csm_bilinear import CSMBilinearModel
 
 _CLAUSE = "B.6.1"
@@ -52,6 +53,9 @@ class TensionResult:
     strain: float  # ε_csm,t
     design_stress: float  # f_csm,t, N/mm²
     resistance: float  # N_csm,t,Rd, N
+    yield_resistance: float  # A f_y / γM0, N: the reference the headline is compared with
+    above_yield: float  # N_csm,t,Rd / (A f_y / γM0) − 1, a fraction
+    frames: StageFrames  # the section loaded from zero strain to ε_csm,t (the Section Stage slider)
     notes: tuple[str, ...]
     trace: CalcTrace
 
@@ -192,12 +196,16 @@ class CSMTension:
             ),
             code("B.6.1(1), Formula (B.12)"),
         )
+        yield_resistance = data.area * fy / data.gamma_m0
         return TensionResult(
             strain_ratio=ratio,
             governing=governing,
             strain=strain,
             design_stress=f_csm_t,
             resistance=n_rd,
+            yield_resistance=yield_resistance,
+            above_yield=n_rd / yield_resistance - 1,
+            frames=tension_frames(model, ratio),
             notes=tuple(notes),
             trace=trace,
         )

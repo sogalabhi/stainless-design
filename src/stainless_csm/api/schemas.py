@@ -138,6 +138,60 @@ class MaterialModelResponse(BaseModel):
     figure: dict[str, Any] = Field(description="Plotly figure (data and layout)")
 
 
+class LoadCaseKey(StrEnum):
+    TENSION = "tension"
+    COMPRESSION = "compression"
+    BENDING = "bending"
+
+
+class FrameMarkKey(StrEnum):
+    """What a frame of the Section Stage slider is, where it is more than one step."""
+
+    UNLOADED = "unloaded"
+    FIRST_YIELD = "first_yield"
+    PASSES_MPL = "passes_mpl"
+    LIMIT = "limit"
+
+
+class StageFrameOut(BaseModel):
+    """One state of the section on its way to the strain limit. The browser shows it as it is."""
+
+    ratio: float = Field(description="eps / eps_y at the extreme fibre")
+    strain: float = Field(description="eps at the extreme fibre")
+    stress: float = Field(
+        description="Stress at the extreme fibre, read from the B.4 curve [N/mm2]"
+    )
+    stress_over_yield: float | None = Field(
+        description="stress / f_y - 1 as a fraction; null at or below the first yield"
+    )
+    depth: list[float] = Field(
+        description="Normalised depth: -1 tension edge, +1 compression edge (as the bending chart)"
+    )
+    strain_profile: list[float] = Field(
+        description="eps / eps_y at each depth, compression positive"
+    )
+    stress_profile: list[float] = Field(
+        description="Stress at each depth [N/mm2], compression positive; tension is negative"
+    )
+    resistance: float | None = Field(
+        description="Bending only: the resistance B.19 or B.20 give if the limit were at this "
+        "frame [N mm]"
+    )
+    marks: list[FrameMarkKey]
+
+
+class StageFramesOut(BaseModel):
+    """The frames from zero strain to the strain limit, for the Section Stage slider."""
+
+    load_case: LoadCaseKey
+    yield_strain: float = Field(description="eps_y")
+    yield_stress: float = Field(description="f_y [N/mm2]")
+    frames: list[StageFrameOut] = Field(
+        description="Ascending strain; the first is unloaded, the last is the strain limit"
+    )
+    source: SourceOut = Field(description="Where the frames come from (plan.md, section 4h)")
+
+
 class TensionResponse(BaseModel):
     material: MaterialOut
     strain_ratio: float
@@ -146,6 +200,11 @@ class TensionResponse(BaseModel):
     strain: float
     design_stress: float
     resistance: float = Field(description="N_csm,t,Rd [N]")
+    yield_resistance: float = Field(description="A f_y / gamma_M0 [N], the reference line")
+    above_yield: float = Field(
+        description="N_csm,t,Rd / (A f_y / gamma_M0) - 1, as a fraction (0.0173 is 1.73 %)"
+    )
+    frames: StageFramesOut = Field(description="Strain and stress from zero to eps_csm,t")
     notes: list[str]
     trace: list[TraceStepOut]
     figure: dict[str, Any] = Field(description="Plotly figure (data and layout)")
@@ -425,6 +484,11 @@ class CompressionResponse(BaseModel):
         description="f_csm [N/mm2] (Formula B.17); null when B.15 applies, where B.17 is not used"
     )
     resistance: float = Field(description="N_csm,Rd [N]")
+    yield_resistance: float = Field(description="A f_y / gamma_M0 [N], the reference line")
+    above_yield: float = Field(
+        description="N_csm,Rd / (A f_y / gamma_M0) - 1, as a fraction; negative on the B.15 branch"
+    )
+    frames: StageFramesOut = Field(description="Strain and stress from zero to eps_csm")
     notes: list[str]
     trace: list[TraceStepOut]
     capacity_figure: dict[str, Any] = Field(
@@ -500,6 +564,14 @@ class BendingResponse(BaseModel):
     elastic_moment: float = Field(description="W_el f_y / gamma_M0 [N mm], a reference line")
     plastic_moment: float = Field(description="W_pl f_y / gamma_M0 [N mm], a reference line")
     resistance: float = Field(description="M_csm,c,Rd [N mm]")
+    above_elastic: float = Field(description="M_csm,c,Rd / M_el - 1, as a fraction")
+    above_plastic: float = Field(
+        description="M_csm,c,Rd / M_pl - 1, as a fraction; negative on the B.19 branch"
+    )
+    frames: StageFramesOut = Field(
+        description="Strain and stress across the depth from zero to eps_csm, with the resistance "
+        "B.19 or B.20 give at each frame"
+    )
     notes: list[str]
     trace: list[TraceStepOut]
     moment_figure: dict[str, Any] = Field(

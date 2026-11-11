@@ -57,6 +57,13 @@
       "where": "The manufacturer's data or your drawings.",
       "source": "In EN 1993-1-4 (8.2.2(5))"
     },
+    "geometry": {
+      "name": "Geometry",
+      "what": "Template: the standard dimensions of the section type. Custom: any section made of flat plates, typed in a table or pasted from Excel.",
+      "why": "B.5 needs the flat width and thickness of every plate. A template derives them by 8.2.2(5); Custom takes b̄, t and k_σ of each plate as you give them, for B.9.",
+      "where": "Use Custom for shapes the templates do not cover, such as an I-section with unequal flanges. Copy rows from Excel and paste them into the table.",
+      "source": "In EN 1993-1-4 (B.5)"
+    },
     "h": {
       "name": "Overall height h",
       "what": "The overall height of the section. For an angle, the length of the longer leg.",
@@ -150,7 +157,7 @@
     },
     "route": {
       "name": "Slenderness from",
-      "what": "How the slenderness of the section is found: from its dimensions, from flat plates entered one by one, or from a critical stress you type.",
+      "what": "How the slenderness of the section is found: from the geometry in the Section group (template, custom plates or tube), or from a critical stress you type.",
       "why": "B.5 needs the critical buckling stress. Dimensions and plates use the plate formula B.9, a circular tube uses B.10 and B.11, and a typed σ_cr,cs skips them.",
       "where": "Choose the route that matches the data you have.",
       "source": "In EN 1993-1-4 (B.5)"

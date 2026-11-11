@@ -175,7 +175,7 @@
             }
           },
           "422": {
-            "description": "Unprocessable Content",
+            "description": "Unprocessable Entity",
             "content": {
               "application/json": {
                 "schema": {
@@ -214,7 +214,7 @@
             }
           },
           "422": {
-            "description": "Unprocessable Content",
+            "description": "Unprocessable Entity",
             "content": {
               "application/json": {
                 "schema": {
@@ -253,7 +253,7 @@
             }
           },
           "422": {
-            "description": "Unprocessable Content",
+            "description": "Unprocessable Entity",
             "content": {
               "application/json": {
                 "schema": {
@@ -292,7 +292,7 @@
             }
           },
           "422": {
-            "description": "Unprocessable Content",
+            "description": "Unprocessable Entity",
             "content": {
               "application/json": {
                 "schema": {
@@ -331,7 +331,7 @@
             }
           },
           "422": {
-            "description": "Unprocessable Content",
+            "description": "Unprocessable Entity",
             "content": {
               "application/json": {
                 "schema": {
@@ -370,7 +370,7 @@
             }
           },
           "422": {
-            "description": "Unprocessable Content",
+            "description": "Unprocessable Entity",
             "content": {
               "application/json": {
                 "schema": {
@@ -409,7 +409,7 @@
             }
           },
           "422": {
-            "description": "Unprocessable Content",
+            "description": "Unprocessable Entity",
             "content": {
               "application/json": {
                 "schema": {
@@ -612,6 +612,20 @@
             "title": "Resistance",
             "description": "M_csm,c,Rd [N mm]"
           },
+          "above_elastic": {
+            "type": "number",
+            "title": "Above Elastic",
+            "description": "M_csm,c,Rd / M_el - 1, as a fraction"
+          },
+          "above_plastic": {
+            "type": "number",
+            "title": "Above Plastic",
+            "description": "M_csm,c,Rd / M_pl - 1, as a fraction; negative on the B.19 branch"
+          },
+          "frames": {
+            "$ref": "#/components/schemas/StageFramesOut",
+            "description": "Strain and stress across the depth from zero to eps_csm, with the resistance B.19 or B.20 give at each frame"
+          },
           "notes": {
             "items": {
               "type": "string"
@@ -653,6 +667,9 @@
           "elastic_moment",
           "plastic_moment",
           "resistance",
+          "above_elastic",
+          "above_plastic",
+          "frames",
           "notes",
           "trace",
           "moment_figure",
@@ -976,6 +993,20 @@
             "title": "Resistance",
             "description": "N_csm,Rd [N]"
           },
+          "yield_resistance": {
+            "type": "number",
+            "title": "Yield Resistance",
+            "description": "A f_y / gamma_M0 [N], the reference line"
+          },
+          "above_yield": {
+            "type": "number",
+            "title": "Above Yield",
+            "description": "N_csm,Rd / (A f_y / gamma_M0) - 1, as a fraction; negative on the B.15 branch"
+          },
+          "frames": {
+            "$ref": "#/components/schemas/StageFramesOut",
+            "description": "Strain and stress from zero to eps_csm"
+          },
           "notes": {
             "items": {
               "type": "string"
@@ -1014,6 +1045,9 @@
           "formula_label",
           "design_stress",
           "resistance",
+          "yield_resistance",
+          "above_yield",
+          "frames",
           "notes",
           "trace",
           "capacity_figure",
@@ -1191,6 +1225,17 @@
           "right"
         ],
         "title": "FibreDistancesOut"
+      },
+      "FrameMarkKey": {
+        "type": "string",
+        "enum": [
+          "unloaded",
+          "first_yield",
+          "passes_mpl",
+          "limit"
+        ],
+        "title": "FrameMarkKey",
+        "description": "What a frame of the Section Stage slider is, where it is more than one step."
       },
       "GeometryInput": {
         "properties": {
@@ -1596,6 +1641,15 @@
         "type": "object",
         "title": "KSigmaInput",
         "description": "k_sigma of each kind of plate (EN 1993-1-5, outside Annex B): an input, one per role."
+      },
+      "LoadCaseKey": {
+        "type": "string",
+        "enum": [
+          "tension",
+          "compression",
+          "bending"
+        ],
+        "title": "LoadCaseKey"
       },
       "MaterialInput": {
         "properties": {
@@ -2451,6 +2505,133 @@
         "title": "SourceOut",
         "description": "Where a step comes from (plan.md, section 4h)."
       },
+      "StageFrameOut": {
+        "properties": {
+          "ratio": {
+            "type": "number",
+            "title": "Ratio",
+            "description": "eps / eps_y at the extreme fibre"
+          },
+          "strain": {
+            "type": "number",
+            "title": "Strain",
+            "description": "eps at the extreme fibre"
+          },
+          "stress": {
+            "type": "number",
+            "title": "Stress",
+            "description": "Stress at the extreme fibre, read from the B.4 curve [N/mm2]"
+          },
+          "stress_over_yield": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stress Over Yield",
+            "description": "stress / f_y - 1 as a fraction; null at or below the first yield"
+          },
+          "depth": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Depth",
+            "description": "Normalised depth: -1 tension edge, +1 compression edge (as the bending chart)"
+          },
+          "strain_profile": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Strain Profile",
+            "description": "eps / eps_y at each depth, compression positive"
+          },
+          "stress_profile": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Stress Profile",
+            "description": "Stress at each depth [N/mm2], compression positive; tension is negative"
+          },
+          "resistance": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resistance",
+            "description": "Bending only: the resistance B.19 or B.20 give if the limit were at this frame [N mm]"
+          },
+          "marks": {
+            "items": {
+              "$ref": "#/components/schemas/FrameMarkKey"
+            },
+            "type": "array",
+            "title": "Marks"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ratio",
+          "strain",
+          "stress",
+          "stress_over_yield",
+          "depth",
+          "strain_profile",
+          "stress_profile",
+          "resistance",
+          "marks"
+        ],
+        "title": "StageFrameOut",
+        "description": "One state of the section on its way to the strain limit. The browser shows it as it is."
+      },
+      "StageFramesOut": {
+        "properties": {
+          "load_case": {
+            "$ref": "#/components/schemas/LoadCaseKey"
+          },
+          "yield_strain": {
+            "type": "number",
+            "title": "Yield Strain",
+            "description": "eps_y"
+          },
+          "yield_stress": {
+            "type": "number",
+            "title": "Yield Stress",
+            "description": "f_y [N/mm2]"
+          },
+          "frames": {
+            "items": {
+              "$ref": "#/components/schemas/StageFrameOut"
+            },
+            "type": "array",
+            "title": "Frames",
+            "description": "Ascending strain; the first is unloaded, the last is the strain limit"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceOut",
+            "description": "Where the frames come from (plan.md, section 4h)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "load_case",
+          "yield_strain",
+          "yield_stress",
+          "frames",
+          "source"
+        ],
+        "title": "StageFramesOut",
+        "description": "The frames from zero strain to the strain limit, for the Section Stage slider."
+      },
       "StainlessFamily": {
         "type": "string",
         "enum": [
@@ -2709,6 +2890,20 @@
             "title": "Resistance",
             "description": "N_csm,t,Rd [N]"
           },
+          "yield_resistance": {
+            "type": "number",
+            "title": "Yield Resistance",
+            "description": "A f_y / gamma_M0 [N], the reference line"
+          },
+          "above_yield": {
+            "type": "number",
+            "title": "Above Yield",
+            "description": "N_csm,t,Rd / (A f_y / gamma_M0) - 1, as a fraction (0.0173 is 1.73 %)"
+          },
+          "frames": {
+            "$ref": "#/components/schemas/StageFramesOut",
+            "description": "Strain and stress from zero to eps_csm,t"
+          },
           "notes": {
             "items": {
               "type": "string"
@@ -2739,6 +2934,9 @@
           "strain",
           "design_stress",
           "resistance",
+          "yield_resistance",
+          "above_yield",
+          "frames",
           "notes",
           "trace",
           "figure"

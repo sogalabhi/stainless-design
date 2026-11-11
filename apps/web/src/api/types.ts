@@ -26,6 +26,7 @@ export type GeometryKindKey = S["GeometryKindKey"];
 export type PlateInput = S["PlateInput"];
 export type FamilyKey = S["FamilyKey"];
 export type PlateOut = S["PlateOut"];
+export type StrainLimitOut = S["StrainLimitOut"];
 
 export type CompressionRequest = S["CompressionRequest"];
 export type CompressionResponse = S["CompressionResponse"];
@@ -43,3 +44,9 @@ export type ReferenceSectionOut = S["ReferenceSectionOut"];
 export type SectionPropertiesRequest = S["SectionPropertiesRequest"];
 export type SectionPropertiesResponse = S["SectionPropertiesResponse"];
 export type PropertyRowOut = S["PropertyRowOut"];
+
+export type StageFramesOut = S["StageFramesOut"];
+export type StageFrameOut = S["StageFrameOut"];
+export type LoadCaseKey = S["LoadCaseKey"];
+export type FrameMarkKey = S["FrameMarkKey"];
+export type ModelValuesOut = S["ModelValuesOut"];
