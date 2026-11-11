@@ -4,10 +4,11 @@ import { Segmented } from "../components/ui";
 import { CompareCurvesDiagram, DiagramDefs, WorkflowDiagram } from "../help/diagrams";
 import { BucklingBending } from "../help/BucklingBending";
 import { Modules } from "../help/Modules";
+import { SignConvention } from "../help/SignConvention";
 import { SymbolsBrowser } from "../help/SymbolsBrowser";
 import { WhyNotIs800 } from "../help/WhyNotIs800";
 
-type Topic = "overview" | "buckling" | "is800" | "modules" | "symbols";
+type Topic = "overview" | "buckling" | "is800" | "modules" | "signs" | "symbols";
 
 function Overview() {
   return (
@@ -81,6 +82,7 @@ export function HelpPage() {
           { value: "buckling", label: "Buckling and bending" },
           { value: "is800", label: "Why not IS 800" },
           { value: "modules", label: "Modules" },
+          { value: "signs", label: "Sign convention" },
           { value: "symbols", label: "Symbols" },
         ]}
         onChange={setTopic}
@@ -89,6 +91,7 @@ export function HelpPage() {
       {topic === "buckling" ? <BucklingBending /> : null}
       {topic === "is800" ? <WhyNotIs800 /> : null}
       {topic === "modules" ? <Modules /> : null}
+      {topic === "signs" ? <SignConvention /> : null}
       {topic === "symbols" ? <SymbolsBrowser /> : null}
     </div>
   );
