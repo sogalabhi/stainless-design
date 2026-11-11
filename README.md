@@ -229,6 +229,11 @@ cd apps/web && npm install && npm run build      # once, builds apps/web/dist
 .venv/bin/stainless-csm-api                       # http://127.0.0.1:8100 (API and built site)
 ```
 
+Start everything (API and the dev site with hot reload) in one line, from the repository root. Open the URL Vite prints (usually http://localhost:5173); Ctrl+C stops both:
+```
+bash -c 'trap "kill 0" EXIT; .venv/bin/stainless-csm-api & cd apps/web && npm run dev'
+```
+
 The website has one **input dock** on the left and the results on the right. Every input lives in
 the dock, in groups (**Material**, **Section**, **Deformation capacity (B.5)**, **Bending (B.6.3)**; one open at a time),
 so no two pages can hold different values of A or γM0. Each group header counts the fields still to
@@ -294,9 +299,17 @@ I-section web (by analogy, the PDF draws no channel) and flange b − t_w − r;
 I-section flange (by analogy) and a typed stem c; angle b̄ = h; rectangular hollow section h − 3t and
 b − 3t. Each c is a step of the working that names its source. A, W_el, W_pl and k_σ stay typed.
 
-The result tabs are **Material (B.4)**, **Deformation (B.5)**, **Tension (B.6.1)**,
+The result tabs are **Stage** (first, selected at the start), **Material (B.4)**, **Deformation (B.5)**, **Tension (B.6.1)**,
 **Compression (B.6.2)**, **Bending (B.6.3)**, **Explore** and **Help**. Each tab carries a status icon (done, waiting for inputs, not applicable, arrives in a later phase, needs attention).
-A tab that is waiting lists what it needs as links ("Waiting for: A; γM0"); a link opens that field
+**Stage** is one screen for the three resistances: a Tension / Compression / Bending switch, the resistance
+in large type with one plain sentence and a bar against `A f_y / γ_M0` (or `M_el` and `M_pl`), the section
+drawn to scale beside its strain and stress diagrams on one depth axis, a slider from zero strain to the
+section's limit (it steps through the frames the engine returns, with a "Load it" button), a 3D cut with
+press and pull arrows on the cut face and the member shortening, lengthening or curving (every strain
+drawn ten times larger, stated on the view; the drawn length is illustrative), three linked cards (how
+far can it strain, what stress is that, what does it resist) with the engine's figures and working, and
+in compression a thickness what-if that walks the engine's section-comparison sweep. The inputs stay in
+the dock. A tab that is waiting lists what it needs as links ("Waiting for: A; γM0"); a link opens that field
 in the dock. On a phone the dock becomes an **Inputs** button that slides a drawer out. "Graph view"
 switches between a schematic (not to scale, like Figure B.1) and a true-scale view. "Show working"
 lists each calculation step as a typeset equation, and "Symbols used on this page" explains every
@@ -355,9 +368,9 @@ The API port is 8100 (8000 is often taken by other dev servers); change it with
 | GET | `/api/v1/grades` | Table 5.1 |
 | GET | `/api/v1/csm-coefficients` | Table B.1 |
 | POST | `/api/v1/material-model` | B.4 |
-| POST | `/api/v1/tension` | B.6.1 |
-| POST | `/api/v1/compression` | B.6.2, with B.5 for the section |
-| POST | `/api/v1/bending` | B.6.3.1(1) and B.6.3.2: the λ_LT gate, B.5 for the section in bending (`geometry.k_sigma` are the bending values), then B.19 or B.20 with α from Table B.2; 422 with `error_type` `NotApplicableError` (λ_LT above 0.4, beyond the B.5 limit) or `NotBuiltYetError` (B.18 range, B.6.3.3 shapes) |
+| POST | `/api/v1/tension` | B.6.1; the response also carries `frames` (the Section Stage slider: strain and stress from zero to the limit, with `source`), `yield_resistance` and `above_yield` |
+| POST | `/api/v1/compression` | B.6.2, with B.5 for the section; also `frames`, `yield_resistance` and `above_yield` |
+| POST | `/api/v1/bending` | B.6.3.1(1) and B.6.3.2: the λ_LT gate, B.5 for the section in bending (`geometry.k_sigma` are the bending values), then B.19 or B.20 with α from Table B.2; also `frames` (with the resistance B.19 or B.20 give at each frame), `above_elastic` and `above_plastic`; 422 with `error_type` `NotApplicableError` (λ_LT above 0.4, beyond the B.5 limit) or `NotBuiltYetError` (B.18 range, B.6.3.3 shapes) |
 | POST | `/api/v1/deformation-capacity` | B.5, with 8.2.2(5) for a section template (`geometry.kind = "template"`) |
 | POST | `/api/v1/section-properties` | not a clause: reference geometry (A, centroid, I, W_el, W_pl, plastic axes, shear centre) from the template dimensions; needs r_o (RHS) or r (angle) |
 | POST | `/api/v1/section-comparison` | B.5 and B.4 for the section made thicker and thinner (t_w, t_f and t are multiplied; c is derived again at each point) |

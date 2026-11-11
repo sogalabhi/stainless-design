@@ -4,6 +4,8 @@
 
 # Plan: complete Annex B, with every visualisation
 
+**What is left, in order and by model, is listed in `remaining.md` (written 2026-11-10). Start there.**
+
 Source: EN 1993-1-4:2025, Annex B (normative), printed pages 59 to 66, which are PDF pages 63 to 70 of
 `EN-1993-1-4-2025.pdf`. Every formula below was read from the rendered pages, not only from the text
 extraction, because the extraction garbles exponents and brackets (B.20, B.23, B.25 to B.28).
@@ -344,6 +346,39 @@ the clock status icon and the Use buttons in the geometry window. Judgement call
 by axis even though α is 2.0 for both); "major" and "minor" mean y-y and z-z of the drawing, so for an RHS with b > h the label
 "major" is the drawing's y-y, not necessarily the stronger axis; the h/b of Table B.2 is taken from the typed h and b of the
 section template (only the phase 3 shapes use it); the angle equal/unequal test is h == b of the template.
+
+**Section Stage hand-off (2026-11-11, user-approved prototype `docs/prototypes/section-stage.html`).** Built: a new first tab,
+"Stage", selected at the start, beside the unchanged clause tabs; the dock stays the only place inputs are typed.
+Engine: `csm/stage.py` (`tension_frames`, `compression_frames`, `bending_frames`) returns, inside the tension,
+compression and bending results, 120 equal steps from zero strain to the limit plus exact frames at ε/ε_y = 1, at the
+limit and, in bending, where `moment_at` reaches M_pl (bisection on the engine's own function); each frame has the
+strain ratio, strain, stress read from the B.4 curve, the strain and stress polylines over the normalised depth
+(compression positive, uniform for tension and compression), `stress_over_yield`, marks and, in bending, the B.19 or
+B.20 resistance if the limit were there. The source travels with the frames (`StageFramesOut.source`: code for tension and
+compression, derived for bending, citing Gere and Timoshenko eq. (10-1), B.4, B.19 and B.20). The results also gained
+`yield_resistance` and `above_yield` (tension, compression) and `above_elastic`, `above_plastic` (bending), so the headline
+percentages are engine fractions. Tests: `tests/test_stage.py` (hand-checked: frame at ratio 1 is f_y and M_el, last frame
+equals the reported result, tension and compression blocks uniform, M_pl frame, B.15 branch), frame contract tests in
+`tests/test_api.py`; OpenAPI and `schema.d.ts` regenerated; the recorded fixtures of tension, compression and bending were
+extended with the new fields from the real API (`apps/web/src/test/fixtures`, frames pretty-printed so the diff is large).
+Web: `pages/StagePage.tsx` (case switch with statuses, headline and bar, notes folded, Drawing and 3D cut, slider, readout,
+legend, source badge), `components/stage/` (`StageDrawing`, `Stage3D`, `StepCards`, `WhatIf`, `StageControls`, `Headline`,
+`CaseSwitch`), `lib/stage.ts` (views from the responses, slider marks, animation, what-if frames, profile splitting),
+`lib/stageLayout.ts`, `lib/stageSection.ts`, `lib/stage3d.ts` (pose, arrows, tones), `StageSectionDrawing` added to
+`SectionSketch.tsx` (the lit governing plate for every template, and a quarter turn for minor-axis bending), `capGeometry`
+and an optional `warp` added to `viewer3d/extrude.ts`, `outlineSolids` extracted in `lib/exploreScene.ts`, `symbols` filter
+added to `Working`, `TableB2` exported from `BendingPage`. Tokens added in `styles.css` (steel, soft and deep orange and blue,
+a soft border) with light and dark values. Judgement calls: the case in view is the user's pick, else the first one that is
+done; the thickness sweep is asked only while the Stage shows compression; what-if frames are the section's engine frames
+below the sweep point's limit plus the sweep point itself (the point has no percentage, so none is shown, and no flat width c);
+one magnification (x10) and a drawn length of 2 x the larger side; arrows are as long as the stress, scaled so the longest
+slider arrow is 0.55 of the larger side; Tension card 1 and card 3 are two-bar drawings because the engine has no figure
+for them, card 2 of bending uses `blocks_figure`; the bending base curve comes from one extra `/deformation-capacity` query
+with the bending k_σ, asked for only while the Stage shows bending; middle slider ticks that would crowd are dropped.
+Tests: `lib/stage*.test.ts`, `pages/StagePage.test.tsx`, `App.stage.test.tsx`, `components/stage/Stage.test.tsx`. Left: the
+card charts are the engine's figures at 340 px and their own annotations crowd a little; there is no live ring on the card
+charts while the slider moves (only the what-if ring on the base curve); the clause tabs are not retired; the 3D cut was
+checked in a software WebGL browser only; no phone layout.
 
 ## 4c. Phase 1b spec: section templates
 
@@ -823,6 +858,7 @@ in Help stay as they are.
 - Gain against f_y, one line per family, with the kink.
 - Bar chart of f_csm,t / f_y for every Table 5.1 grade.
 - 3D tension member, illustrative: an extruded section with load arrows, in one colour because stress in pure tension is uniform. No elongation is drawn or calculated. The section dimensions are typed inputs that only set the drawing's shape.
+  **Amendment 2026-11-11 (user request, Section Stage):** the tension member of the Stage's 3D cut lengthens: the Stage's 3D cut now draws the member deforming by the engine's strain of the current frame (the strain of the slider frame, `StageFrame.strain`), under ONE rule for every load case: every strain is drawn 10 times larger (`STAGE_MAGNIFICATION` in `lib/stage3d.ts`), the cut face moves by strain x drawn length x 10 (the drawn length is 2 x the larger side of the section, illustrative). The view states the factor and says the length is illustrative; no displacement value is calculated or shown, so the 9.2 deflection method stays unused. 
 
 ### B.6.2 Compression (B.15 to B.17)
 Done in phase 1: the capacity curve (with the junction marker and your section as a dot, without the slider dot)
@@ -834,6 +870,7 @@ the gain surface, the 3D stub column and the stocky-against-slender view with re
 - Sensitivity chart (tornado): how much N_csm,Rd moves for a change of p % in each input (f_y, f_u, t, Ω, E). The step p is a user setting, empty until typed, never a fixed 10 %.
 - Gain surface (3D): f_csm / f_y over (λ, f_y/f_u), and over (λ, Ω), with contours.
 - 3D stub column, illustrative: local waves from the live slenderness, coloured by N_csm,Rd / (A f_y / γ_M0). The column length is a typed input that sets only the drawing's proportions. No shortening is calculated or shown. Annex B has no displacement rule; clause 9.2 gives a serviceability deflection method (secant modulus, Formulae 9.1 and 9.2, Table 9.1), which the tool does not use yet, so the drawing stays illustrative and shows no displacement value.
+  **Amendment 2026-11-11 (user request, Section Stage):** the compression member of the Stage's 3D cut shortens: the Stage's 3D cut now draws the member deforming by the engine's strain of the current frame (the strain of the slider frame, `StageFrame.strain`), under ONE rule for every load case: every strain is drawn 10 times larger (`STAGE_MAGNIFICATION` in `lib/stage3d.ts`), the cut face moves by strain x drawn length x 10 (the drawn length is 2 x the larger side of the section, illustrative). The view states the factor and says the length is illustrative; no displacement value is calculated or shown, so the 9.2 deflection method stays unused. 
 - Stocky against slender side by side, as in the Visualise tab, now with real resistances.
 
 ### B.6.3 Bending (B.18 to B.20, Table B.2)
@@ -846,6 +883,7 @@ the gain surface, the 3D stub column and the stocky-against-slender view with re
 - B.6.3.3 neutral-axis shift diagram: the elastic axis, the plastic axis, the design axis (midway, or by equilibrium when chosen), and ε_csm,t against ε_csm.
 - Continuity marker: B.19 meets B.20 at ε_csm/ε_y = 1 (both equal W_el f_y / γ_M0).
 - 3D beam, illustrative: a deflected shape coloured by strain, with local wrinkling on the compression flange from the live slenderness. The span and load are typed inputs that only draw the shape. No displacement value is calculated or shown. Annex B has no displacement rule; EN 1993-1-4:2025, 9.2 estimates deflections with the secant modulus E_s,ser = (E_s,1 + E_s,2)/2 (Formula 9.1), with E_s,i from Formula 9.2 and the exponent n from Table 9.1 (ferritic 14, austenitic 7, duplex 8); 9.2(9) allows the finite element methods of FprEN 1993-1-14:2025 instead. The tool does not use 9.2 yet, so the drawing is illustrative and carries no displacement value. Using 9.2 would be a code-sourced addition (section 4h).
+  **Amendment 2026-11-11 (user request, Section Stage):** the beam of the Stage's 3D cut curves, the top fibres shortening and the bottom fibres lengthening, the cut face turning about the neutral axis: the Stage's 3D cut now draws the member deforming by the engine's strain of the current frame (the strain of the slider frame, `StageFrame.strain`), under ONE rule for every load case: every strain is drawn 10 times larger (`STAGE_MAGNIFICATION` in `lib/stage3d.ts`), the cut face moves by strain x drawn length x 10 (the drawn length is 2 x the larger side of the section, illustrative). The view states the factor and says the length is illustrative; no displacement value is calculated or shown, so the 9.2 deflection method stays unused. 
 
 ### B.6.4 Combined bending and axial force (B.21 to B.29)
 - Interaction curve, M_N / M against n_csm, for the selected criterion (RHS, I-section major and minor axes, CHS), with the design point inside or outside.

@@ -1,0 +1,1089 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>CSM Section Stage</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=STIX+Two+Text:ital,wght@1,400;1,500&display=swap">
+<style>
+/* Layout: a drafting sheet. The section is the stage; the chain of three linked charts below explains the number. */
+:root {
+  --bg: #e8ecef; --surface: #f8fafb; --surface-2: #edf1f4; --ink: #15212b; --ink-2: #41505c; --ink-3: #5c6b77;
+  --line: #c9d2d9; --line-2: #dde4e9; --steel: #b8c3cc; --steel-cut: #9dabb6; --steel-edge: #52616d;
+  --comp: #eb6834; --comp-soft: #f8cdb9; --comp-deep: #a53c0c;
+  --tens: #2a78d6; --tens-soft: #c3daf8; --tens-deep: #104281;
+  --focus: #15212b;
+  --f-display: "Barlow Condensed", "Arial Narrow", "Helvetica Neue", sans-serif;
+  --f-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-num: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --f-sym: "STIX Two Text", "Cambria Math", Georgia, serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d1317; --surface: #141c22; --surface-2: #1a242b; --ink: #e8eef2; --ink-2: #b7c4ce; --ink-3: #92a1ad;
+    --line: #2d3a44; --line-2: #212c34; --steel: #4c5a66; --steel-cut: #64737f; --steel-edge: #b1bfca;
+    --comp: #e0632f; --comp-soft: #55291a; --comp-deep: #ffa277;
+    --tens: #3987e5; --tens-soft: #15345a; --tens-deep: #9ec5f4;
+    --focus: #e8eef2; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d1317; --surface: #141c22; --surface-2: #1a242b; --ink: #e8eef2; --ink-2: #b7c4ce; --ink-3: #92a1ad;
+  --line: #2d3a44; --line-2: #212c34; --steel: #4c5a66; --steel-cut: #64737f; --steel-edge: #b1bfca;
+  --comp: #e0632f; --comp-soft: #55291a; --comp-deep: #ffa277;
+  --tens: #3987e5; --tens-soft: #15345a; --tens-deep: #9ec5f4;
+  --focus: #e8eef2; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.5; }
+.page { max-width: 1240px; margin: 0 auto; padding-block: 28px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 20px; }
+h1, h2, h3, p, dl, dd, ol, ul { margin: 0; padding: 0; }
+ol, ul { list-style: none; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+sub { font-size: 0.72em; line-height: 0; }
+.sym { font-family: var(--f-sym); font-style: italic; font-size: 1.06em; white-space: nowrap; }
+.num { font-family: var(--f-num); font-variant-numeric: tabular-nums; }
+.eyebrow { font-family: var(--f-display); font-weight: 600; font-size: 14px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-3); }
+
+/* masthead */
+.masthead { display: flex; flex-wrap: wrap; gap: 18px 40px; align-items: flex-end; justify-content: space-between;
+  padding-bottom: 18px; border-bottom: 2px solid var(--ink); }
+.brand { flex: 1 1 300px; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.brand h1 { font-family: var(--f-display); font-weight: 600; font-size: clamp(38px, 6vw, 58px); line-height: 0.95; letter-spacing: 0.01em; text-transform: uppercase; }
+.brand .lede { color: var(--ink-2); max-width: 52ch; margin-top: 6px; }
+.inputs { flex: 1 1 420px; min-width: 0; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 5px 14px; font-size: 13.5px; }
+.inputs dt { font-family: var(--f-display); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; font-size: 13px; color: var(--ink-3); padding-top: 1px; }
+.inputs dd { color: var(--ink-2); min-width: 0; }
+.inputs dd b { font-family: var(--f-num); font-weight: 500; color: var(--ink); }
+.inputs .tag { grid-column: 1 / -1; font-size: 12.5px; color: var(--ink-3); }
+
+/* verdict: case switch + result */
+.verdict { display: flex; flex-wrap: wrap; gap: 20px 36px; align-items: stretch; }
+.cases { flex: 0 1 auto; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.case-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.case-btn { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 8px 16px 8px 12px; background: var(--surface);
+  border: 1.5px solid var(--line); border-radius: 3px; cursor: pointer; text-align: left; }
+.case-btn:hover { border-color: var(--ink-3); }
+.case-btn[aria-selected="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.case-btn .glyph { width: 30px; height: 30px; flex: none; }
+.case-btn .nm { font-family: var(--f-display); font-weight: 600; font-size: 21px; letter-spacing: 0.04em; text-transform: uppercase; line-height: 1; display: block; }
+.case-btn .cl { font-family: var(--f-num); font-size: 11.5px; opacity: 0.8; display: block; margin-top: 3px; }
+.case-inputs { font-size: 13px; color: var(--ink-3); max-width: 46ch; }
+.case-inputs b { font-family: var(--f-num); font-weight: 500; color: var(--ink-2); }
+.result { flex: 1 1 520px; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.big { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; }
+.big .sym { font-size: 24px; color: var(--ink-2); }
+.big .val { font-family: var(--f-display); font-weight: 600; font-size: clamp(56px, 9vw, 84px); line-height: 0.9; letter-spacing: 0.005em; font-variant-numeric: tabular-nums; }
+.big .unit { font-family: var(--f-display); font-weight: 500; font-size: 28px; color: var(--ink-2); }
+.why { color: var(--ink-2); max-width: 68ch; }
+.gauge { max-width: 640px; } .gauge svg { display: block; width: 100%; height: auto; }
+details.scope { font-size: 13.5px; color: var(--ink-2); }
+details.scope summary, details.working summary { cursor: pointer; color: var(--ink-2); font-weight: 500; padding: 4px 0; }
+details.scope ul { display: flex; flex-direction: column; gap: 6px; padding: 6px 0 2px 16px; list-style: square; max-width: 78ch; }
+
+/* cards */
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 3px; }
+.stage { display: flex; flex-direction: column; }
+.stage-head { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; justify-content: space-between; padding: 14px 18px 0; }
+.stage-head h2, .chain > h2 { font-family: var(--f-display); font-weight: 600; font-size: 24px; letter-spacing: 0.04em; text-transform: uppercase; line-height: 1.1; }
+.stage-head p { color: var(--ink-3); font-size: 13.5px; }
+.seg { display: inline-flex; border: 1.5px solid var(--ink); border-radius: 3px; overflow: hidden; }
+.seg button { min-height: 40px; padding: 6px 16px; background: transparent; border: 0; cursor: pointer; font-family: var(--f-display); font-weight: 600; font-size: 16px; letter-spacing: 0.06em; text-transform: uppercase; }
+.seg button + button { border-left: 1.5px solid var(--ink); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--surface); }
+.scroll-x { overflow-x: auto; }
+#stageSvg { display: block; width: 100%; min-width: 760px; height: auto; }
+.banner { margin: 10px 18px 0; padding: 8px 12px; border: 1px dashed var(--ink-3); border-radius: 3px; font-size: 13.5px; color: var(--ink-2); display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; justify-content: space-between; }
+.link-btn { background: none; border: 0; padding: 6px 2px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; font-weight: 500; }
+
+#stage3d { position: relative; }
+#gl { position: relative; height: 470px; margin: 8px 18px 0; background: var(--surface-2); border: 1px solid var(--line-2); border-radius: 3px; overflow: hidden; touch-action: pan-y; cursor: grab; }
+#gl.dragging { cursor: grabbing; }
+#gl canvas { display: block; width: 100%; height: 100%; }
+#gl .lbl { position: absolute; left: 0; top: 0; pointer-events: none; font-size: 12.5px; line-height: 1.25; padding: 2px 7px; background: var(--surface); border: 1px solid var(--line); border-radius: 2px; color: var(--ink); white-space: nowrap; transform: translate(-50%, -50%); }
+#gl .lbl.plain { background: transparent; border: 0; color: var(--ink-2); font-family: var(--f-display); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; font-size: 13px; }
+.gl-tools { position: absolute; left: 30px; top: 20px; display: flex; gap: 6px; flex-wrap: wrap; }
+.gl-tools button { min-height: 36px; padding: 4px 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 3px; cursor: pointer; font-size: 13px; }
+.gl-tools button[aria-pressed="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+.gl-badge { position: absolute; right: 30px; top: 20px; max-width: min(50ch, 55%); font-size: 12px; line-height: 1.35; color: var(--ink-2); background: var(--surface); border: 1px solid var(--line); border-radius: 3px; padding: 6px 10px; }
+.gl-fail { padding: 60px 20px; text-align: center; color: var(--ink-2); }
+
+.scrub { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 16px; align-items: center; padding: 14px 18px 4px; }
+.play { min-width: 96px; min-height: 44px; padding: 8px 14px; background: var(--ink); color: var(--surface); border: 0; border-radius: 3px; cursor: pointer; font-family: var(--f-display); font-weight: 600; font-size: 17px; letter-spacing: 0.06em; text-transform: uppercase; }
+.play:disabled { opacity: 0.4; cursor: default; }
+.track { position: relative; padding-top: 22px; min-width: 0; }
+.track input[type="range"] { width: 100%; margin: 0; accent-color: var(--ink); height: 28px; }
+.track .mark { position: absolute; top: 0; font-size: 11.5px; color: var(--ink-3); transform: translateX(-50%); white-space: nowrap; }
+.track .mark::after { content: ""; position: absolute; left: 50%; top: 17px; width: 1px; height: 8px; background: var(--ink-3); }
+.track .mark.end { transform: translateX(-100%); } .track .mark.end::after { left: 100%; }
+.track .mark.start { transform: none; } .track .mark.start::after { left: 0; }
+.scrub label { grid-column: 2; font-size: 13px; color: var(--ink-3); }
+.readout { display: flex; flex-wrap: wrap; gap: 0; border-top: 1px solid var(--line); margin-top: 14px; }
+.readout div { flex: 1 1 200px; min-width: 0; padding: 12px 18px; border-right: 1px solid var(--line-2); display: flex; flex-direction: column; gap: 2px; }
+.readout div:last-child { border-right: 0; }
+.readout .k { font-family: var(--f-display); font-weight: 600; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
+.readout .v { font-family: var(--f-num); font-size: 21px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.readout .v small { font-size: 13px; color: var(--ink-2); font-weight: 400; }
+.readout .s { font-size: 12.5px; color: var(--ink-3); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 20px; padding: 10px 18px 14px; font-size: 12.5px; color: var(--ink-2); border-top: 1px solid var(--line-2); }
+.legend li { display: flex; align-items: center; gap: 7px; }
+.legend svg { width: 22px; height: 12px; flex: none; }
+
+/* chain */
+.chain { display: flex; flex-direction: column; gap: 12px; }
+.chain > p { color: var(--ink-2); max-width: 78ch; }
+.steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+.step { display: flex; flex-direction: column; gap: 10px; padding: 16px; min-width: 0; position: relative; }
+.step-head { display: flex; align-items: baseline; gap: 10px; }
+.step-n { font-family: var(--f-display); font-weight: 600; font-size: 30px; line-height: 1; color: var(--ink-3); }
+.step-head h3 { font-family: var(--f-display); font-weight: 600; font-size: 21px; letter-spacing: 0.04em; text-transform: uppercase; line-height: 1.1; }
+.clause { margin-left: auto; font-family: var(--f-num); font-size: 11.5px; padding: 2px 7px; border: 1px solid var(--ink-3); border-radius: 2px; color: var(--ink-2); white-space: nowrap; }
+.io { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; font-size: 14px; padding: 8px 10px; background: var(--surface-2); border-radius: 2px; }
+.io .num { font-size: 17px; font-weight: 500; }
+.io .arrow { color: var(--ink-3); }
+.plot { position: relative; }
+.plot svg { display: block; width: 100%; height: auto; touch-action: pan-y; }
+.tip { position: absolute; pointer-events: none; font-size: 12px; line-height: 1.35; padding: 5px 8px; background: var(--ink); color: var(--surface); border-radius: 2px; white-space: nowrap; transform: translate(-50%, -100%); z-index: 2; }
+.tip b { font-family: var(--f-num); font-weight: 500; }
+.cap { font-size: 13px; color: var(--ink-2); }
+.eq { font-size: 14px; padding: 10px 12px; background: var(--surface-2); border-radius: 2px; white-space: normal; overflow-wrap: anywhere; }
+.thick { display: flex; flex-direction: column; gap: 2px; margin: 10px 18px 0; padding: 10px 12px; border: 1px dashed var(--ink-3); border-radius: 3px; }
+.thick label { font-size: 13px; color: var(--ink-2); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 10px; }
+.thick input { width: 100%; accent-color: var(--ink); height: 28px; margin: 0; }
+.thick .ends { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--ink-3); }
+details.working { font-size: 13px; border-top: 1px solid var(--line-2); padding-top: 4px; margin-top: auto; }
+details.working ol { display: flex; flex-direction: column; gap: 9px; padding: 6px 0 2px; }
+details.working li { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.wline { overflow-x: auto; white-space: nowrap; padding-bottom: 2px; color: var(--ink); }
+.src { font-size: 11.5px; color: var(--ink-3); }
+.src i { font-style: normal; font-family: var(--f-display); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; border: 1px solid var(--ink-3); border-radius: 2px; padding: 0 5px; margin-right: 6px; color: var(--ink-2); }
+table.plates { border-collapse: collapse; font-size: 12.5px; width: 100%; }
+table.plates th { text-align: right; font-weight: 500; color: var(--ink-3); padding: 3px 6px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+table.plates td { text-align: right; padding: 4px 6px; border-bottom: 1px solid var(--line-2); font-family: var(--f-num); font-variant-numeric: tabular-nums; white-space: nowrap; }
+table.plates th:first-child, table.plates td:first-child { text-align: left; font-family: var(--f-body); }
+table.plates tr.gov td { color: var(--ink); font-weight: 500; background: var(--surface-2); }
+.notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px 32px; padding-top: 18px; border-top: 2px solid var(--ink); font-size: 13.5px; color: var(--ink-2); }
+.notes h3 { font-family: var(--f-display); font-weight: 600; font-size: 16px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink); margin-bottom: 4px; }
+
+/* svg ink */
+svg text { font-family: var(--f-body); font-size: 12px; fill: var(--ink-2); }
+svg .t-s { font-size: 11px; fill: var(--ink-3); }
+svg .t-b { fill: var(--ink); font-weight: 600; }
+svg .t-n { font-family: var(--f-num); font-size: 11.5px; fill: var(--ink-2); }
+svg .t-v { font-family: var(--f-num); font-size: 13px; font-weight: 500; fill: var(--ink); }
+svg .t-h { font-family: var(--f-display); font-weight: 600; font-size: 14px; letter-spacing: 0.09em; text-transform: uppercase; fill: var(--ink-3); }
+svg .sy { font-family: var(--f-sym); font-style: italic; font-size: 13.5px; }
+.steel { fill: var(--steel); stroke: var(--steel-edge); stroke-width: 1.3; stroke-linejoin: round; }
+.dim { stroke: var(--ink-3); stroke-width: 1; fill: none; }
+.guide { stroke: var(--line); stroke-width: 1; stroke-dasharray: 3 4; fill: none; }
+.axis { stroke: var(--ink-2); stroke-width: 1.2; fill: none; }
+.grid { stroke: var(--line-2); stroke-width: 1; fill: none; }
+.ref { stroke: var(--ink-3); stroke-width: 1; stroke-dasharray: 2 4; fill: none; }
+.comp-f { fill: var(--comp-soft); stroke: var(--comp); stroke-width: 2; stroke-linejoin: round; }
+.tens-f { fill: var(--tens-soft); stroke: var(--tens); stroke-width: 2; stroke-linejoin: round; }
+.comp-s { fill: var(--comp); } .tens-s { fill: var(--tens); }
+.comp-h { fill: url(#hatchC); stroke: var(--comp-deep); stroke-width: 1.2; stroke-linejoin: round; }
+.tens-h { fill: url(#hatchT); stroke: var(--tens-deep); stroke-width: 1.2; stroke-linejoin: round; }
+.ink-h { fill: url(#hatchI); stroke: var(--ink-2); stroke-width: 1; }
+.epp { stroke: var(--ink); stroke-width: 1.3; stroke-dasharray: 5 4; fill: none; }
+.arr { stroke: var(--ink); stroke-width: 1.3; fill: none; } .arr-h { fill: var(--ink); stroke: none; }
+.curve { stroke: var(--ink); stroke-width: 2; fill: none; stroke-linejoin: round; stroke-linecap: round; }
+.curve.dash { stroke-dasharray: 6 5; }
+.curve.soft { stroke: var(--ink-3); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.band-a { fill: var(--surface-2); } .band-b { fill: var(--surface); } .band-x { fill: url(#hatchX); }
+.pt { stroke: var(--surface); stroke-width: 2; }
+.pt.ink { fill: var(--ink); } .pt.off { fill: var(--surface); stroke: var(--ink-3); stroke-width: 1.5; }
+.live { fill: var(--surface); stroke: var(--ink); stroke-width: 2.5; }
+.xhair { stroke: var(--ink-3); stroke-width: 1; }
+.plate-gov { stroke-width: 0; }
+@media (max-width: 640px) {
+  #gl { height: 360px; margin-inline: 10px; }
+  .gl-badge { position: static; max-width: none; margin: 8px 10px 0; }
+  .stage-head { padding-inline: 12px; } .scrub { padding-inline: 12px; } .legend { padding-inline: 12px; }
+  .readout div { padding-inline: 12px; }
+}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <pattern id="hatchC" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" style="fill:var(--comp-soft)"></rect><line x1="0" y1="0" x2="0" y2="6" style="stroke:var(--comp-deep);stroke-width:2.2"></line></pattern>
+    <pattern id="hatchT" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" style="fill:var(--tens-soft)"></rect><line x1="0" y1="0" x2="0" y2="6" style="stroke:var(--tens-deep);stroke-width:2.2"></line></pattern>
+    <pattern id="hatchI" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" style="fill:var(--surface-2)"></rect><line x1="0" y1="0" x2="0" y2="6" style="stroke:var(--ink-2);stroke-width:2"></line></pattern>
+    <pattern id="hatchX" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)"><rect width="7" height="7" style="fill:var(--surface-2)"></rect><line x1="0" y1="0" x2="0" y2="7" style="stroke:var(--line);stroke-width:1.5"></line></pattern>
+  </defs>
+</svg>
+
+<div class="page">
+  <header class="masthead">
+    <div class="brand">
+      <p class="eyebrow">EN 1993-1-4:2025 · Annex B · design prototype</p>
+      <h1>Section Stage</h1>
+      <p class="lede">The cross-section is the screen. Pick a load case, load the section up to its strain limit, and follow the three steps that give the resistance.</p>
+    </div>
+    <dl class="inputs" id="inputs"></dl>
+  </header>
+
+  <section class="verdict" aria-label="Load case and resistance">
+    <div class="cases">
+      <div class="case-row" role="tablist" aria-label="Load case" id="caseRow"></div>
+      <p class="case-inputs" id="caseInputs"></p>
+    </div>
+    <div class="result" id="result" aria-live="polite"></div>
+  </section>
+
+  <section class="stage card" aria-label="The section under load">
+    <div class="stage-head">
+      <div>
+        <h2 id="stageTitle">The section at its strain limit</h2>
+        <p id="stageSub"></p>
+      </div>
+      <div class="seg" role="group" aria-label="View">
+        <button type="button" id="view2d" aria-pressed="true">Drawing</button>
+        <button type="button" id="view3d" aria-pressed="false">3D cut</button>
+      </div>
+    </div>
+    <div class="banner" id="banner" hidden></div>
+    <div id="stage2d" class="scroll-x"><svg id="stageSvg" viewBox="0 0 1100 430" role="img" aria-labelledby="stageTitle"></svg></div>
+    <div id="stage3d" hidden>
+      <div id="gl" aria-label="3D view of the member cut at the section, with the stress block on the cut face. Drag to turn."></div>
+      <div class="gl-tools" role="group" aria-label="Camera">
+        <button type="button" data-cam="iso" aria-pressed="true">Iso</button>
+        <button type="button" data-cam="side" aria-pressed="false">Side</button>
+        <button type="button" data-cam="front" aria-pressed="false">Front</button>
+      </div>
+      <p class="gl-badge" id="glBadge"></p>
+    </div>
+    <div class="scrub">
+      <button type="button" class="play" id="play">Load it</button>
+      <div class="track" id="track">
+        <input type="range" id="scrub" min="0" max="15" step="0.05" value="15" aria-label="Strain at the extreme fibre, as a multiple of the yield strain">
+      </div>
+      <label for="scrub" id="scrubLabel">Strain at the extreme fibre, from zero to this section's limit</label>
+    </div>
+    <div class="thick" id="thickRow" hidden>
+      <label for="thick"><span>What if every thickness changed?</span><span class="num" id="thickVal"></span></label>
+      <input type="range" id="thick" min="0" max="1" step="1" value="0">
+      <div class="ends"><span>thinner, more slender</span><span id="thickNote"></span><span>thicker, stockier</span></div>
+    </div>
+    <div class="readout" id="readout"></div>
+    <ul class="legend" id="legend"></ul>
+  </section>
+
+  <section class="chain" aria-label="How the number is reached">
+    <h2>How the number is reached</h2>
+    <p id="chainLede"></p>
+    <div class="steps" id="steps"></div>
+  </section>
+
+  <footer class="notes">
+    <div><h3>Where the numbers come from</h3><p>Every value was returned by the stainless-csm engine for the app's Load example section and recorded on 2026-11-10. Curves are the engine's own chart points. Working lines are printed as the engine wrote them.</p></div>
+    <div><h3>What is drawn, not calculated</h3><p>The section outline is to scale from the typed dimensions. The stress block joins the engine's points on the B.4 curve; the resistance is the formula result, never an integral of the picture. The yield fibre follows from a straight strain line.</p></div>
+    <div><h3>Prototype shortcuts</h3><p>Inputs are fixed. While you drag, the page reads between recorded engine points. In the app, the engine would return each frame, and percentages would be engine values rather than a ratio of two of them.</p></div>
+  </footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function () {
+"use strict";
+const D = {"inputs":{"grade":"1.4301","family":"austenitic","fy":210.0,"fu":500.0,"E":200000.0,"source":"Table 5.1 – 1.4301","h":200,"b":100,"tw":5.6,"tf":8.5,"r":12,"fabrication":"rolled","omega":15,"nu":0.3,"gammaM0":1.1,"wEl":194300,"wPl":220600,"lambdaLT":0.15,"area":2848,"kSigmaC":{"web":4,"flange":0.43},"kSigmaB":{"web":23.9,"flange":0.43}},"material":{"epsY":0.00105,"Esh":3160.76,"ratioC1":55.2381,"sigmaC1":390.005,"ratioEnd":88.381,"EshOverE":0.0158038},"geometry":{"area":2848.42,"label":"computed from your dimensions: geometry, not a rule of EN 1993-1-4"},"baseCurve":[[0.1,15.0],[0.11255,15.0],[0.1251,15.0],[0.13766,15.0],[0.15021,15.0],[0.16276,15.0],[0.17531,15.0],[0.18787,15.0],[0.20042,15.0],[0.21297,15.0],[0.22552,15.0],[0.23808,15.0],[0.25063,15.0],[0.26318,15.0],[0.27573,15.0],[0.28828,15.0],[0.30084,15.0],[0.31339,15.0],[0.32594,14.146],[0.33849,12.347],[0.35105,10.83],[0.3636,9.5434],[0.37615,8.4457],[0.3887,7.5044],[0.40126,6.6931],[0.41381,5.9905],[0.42636,5.3795],[0.43891,4.846],[0.45146,4.3782],[0.46402,3.9666],[0.47657,3.6032],[0.48912,3.2813],[0.50167,2.9952],[0.51423,2.7402],[0.52678,2.5123],[0.53933,2.3081],[0.55188,2.1247],[0.56444,1.9594],[0.57699,1.8103],[0.58954,1.6753],[0.60209,1.5529],[0.61464,1.4418],[0.6272,1.3406],[0.63975,1.2483],[0.6523,1.1639],[0.66485,1.0867],[0.67741,1.016],[0.68996,0.99253],[0.70251,0.98282],[0.71506,0.97314],[0.72762,0.96351],[0.74017,0.95392],[0.75272,0.94441],[0.76527,0.93497],[0.77782,0.92562],[0.79038,0.91636],[0.80293,0.90719],[0.81548,0.89813],[0.82803,0.88918],[0.84059,0.88033],[0.85314,0.8716],[0.86569,0.86298],[0.87824,0.85447],[0.89079,0.84608],[0.90335,0.83781],[0.9159,0.82965],[0.92845,0.82161],[0.941,0.81369],[0.95356,0.80589],[0.96611,0.7982],[0.97866,0.79062],[0.99121,0.78316],[1.0038,0.77581],[1.0163,0.76857],[1.0289,0.76144],[1.0414,0.75442],[1.054,0.7475],[1.0665,0.74069],[1.0791,0.73399],[1.0916,0.72738],[1.1042,0.72088],[1.1167,0.71448],[1.1293,0.70817],[1.1418,0.70196],[1.1544,0.69585],[1.1669,0.68982],[1.1795,0.68389],[1.1921,0.67805],[1.2046,0.67229],[1.2172,0.66662],[1.2297,0.66103],[1.2423,0.65553],[1.2548,0.65011],[1.2674,0.64477],[1.2799,0.63951],[1.2925,0.63432],[1.305,0.62921],[1.3176,0.62418],[1.3301,0.61921],[1.3427,0.61432],[1.3552,0.6095],[1.3678,0.60475],[1.3803,0.60006],[1.3929,0.59544],[1.4054,0.59089],[1.418,0.5864],[1.4305,0.58197],[1.4431,0.5776],[1.4556,0.57329],[1.4682,0.56905],[1.4808,0.56486],[1.4933,0.56072],[1.5059,0.55665],[1.5184,0.55262],[1.531,0.54865],[1.5435,0.54474],[1.5561,0.54088],[1.5686,0.53706],[1.5812,0.5333],[1.5937,0.52959],[1.6,0.52775]],"limits":{"switch":0.68,"upper":1.6,"cap":15.0},"tension":{"ratio":15.0,"strain":0.01575,"stress":256.463,"resistance":664006.6,"governing":"15","notes":["B.2 requires the B.5 cross-section slenderness limits; they were not checked because only the area was given."],"steps":{"limit":[{"symbol":"C₁ε_u/ε_y","line":"C₁ε_u/ε_y = C₁ε_u / ε_y = 0.058 / 0.00105 = 55.238","clause":"B.4","kind":"code","cite":"EN 1993-1-4:2025, Formulae (B.6), (B.7) and (B.14) (the ratio C₁ε_u / ε_y)"},{"symbol":"ε_csm,t/ε_y","line":"ε_csm,t/ε_y = min{15 ; C₁ε_u / ε_y} = min{15 ; 55.2381} = 15","clause":"B.6.1","kind":"code","cite":"EN 1993-1-4:2025, B.6.1(1), Formula (B.14)"},{"symbol":"ε_csm,t","line":"ε_csm,t = (ε_csm,t / ε_y) × ε_y = 15 × 0.00105 = 0.01575","clause":"B.6.1","kind":"code","cite":"EN 1993-1-4:2025, B.6.1(1), Formula (B.14), with ε_y from B.4(1)"}],"stress":[{"symbol":"ε_y","line":"ε_y = f_y / E = 210 / 200000 = 0.00105","clause":"B.4","kind":"code","cite":"EN 1993-1-4:2025, B.4(1), Figure B.1 (ε_y = f_y / E)"},{"symbol":"ε_u","line":"ε_u = C₃ (1 − f_y / f_u) = 1 × (1 − 210 / 500) = 0.58","clause":"B.4","kind":"code","cite":"EN 1993-1-4:2025, B.4(1), Formula (B.5)"},{"symbol":"E_sh","line":"E_sh = (f_u − f_y) / (C₂ε_u − ε_y) = (500 − 210) / (0.16 × 0.58 − 0.00105) = 3 160.8 N/mm²","clause":"B.4","kind":"code","cite":"EN 1993-1-4:2025, B.4(1), Formula (B.4)"},{"symbol":"f_csm,t","line":"f_csm,t = f_y + E_sh ε_y (ε_csm,t/ε_y − 1) = 210 + 3160.76 × 0.00105 × (15 − 1) = 256.46 N/mm²","clause":"B.6.1","kind":"code","cite":"EN 1993-1-4:2025, B.6.1(1), Formula (B.13)"}],"resistance":[{"symbol":"N_csm,t,Rd","line":"N_csm,t,Rd = A f_csm,t / γ_M0 = 2848 × 256.463 / 1.1 = 664 006.6 N","clause":"B.6.1","kind":"code","cite":"EN 1993-1-4:2025, B.6.1(1), Formula (B.12)"}]}},"compression":{"ratio":3.41109,"strain":0.00358165,"stress":218.002,"resistance":564426.8,"formula":"B.16","lambda":0.483877,"sigmaCr":896.91,"governing":"web","capped":false,"rawRatio":3.41109,"plates":[{"label":"web","width":159.0,"thickness":5.6,"width_to_thickness":28.393,"k_sigma":4.0,"sigma_cr":896.91,"slenderness":0.48388,"governing":true,"role":"web","plate_type":"internal","c_source":"c as drawn in Table 7.2 (between the fillet toes)"},{"label":"flange","width":35.2,"thickness":8.5,"width_to_thickness":4.1412,"k_sigma":0.43,"sigma_cr":4532.4,"slenderness":0.21525,"governing":false,"role":"flange","plate_type":"outstand","c_source":"c as drawn in Table 7.3 (from the fillet toe to the free edge)"}],"notes":["The flat width c of each plate is derived from the section dimensions as 8.2.2(5) and Tables 7.2 to 7.4 draw it; the working names the source of each. The buckling factor k_σ of each plate is your input.","σ_cr,cs is taken as the critical stress of the most slender plate, which is conservative (B.5.2(3)); a numerical value is usually higher. The buckling factor k_σ of each plate is your input.","This is the cross-section resistance of B.6.2. Member buckling (8.3) is outside Annex B and is not checked."],"normalised":1.0381,"capNormalised":1.22125,"capacity16":[[0.1,1.2213],[0.10628,1.2213],[0.11255,1.2213],[0.11883,1.2213],[0.1251,1.2213],[0.13138,1.2213],[0.13766,1.2213],[0.14393,1.2213],[0.15021,1.2213],[0.15649,1.2213],[0.16276,1.2213],[0.16904,1.2213],[0.17531,1.2213],[0.18159,1.2213],[0.18787,1.2213],[0.19414,1.2213],[0.20042,1.2213],[0.20669,1.2213],[0.21297,1.2213],[0.21925,1.2213],[0.22552,1.2213],[0.2318,1.2213],[0.23808,1.2213],[0.24435,1.2213],[0.25063,1.2213],[0.2569,1.2213],[0.26318,1.2213],[0.26946,1.2213],[0.27573,1.2213],[0.28201,1.2213],[0.28828,1.2213],[0.29456,1.2213],[0.30084,1.2213],[0.30711,1.2213],[0.31339,1.2213],[0.31967,1.2213],[0.32594,1.2078],[0.33222,1.1929],[0.33849,1.1793],[0.34477,1.1668],[0.35105,1.1554],[0.35732,1.1448],[0.3636,1.135],[0.36987,1.126],[0.37615,1.1177],[0.38243,1.11],[0.3887,1.1028],[0.39498,1.0961],[0.40126,1.09],[0.40753,1.0842],[0.41381,1.0789],[0.42008,1.0739],[0.42636,1.0692],[0.43264,1.0649],[0.43891,1.0608],[0.44519,1.057],[0.45146,1.0534],[0.45774,1.05],[0.46402,1.0469],[0.47029,1.0439],[0.47657,1.0411],[0.48285,1.0385],[0.48912,1.0361],[0.4954,1.0337],[0.50167,1.0315],[0.50795,1.0295],[0.51423,1.0275],[0.5205,1.0257],[0.52678,1.0239],[0.53305,1.0222],[0.53933,1.0207],[0.54561,1.0192],[0.55188,1.0178],[0.55816,1.0164],[0.56444,1.0152],[0.57071,1.014],[0.57699,1.0128],[0.58326,1.0117],[0.58954,1.0107],[0.59582,1.0097],[0.60209,1.0087],[0.60837,1.0078],[0.61464,1.007],[0.62092,1.0062],[0.6272,1.0054],[0.63347,1.0046],[0.63975,1.0039],[0.64603,1.0032],[0.6523,1.0026],[0.65858,1.002],[0.66485,1.0014],[0.67113,1.0008],[0.67741,1.0003],[0.68031,1.0]],"capacity15":[[0.68031,1.0],[0.68996,0.99253],[0.70251,0.98282],[0.71506,0.97314],[0.72762,0.96351],[0.74017,0.95392],[0.75272,0.94441],[0.76527,0.93497],[0.77782,0.92562],[0.79038,0.91636],[0.80293,0.90719],[0.81548,0.89813],[0.82803,0.88918],[0.84059,0.88033],[0.85314,0.8716],[0.86569,0.86298],[0.87824,0.85447],[0.89079,0.84608],[0.90335,0.83781],[0.9159,0.82965],[0.92845,0.82161],[0.941,0.81369],[0.95356,0.80589],[0.96611,0.7982],[0.97866,0.79062],[0.99121,0.78316],[1.0038,0.77581],[1.0163,0.76857],[1.0289,0.76144],[1.0414,0.75442],[1.054,0.7475],[1.0665,0.74069],[1.0791,0.73399],[1.0916,0.72738],[1.1042,0.72088],[1.1167,0.71448],[1.1293,0.70817],[1.1418,0.70196],[1.1544,0.69585],[1.1669,0.68982],[1.1795,0.68389],[1.1921,0.67805],[1.2046,0.67229],[1.2172,0.66662],[1.2297,0.66103],[1.2423,0.65553],[1.2548,0.65011],[1.2674,0.64477],[1.2799,0.63951],[1.2925,0.63432],[1.305,0.62921],[1.3176,0.62418],[1.3301,0.61921],[1.3427,0.61432],[1.3552,0.6095],[1.3678,0.60475],[1.3803,0.60006],[1.3929,0.59544],[1.4054,0.59089],[1.418,0.5864],[1.4305,0.58197],[1.4431,0.5776],[1.4556,0.57329],[1.4682,0.56905],[1.4808,0.56486],[1.4933,0.56072],[1.5059,0.55665],[1.5184,0.55262],[1.531,0.54865],[1.5435,0.54474],[1.5561,0.54088],[1.5686,0.53706],[1.5812,0.5333],[1.5937,0.52959],[1.6,0.52775]],"steps":{"limit":[{"symbol":"c_w","line":"c_w = h − 2 t_f − 2 r = 200 − 2 × 8.5 − 2 × 12 = 159 mm","clause":"8.2.2(5)","kind":"code","cite":"EN 1993-1-4:2025, 8.2.2(5) and Table 7.2 (c as drawn for I-sections)"},{"symbol":"c_f","line":"c_f = (b − t_w − 2 r) / 2 = (100 − 5.6 − 2 × 12) / 2 = 35.2 mm","clause":"8.2.2(5)","kind":"code","cite":"EN 1993-1-4:2025, 8.2.2(5) and Table 7.3 (c as drawn for I-sections)"},{"symbol":"σ_cr,p [web]","line":"σ_cr,p [web] = k_σ π² E t² / (12 (1 − ν²) b²) = 896.91 = 896.91 N/mm²","clause":"B.5.2","kind":"code","cite":"EN 1993-1-4:2025, B.5.2(3), Formula (B.9)"},{"symbol":"λ_p [web]","line":"λ_p [web] = √(f_y / σ_cr,p) = 0.483877 = 0.48388","clause":"B.5.2","kind":"code","cite":"EN 1993-1-4:2025, 8.2.2(5), Formula (8.5)"},{"symbol":"σ_cr,p [flange]","line":"σ_cr,p [flange] = k_σ π² E t² / (12 (1 − ν²) b²) = 4532.4 = 4 532.4 N/mm²","clause":"B.5.2","kind":"code","cite":"EN 1993-1-4:2025, B.5.2(3), Formula (B.9)"},{"symbol":"λ_p [flange]","line":"λ_p [flange] = √(f_y / σ_cr,p) = 0.215251 = 0.21525","clause":"B.5.2","kind":"code","cite":"EN 1993-1-4:2025, 8.2.2(5), Formula (8.5)"},{"symbol":"σ_cr,cs","line":"σ_cr,cs = min σ_cr,p = 896.91 = 896.91 N/mm²","clause":"B.5.2","kind":"code","cite":"EN 1993-1-4:2025, B.5.2(3)"},{"symbol":"λ_p,cs","line":"λ_p,cs = √(f_y / σ_cr,cs) = 0.483877 = 0.48388","clause":"B.5.2","kind":"code","cite":"EN 1993-1-4:2025, B.5.2(1), Formula (B.8)"},{"symbol":"min(Ω, C₁ε_u/ε_y)","line":"min(Ω, C₁ε_u/ε_y) = min{Ω ; C₁ε_u / ε_y} = min{15 ; 55.2381} = 15","clause":"B.5.1","kind":"code","cite":"EN 1993-1-4:2025, B.5.1(1), Formula (B.6): the limit min(Ω, C₁ε_u/ε_y), Ω (typed) as defined in 7.4.3.5"},{"symbol":"(ε_csm/ε_y) base curve","line":"(ε_csm/ε_y) base curve = 0.25 / λ^3.6 = λ = 0.483877 = 3.4111","clause":"B.5.1","kind":"code","cite":"EN 1993-1-4:2025, B.5.1(1), Formula (B.6)"},{"symbol":"ε_csm/ε_y","line":"ε_csm/ε_y = min{base curve ; cap} = min{3.41109 ; 15} = 3.4111","clause":"B.5.1","kind":"code","cite":"EN 1993-1-4:2025, B.5.1(1), Formula (B.6)"},{"symbol":"ε_csm","line":"ε_csm = (ε_csm / ε_y) × ε_y = 3.41109 × 0.00105 = 0.003582","clause":"B.5.1","kind":"code","cite":"EN 1993-1-4:2025, B.5.1(1), Formula (B.6), with ε_y from B.4(1)"}],"stress":[{"symbol":"ε_y","line":"ε_y = f_y / E = 210 / 200000 = 0.00105","clause":"B.4","kind":"code","cite":"EN 1993-1-4:2025, B.4(1), Figure B.1 (ε_y = f_y / E)"},{"symbol":"ε_u","line":"ε_u = C₃ (1 − f_y / f_u) = 1 × (1 − 210 / 500) = 0.58","clause":"B.4","kind":"code","cite":"EN 1993-1-4:2025, B.4(1), Formula (B.5)"},{"symbol":"E_sh","line":"E_sh = (f_u − f_y) / (C₂ε_u − ε_y) = (500 − 210) / (0.16 × 0.58 − 0.00105) = 3 160.8 N/mm²","clause":"B.4","kind":"code","cite":"EN 1993-1-4:2025, B.4(1), Formula (B.4)"},{"symbol":"f_csm","line":"f_csm = f_y + E_sh ε_y (ε_csm/ε_y − 1) = 210 + 3160.76 × 0.00105 × (3.41109 − 1) = 218 N/mm²","clause":"B.6.2","kind":"code","cite":"EN 1993-1-4:2025, B.6.2(1), Formula (B.17)"}],"resistance":[{"symbol":"ε_csm/ε_y vs 1","line":"ε_csm/ε_y vs 1 = ε_csm/ε_y < 1.0: B.15;  ε_csm/ε_y ≥ 1.0: B.16 = 3.41109 ≥ 1.0, so B.16 = 3.4111","clause":"B.6.2","kind":"code","cite":"EN 1993-1-4:2025, B.6.2(1), Formulae (B.15) and (B.16)"},{"symbol":"N_csm,Rd","line":"N_csm,Rd = A f_csm / γ_M0 = 2848 × 218.002 / 1.1 = 564 426.8 N","clause":"B.6.2","kind":"code","cite":"EN 1993-1-4:2025, B.6.2(1), Formula (B.16)"}]}},"bending":{"ratio":15.0,"strain":0.01575,"resistance":50299320.0,"formula":"B.20","alpha":2.0,"lambda":0.215251,"sigmaCr":4532.4,"governing":"flange","capped":true,"rawRatio":62.9993,"mEl":37093640.0,"mPl":42114550.0,"plates":[{"label":"web","width":159.0,"thickness":5.6,"width_to_thickness":28.393,"k_sigma":23.9,"sigma_cr":5359.0,"slenderness":0.19795,"governing":false,"role":"web","plate_type":"internal","c_source":"c as drawn in Table 7.2 (between the fillet toes)"},{"label":"flange","width":35.2,"thickness":8.5,"width_to_thickness":4.1412,"k_sigma":0.43,"sigma_cr":4532.4,"slenderness":0.21525,"governing":true,"role":"flange","plate_type":"outstand","c_source":"c as drawn in Table 7.3 (from the fillet toe to the free edge)"}],"notes":["The flat width c of each plate is derived from the section dimensions as 8.2.2(5) and Tables 7.2 to 7.4 draw it; the working names the source of each. The buckling factor k_σ of each plate is your input.","σ_cr,cs is taken as the critical stress of the most slender plate, which is conservative (B.5.2(3)); a numerical value is usually higher. The buckling factor k_σ of each plate is your input.","This is the cross-section resistance of B.6.3.2. Lateral-torsional buckling (8.3) is outside Annex B and is not checked: λ_LT is the value you give."],"blockStrain":[[0.0,-1.0],[-15.0,-1.0],[-1.0,-0.0666667],[1.0,0.0666667],[15.0,1.0],[0.0,1.0]],"blockStress":[[0.0,-1.0],[-256.463,-1.0],[-210.0,-0.0666667],[210.0,0.0666667],[256.463,1.0],[0.0,1.0]],"moment19":[[0.02,0.74187],[0.082678,3.0668],[0.14536,5.3918],[0.20803,7.7167],[0.27071,10.042],[0.33339,12.367],[0.39607,14.692],[0.45874,17.017],[0.52142,19.341],[0.5841,21.666],[0.64678,23.991],[0.70946,26.316],[0.77213,28.641],[0.83481,30.966],[0.89749,33.291],[0.96017,35.616],[1.0,37.094]],"moment20":[[1.0,37.094],[1.0855,37.904],[1.2109,38.814],[1.3362,39.5],[1.4616,40.035],[1.5869,40.465],[1.7123,40.82],[1.8377,41.119],[1.963,41.376],[2.0884,41.601],[2.2137,41.802],[2.3391,41.982],[2.4644,42.146],[2.5898,42.298],[2.7151,42.439],[2.8405,42.571],[2.9659,42.696],[3.0912,42.815],[3.2166,42.929],[3.3419,43.038],[3.4673,43.143],[3.5926,43.245],[3.718,43.345],[3.8433,43.441],[3.9687,43.536],[4.0941,43.629],[4.2194,43.72],[4.3448,43.809],[4.4701,43.898],[4.5955,43.985],[4.7208,44.07],[4.8462,44.155],[4.9715,44.24],[5.0969,44.323],[5.2223,44.406],[5.3476,44.488],[5.473,44.569],[5.5983,44.65],[5.7237,44.73],[5.849,44.81],[5.9744,44.89],[6.0997,44.969],[6.2251,45.048],[6.3505,45.127],[6.4758,45.205],[6.6012,45.283],[6.7265,45.361],[6.8519,45.438],[6.9772,45.515],[7.1026,45.592],[7.2279,45.669],[7.3533,45.746],[7.4787,45.823],[7.604,45.899],[7.7294,45.975],[7.8547,46.052],[7.9801,46.128],[8.1054,46.203],[8.2308,46.279],[8.3562,46.355],[8.4815,46.431],[8.6069,46.506],[8.7322,46.581],[8.8576,46.657],[8.9829,46.732],[9.1083,46.807],[9.2336,46.882],[9.359,46.957],[9.4844,47.032],[9.6097,47.107],[9.7351,47.182],[9.8604,47.257],[9.9858,47.332],[10.111,47.407],[10.236,47.481],[10.362,47.556],[10.487,47.63],[10.613,47.705],[10.738,47.78],[10.863,47.854],[10.989,47.929],[11.114,48.003],[11.239,48.077],[11.365,48.152],[11.49,48.226],[11.615,48.3],[11.741,48.375],[11.866,48.449],[11.991,48.523],[12.117,48.597],[12.242,48.671],[12.368,48.746],[12.493,48.82],[12.618,48.894],[12.744,48.968],[12.869,49.042],[12.994,49.116],[13.12,49.19],[13.245,49.264],[13.37,49.338],[13.496,49.412],[13.621,49.486],[13.746,49.56],[13.872,49.634],[13.997,49.708],[14.123,49.782],[14.248,49.856],[14.373,49.93],[14.499,50.004],[14.624,50.078],[14.749,50.152],[14.875,50.225],[15.0,50.299]],"tableB2":[{"section":"I-section","section_type":"I-section","axis":"major","aspect_ratio":"Any","alpha":2.0,"selected":true}],"steps":{"limit":[{"symbol":"c_w","line":"c_w = h − 2 t_f − 2 r = 200 − 2 × 8.5 − 2 × 12 = 159 mm","clause":"8.2.2(5)","kind":"code","cite":"EN 1993-1-4:2025, 8.2.2(5) and Table 7.2 (c as drawn for I-sections)"},{"symbol":"c_f","line":"c_f = (b − t_w − 2 r) / 2 = (100 − 5.6 − 2 × 12) / 2 = 35.2 mm","clause":"8.2.2(5)","kind":"code","cite":"EN 1993-1-4:2025, 8.2.2(5) and Table 7.3 (c as drawn for I-sections)"},{"symbol":"σ_cr,p [web]","line":"σ_cr,p [web] = k_σ π² E t² / (12 (1 − ν²) b²) = 5359.04 = 5 359.0 N/mm²","clause":"B.5.2","kind":"code","cite":"EN 1993-1-4:2025, B.5.2(3), Formula (B.9)"},{"symbol":"λ_p [web]","line":"λ_p [web] = √(f_y / σ_cr,p) = 0.197955 = 0.19795","clause":"B.5.2","kind":"code","cite":"EN 1993-1-4:2025, 8.2.2(5), Formula (8.5)"},{"symbol":"σ_cr,p [flange]","line":"σ_cr,p [flange] = k_σ π² E t² / (12 (1 − ν²) b²) = 4532.4 = 4 532.4 N/mm²","clause":"B.5.2","kind":"code","cite":"EN 1993-1-4:2025, B.5.2(3), Formula (B.9)"},{"symbol":"λ_p [flange]","line":"λ_p [flange] = √(f_y / σ_cr,p) = 0.215251 = 0.21525","clause":"B.5.2","kind":"code","cite":"EN 1993-1-4:2025, 8.2.2(5), Formula (8.5)"},{"symbol":"σ_cr,cs","line":"σ_cr,cs = min σ_cr,p = 4532.4 = 4 532.4 N/mm²","clause":"B.5.2","kind":"code","cite":"EN 1993-1-4:2025, B.5.2(3)"},{"symbol":"λ_p,cs","line":"λ_p,cs = √(f_y / σ_cr,cs) = 0.215251 = 0.21525","clause":"B.5.2","kind":"code","cite":"EN 1993-1-4:2025, B.5.2(1), Formula (B.8)"},{"symbol":"min(Ω, C₁ε_u/ε_y)","line":"min(Ω, C₁ε_u/ε_y) = min{Ω ; C₁ε_u / ε_y} = min{15 ; 55.2381} = 15","clause":"B.5.1","kind":"code","cite":"EN 1993-1-4:2025, B.5.1(1), Formula (B.6): the limit min(Ω, C₁ε_u/ε_y), Ω (typed) as defined in 7.4.3.5"},{"symbol":"(ε_csm/ε_y) base curve","line":"(ε_csm/ε_y) base curve = 0.25 / λ^3.6 = λ = 0.215251 = 62.999","clause":"B.5.1","kind":"code","cite":"EN 1993-1-4:2025, B.5.1(1), Formula (B.6)"},{"symbol":"ε_csm/ε_y","line":"ε_csm/ε_y = min{base curve ; cap} = min{62.9993 ; 15} = 15","clause":"B.5.1","kind":"code","cite":"EN 1993-1-4:2025, B.5.1(1), Formula (B.6)"},{"symbol":"ε_csm","line":"ε_csm = (ε_csm / ε_y) × ε_y = 15 × 0.00105 = 0.01575","clause":"B.5.1","kind":"code","cite":"EN 1993-1-4:2025, B.5.1(1), Formula (B.6), with ε_y from B.4(1)"}],"stress":[{"symbol":"ε_y","line":"ε_y = f_y / E = 210 / 200000 = 0.00105","clause":"B.4","kind":"code","cite":"EN 1993-1-4:2025, B.4(1), Figure B.1 (ε_y = f_y / E)"},{"symbol":"ε_u","line":"ε_u = C₃ (1 − f_y / f_u) = 1 × (1 − 210 / 500) = 0.58","clause":"B.4","kind":"code","cite":"EN 1993-1-4:2025, B.4(1), Formula (B.5)"},{"symbol":"E_sh","line":"E_sh = (f_u − f_y) / (C₂ε_u − ε_y) = (500 − 210) / (0.16 × 0.58 − 0.00105) = 3 160.8 N/mm²","clause":"B.4","kind":"code","cite":"EN 1993-1-4:2025, B.4(1), Formula (B.4)"},{"symbol":"E_sh/E","line":"E_sh/E = E_sh / E = 3160.76 / 200000 = 0.015804","clause":"B.4","kind":"code","cite":"EN 1993-1-4:2025, B.6.3.2(1), Formula (B.20) (the ratio E_sh / E)"}],"resistance":[{"symbol":"λ_LT","line":"λ_LT = λ_LT ≤ 0.2: B.19 or B.20 = 0.15 ≤ 0.2 = 0.15","clause":"B.6.3.1","kind":"input","cite":"Entered by the user (member design); B.6.3.1(1) applies λ_LT ≤ 0.2"},{"symbol":"α","line":"α = 2   (Table B.2: I-section, major axis: α = 2)","clause":"B.6.3.2","kind":"code","cite":"EN 1993-1-4:2025, B.6.3.2(1), Table B.2"},{"symbol":"M_el","line":"M_el = W_el f_y / γ_M0 = 194300 × 210 / 1.1 = 3.709e+07 N mm","clause":"B.6.3.2","kind":"code","cite":"EN 1993-1-4:2025, B.6.3.2(1), Formula (B.19) at ε_csm/ε_y = 1.0"},{"symbol":"M_pl","line":"M_pl = W_pl f_y / γ_M0 = 220600 × 210 / 1.1 = 4.211e+07 N mm","clause":"B.6.3.2","kind":"code","cite":"EN 1993-1-4:2025, B.6.3.2(1), Formula (B.20), the factor W_pl f_y / γ_M0"},{"symbol":"ε_csm/ε_y vs 1","line":"ε_csm/ε_y vs 1 = ε_csm/ε_y < 1.0: B.19;  ε_csm/ε_y ≥ 1.0: B.20 = 15 ≥ 1.0, so B.20 = 15","clause":"B.6.3.2","kind":"code","cite":"EN 1993-1-4:2025, B.6.3.2(1), Formulae (B.19) and (B.20)"},{"symbol":"M_csm,c,Rd","line":"M_csm,c,Rd = (W_pl f_y / γ_M0) [1 + (E_sh/E)(W_el/W_pl)(ε_csm/ε_y − 1) − (1 − W_el/W_pl)(ε_csm/ε_y)^−α] = (220600 × 210 / 1.1) [1 + 0.0158038 × 0.88078 × (15 − 1) − (1 − 0.88078) / 15^2] = 5.03e+07 N mm","clause":"B.6.3.2","kind":"code","cite":"EN 1993-1-4:2025, B.6.3.2(1), Formula (B.20)"}]}},"sweep":[[0.22699,2.3079,"not_allowed",null,null,null],[0.23305,2.2465,"not_allowed",null,null,null],[0.23928,2.1867,"not_allowed",null,null,null],[0.24567,2.1285,"not_allowed",null,null,null],[0.25223,2.0718,"not_allowed",null,null,null],[0.25897,2.0165,"not_allowed",null,null,null],[0.26588,1.9627,"not_allowed",null,null,null],[0.27298,1.9103,"not_allowed",null,null,null],[0.28028,1.8593,"not_allowed",null,null,null],[0.28776,1.8096,"not_allowed",null,null,null],[0.29545,1.7612,"not_allowed",null,null,null],[0.30334,1.714,"not_allowed",null,null,null],[0.31144,1.6681,"not_allowed",null,null,null],[0.31976,1.6233,"not_allowed",null,null,null],[0.32427,1.6,"slender",0.52775,110.83,null],[0.32427,1.6,"slender",0.52775,110.83,"limit"],[0.3283,1.5798,"slender",0.53372,112.08,null],[0.33706,1.5373,"slender",0.54667,114.8,null],[0.34607,1.496,"slender",0.55985,117.57,null],[0.35531,1.4557,"slender",0.57327,120.39,null],[0.3648,1.4165,"slender",0.58692,123.25,null],[0.37454,1.3783,"slender",0.60081,126.17,null],[0.38455,1.3411,"slender",0.61493,129.13,null],[0.39482,1.3049,"slender",0.62927,132.15,null],[0.40536,1.2696,"slender",0.64383,135.2,null],[0.41619,1.2352,"slender",0.65861,138.31,null],[0.4273,1.2017,"slender",0.6736,141.46,null],[0.43872,1.1691,"slender",0.68878,144.64,null],[0.45043,1.1374,"slender",0.70416,147.87,null],[0.46246,1.1064,"slender",0.71973,151.14,null],[0.47482,1.0763,"slender",0.73546,154.45,null],[0.4875,1.047,"slender",0.75135,157.78,null],[0.50052,1.0184,"slender",0.76739,161.15,null],[0.51388,0.99055,"slender",0.78355,164.55,null],[0.52761,0.96343,"slender",0.79983,167.96,null],[0.5417,0.93703,"slender",0.81619,171.4,null],[0.55617,0.9113,"slender",0.83262,174.85,null],[0.57102,0.88625,"slender",0.8491,178.31,null],[0.58627,0.86185,"slender",0.8656,181.78,null],[0.60193,0.83809,"slender",0.88208,185.24,null],[0.61801,0.81494,"slender",0.89852,188.69,null],[0.63451,0.79239,"slender",0.91488,192.12,null],[0.65146,0.77044,"slender",0.93111,195.53,null],[0.66886,0.74905,"slender",0.94719,198.91,null],[0.68672,0.72822,"slender",0.96305,202.24,null],[0.70507,0.70793,"slender",0.97864,205.51,null],[0.7239,0.68817,"slender",0.99392,208.72,null],[0.73198,0.68,"slender",1.0002,210.0,null],[0.73198,0.68,"slender",1.0002,210.0,"yield"],[0.74323,0.66892,"stocky",1.0632,210.21,null],[0.76308,0.65017,"stocky",1.1777,210.59,null],[0.78346,0.63191,"stocky",1.3049,211.01,null],[0.80439,0.61413,"stocky",1.4461,211.48,null],[0.82587,0.59681,"stocky",1.603,212.0,null],[0.84793,0.57994,"stocky",1.7773,212.58,null],[0.87057,0.56351,"stocky",1.9711,213.22,null],[0.89383,0.5475,"stocky",2.1865,213.94,null],[0.9177,0.53191,"stocky",2.4261,214.73,null],[0.94221,0.51673,"stocky",2.6927,215.62,null],[0.96737,0.50194,"stocky",2.9894,216.6,null],[0.99321,0.48754,"stocky",3.3197,217.7,null],[1.0,0.48388,"stocky",3.4111,218.0,null],[1.0,0.48388,"stocky",3.4111,218.0,"yours"],[1.0197,0.47351,"stocky",3.6877,218.92,null],[1.047,0.45985,"stocky",4.0976,220.28,null],[1.0749,0.44654,"stocky",4.5545,221.8,null],[1.1036,0.43358,"stocky",5.0641,223.49,null],[1.1331,0.42095,"stocky",5.6325,225.37,null],[1.1634,0.40866,"stocky",6.2668,227.48,null],[1.1945,0.39668,"stocky",6.9751,229.83,null],[1.2264,0.38502,"stocky",7.7664,232.46,null],[1.2591,0.37365,"stocky",8.6506,235.39,null],[1.2927,0.36259,"stocky",9.6394,238.67,null],[1.3273,0.35181,"stocky",10.746,242.34,null],[1.3627,0.34131,"stocky",11.984,246.45,null],[1.3991,0.33109,"stocky",13.37,251.05,null],[1.4365,0.32113,"stocky",14.924,256.21,null],[1.4382,0.32068,"stocky",15.0,256.46,null],[1.4382,0.32068,"stocky",15.0,256.46,"capped"],[1.4748,0.31143,"stocky",15.0,256.46,null],[1.5142,0.30198,"stocky",15.0,256.46,null],[1.5547,0.29278,"stocky",15.0,256.46,null],[1.5962,0.28382,"stocky",15.0,256.46,null],[1.6388,0.27509,"stocky",15.0,256.46,null],[1.6826,0.26659,"stocky",15.0,256.46,null],[1.7275,0.25831,"stocky",15.0,256.46,null],[1.7737,0.25024,"stocky",15.0,256.46,null],[1.8211,0.24239,"stocky",15.0,256.46,null],[1.8697,0.23474,"stocky",15.0,256.46,null]],"sweepRefs":[{"key":"capped","label":"Cap just reached","factor":1.4382},{"key":"yours","label":"Your section","factor":1.0},{"key":"yield","label":"Strain limit down to yield","factor":0.73198},{"key":"limit","label":"Thinnest allowed","factor":0.32427}],"sweepNote":"Every thickness is multiplied by one factor; widths, diameter and k_σ stay as entered. Each point is a full B.5 calculation on the same B.4 material."};
+const I = D.inputs, MAT = D.material;
+const $ = (s, r) => (r || document).querySelector(s);
+const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const nf = (v, d) => Number(v).toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d }).replace(/,/g, " ");
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+
+/* ---------- symbols: "f_csm,t" -> f with a subscript ---------- */
+const SUB = /_([A-Za-z0-9σ]+(?:,[A-Za-z0-9]+)*)/g;
+function symHtml(s) { return esc(s).replace(SUB, "<sub>$1</sub>"); }
+function S(s) { return '<span class="sym">' + symHtml(s) + "</span>"; }
+/* svg text: parts are [text, "sy" | "t-v" | ""], subscripts become shifted tspans */
+function svgRun(parts) {
+  let out = "", down = false;
+  for (const [text, cls] of parts) {
+    let last = 0, m; SUB.lastIndex = 0;
+    const push = (t, sub) => {
+      if (!t) return;
+      const dy = sub ? (down ? 0 : 3) : (down ? -3 : 0);
+      down = sub;
+      out += "<tspan" + (cls ? ' class="' + cls + '"' : "") + (dy ? ' dy="' + dy + '"' : "") + (sub ? ' font-size="9.5"' : "") + ">" + esc(t) + "</tspan>";
+    };
+    while ((m = SUB.exec(text))) { push(text.slice(last, m.index), false); push(m[1], true); last = SUB.lastIndex; }
+    push(text.slice(last), false);
+  }
+  return out;
+}
+const txt = (x, y, parts, attrs) => '<text x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '"' + (attrs || "") + ">" + (typeof parts === "string" ? esc(parts) : svgRun(parts)) + "</text>";
+
+/* ---------- engine curves ---------- */
+function interp(pts, x) {
+  if (x <= pts[0][0]) return pts[0][1];
+  for (let i = 1; i < pts.length; i++) {
+    if (x <= pts[i][0]) { const a = pts[i - 1], b = pts[i]; return a[1] + (b[1] - a[1]) * (x - a[0]) / ((b[0] - a[0]) || 1); }
+  }
+  return pts[pts.length - 1][1];
+}
+/* stress on the B.4 curve, between the engine's points (0,0), (1, f_y), (C1 eps_u / eps_y, sigma there) */
+const MATPTS = [[0, 0], [1, I.fy], [MAT.ratioC1, MAT.sigmaC1]];
+const stressAt = (r) => Math.sign(r) * interp(MATPTS, Math.abs(r));
+const M19 = [[0, 0]].concat(D.bending.moment19), M20 = D.bending.moment20;
+const momentAt = (r) => (r < 1 ? interp(M19, r) : interp(M20, r));
+const NY = D.compression.resistance / D.compression.normalised;          // A f_y / gamma_M0, from two engine values
+const SW = D.sweep, YOURS = SW.findIndex((p) => p[5] === "yours");
+const SIGMA_MAX = stressAt(D.limits.cap);
+function crossing(pts, y) { for (let i = 1; i < pts.length; i++) if (pts[i][1] >= y) { const a = pts[i - 1], b = pts[i]; return a[0] + (b[0] - a[0]) * (y - a[1]) / (b[1] - a[1]); } return null; }
+const R_MPL = crossing(M20, D.bending.mPl / 1e6);
+
+const CASES = {
+  tension: { key: "tension", name: "Tension", clause: "B.6.1", uniform: true, sign: -1, d: D.tension, limit: D.tension.ratio,
+    symbol: "N_csm,t,Rd", value: D.tension.resistance / 1e3, unit: "kN", digits: 1,
+    why: "Formula B.12 with the stress <span class=\"sym\">f<sub>csm,t</sub></span> = " + nf(D.tension.stress, 1) + " N/mm² at 15 times the yield strain. " + nf((D.tension.stress / I.fy - 1) * 100, 1) + " % above " + "<span class=\"sym\">A f<sub>y</sub> / γ<sub>M0</sub></span>.",
+    refs: [{ s: "A f_y / γ_M0", v: NY / 1e3 }] },
+  compression: { key: "compression", name: "Compression", clause: "B.6.2", uniform: true, sign: 1, d: D.compression, limit: D.compression.ratio,
+    symbol: "N_csm,Rd", value: D.compression.resistance / 1e3, unit: "kN", digits: 1,
+    why: "Formula " + D.compression.formula + ": the " + D.compression.governing + " lets the section strain to " + nf(D.compression.ratio, 2) + " times yield before it buckles locally, so the stress reaches " + nf(D.compression.stress, 1) + " N/mm². " + nf((D.compression.normalised - 1) * 100, 1) + " % above <span class=\"sym\">A f<sub>y</sub> / γ<sub>M0</sub></span>.",
+    refs: [{ s: "A f_y / γ_M0", v: NY / 1e3 }] },
+  bending: { key: "bending", name: "Bending", clause: "B.6.3", uniform: false, sign: 1, d: D.bending, limit: D.bending.ratio,
+    symbol: "M_csm,c,Rd", value: D.bending.resistance / 1e6, unit: "kN m", digits: 2,
+    why: "Formula " + D.bending.formula + " with α = " + nf(D.bending.alpha, 1) + " from Table B.2 (I-section, major axis). The strain limit is held at Ω = " + I.omega + ". " + nf((D.bending.resistance / D.bending.mPl - 1) * 100, 1) + " % above the plastic moment.",
+    refs: [{ s: "M_el", v: D.bending.mEl / 1e6 }, { s: "M_pl", v: D.bending.mPl / 1e6 }] },
+};
+const ORDER = ["tension", "compression", "bending"];
+const state = { c: "bending", view: "2d", r: CASES.bending.limit, sw: YOURS, playing: false, cam: "iso", az: 0.72, el: 0.36 };
+const cur = () => CASES[state.c];
+const whatIf = () => state.c === "compression" && state.sw !== YOURS;
+const factor = () => (whatIf() ? SW[state.sw][0] : 1);
+const limit = () => (whatIf() ? SW[state.sw][3] : cur().limit);              // null beyond the method's limit
+const tone = (sign) => (sign >= 0 ? "comp" : "tens");
+
+/* ---------- masthead ---------- */
+$("#inputs").innerHTML =
+  "<dt>Material</dt><dd><b>" + esc(I.grade) + "</b> " + esc(I.family) + " · " + S("f_y") + " <b>" + I.fy + "</b> · " + S("f_u") + " <b>" + I.fu + "</b> · " + S("E") + " <b>" + nf(I.E, 0) + "</b> N/mm²</dd>" +
+  "<dt>Section</dt><dd>" + esc(I.fabrication) + " I · " + S("h") + " <b>" + I.h + "</b> · " + S("b") + " <b>" + I.b + "</b> · " + S("t_w") + " <b>" + I.tw + "</b> · " + S("t_f") + " <b>" + I.tf + "</b> · " + S("r") + " <b>" + I.r + "</b> mm · " + S("A") + " <b>" + nf(I.area, 0) + "</b> mm²</dd>" +
+  "<dt>Factors</dt><dd>" + S("γ_M0") + " <b>" + nf(I.gammaM0, 2) + "</b> · " + S("Ω") + " <b>" + I.omega + "</b> · " + S("ν") + " <b>" + I.nu + "</b></dd>" +
+  '<dd class="tag">Example values, as the app\'s Load example button fills them. Fixed in this prototype.</dd>';
+
+const GLYPH = {
+  tension: '<path d="M15 4v22M15 4l-4 5M15 4l4 5M15 26l-4-5M15 26l4-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  compression: '<path d="M15 3v9M15 12l-4-5M15 12l4-5M15 27v-9M15 18l-4 5M15 18l4 5M6 15h18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  bending: '<path d="M4 11c7 8 15 8 22 0M4 11l1 5M4 11l5-1M26 11l-1 5M26 11l-5-1" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+};
+$("#caseRow").innerHTML = ORDER.map((k) => {
+  const c = CASES[k];
+  return '<button type="button" class="case-btn" role="tab" id="case-' + k + '" data-case="' + k + '" aria-selected="false"><svg class="glyph" viewBox="0 0 30 30" aria-hidden="true">' + GLYPH[k] + '</svg><span><span class="nm">' + c.name + '</span><span class="cl">' + c.clause + "</span></span></button>";
+}).join("");
+$("#caseRow").addEventListener("click", (e) => { const b = e.target.closest("[data-case]"); if (b) setCase(b.dataset.case); });
+
+function caseInputsHtml() {
+  if (state.c === "tension") return "This case uses the area only. No holes.";
+  if (state.c === "compression") return "Buckling factors typed for compression: " + S("k_σ") + " web <b>" + nf(I.kSigmaC.web, 1) + "</b>, flange <b>" + I.kSigmaC.flange + "</b>.";
+  return "Major axis · " + S("W_el") + " <b>" + nf(I.wEl, 0) + "</b> · " + S("W_pl") + " <b>" + nf(I.wPl, 0) + "</b> mm³ · " + S("λ_LT") + " <b>" + I.lambdaLT + "</b> · bending " + S("k_σ") + " web <b>" + I.kSigmaB.web + "</b>, flange <b>" + I.kSigmaB.flange + "</b>.";
+}
+
+/* ---------- result + gauge ---------- */
+function renderResult() {
+  const c = cur();
+  const notes = c.d.notes || [];
+  $("#result").innerHTML =
+    '<div class="big">' + S(c.symbol) + '<span class="val">' + nf(c.value, c.digits) + '</span><span class="unit">' + c.unit + "</span></div>" +
+    '<p class="why">' + c.why + "</p>" +
+    '<div class="gauge" id="gauge"></div>' +
+    (notes.length ? '<details class="scope"><summary>' + notes.length + (notes.length === 1 ? " note" : " notes") + " on what this result covers</summary><ul>" + notes.map((n) => "<li>" + symHtml(n) + "</li>").join("") + "</ul></details>" : "");
+  renderGauge();
+}
+function renderGauge() {
+  const c = cur(), W = clamp($("#gauge").clientWidth || 640, 300, 640), x0 = 8, x1 = W - 8, max = c.value * 1.06, X = (v) => x0 + (v / max) * (x1 - x0), y = 30, h = 16, t = tone(c.sign);
+  const refs = c.refs, first = refs[0].v, last = refs[refs.length - 1].v;
+  let s = '<svg viewBox="0 0 ' + W + ' 74" role="img" aria-label="' + esc(c.symbol.replace(/_/g, " ")) + " " + nf(c.value, c.digits) + " " + c.unit + ", against " + refs.map((r) => r.s.replace(/_/g, " ") + " " + nf(r.v, c.digits)).join(" and ") + '">';
+  s += '<rect x="' + x0 + '" y="' + y + '" width="' + (X(first) - x0).toFixed(1) + '" height="' + h + '" style="fill:var(--steel)"></rect>';
+  if (refs.length > 1) s += '<rect x="' + (X(first) + 2).toFixed(1) + '" y="' + y + '" width="' + (X(last) - X(first) - 2).toFixed(1) + '" height="' + h + '" style="fill:var(--steel-cut)"></rect>';
+  s += '<rect class="' + (state.c === "bending" ? "ink-h" : t + "-h") + '" x="' + (X(last) + 2).toFixed(1) + '" y="' + y + '" width="' + (X(c.value) - X(last) - 2).toFixed(1) + '" height="' + h + '" style="stroke-width:0"></rect>';
+  refs.forEach((r, i) => {
+    const x = X(r.v), end = refs.length > 1 && i === 0;
+    s += '<line class="axis" x1="' + x.toFixed(1) + '" y1="' + (y - 4) + '" x2="' + x.toFixed(1) + '" y2="' + (y + h + 6) + '"></line>';
+    s += txt(x + (end ? -5 : 5), y + h + 20, [[r.s, "sy"], ["  " + nf(r.v, c.digits), "t-n"]], ' text-anchor="' + (end ? "end" : (refs.length > 1 ? "start" : "middle")) + '"');
+  });
+  const xv = X(c.value);
+  s += '<line class="axis" style="stroke-width:2" x1="' + xv.toFixed(1) + '" y1="' + (y - 8) + '" x2="' + xv.toFixed(1) + '" y2="' + (y + h + 2) + '"></line>';
+  s += txt(xv, y - 13, [[c.symbol, "sy"], ["  " + nf(c.value, c.digits) + " " + c.unit, "t-v"]], ' text-anchor="end"');
+  s += txt(x0, y - 13, "0", ' class="t-s"');
+  s += '<path id="gaugeLive" d="M0 0l-5 8h10z" style="fill:var(--ink)" transform="translate(-20 0)"></path>';
+  s += "</svg>";
+  $("#gauge").innerHTML = s;
+  $("#gauge").dataset.max = max; $("#gauge").dataset.w = W;
+  updateGaugeLive();
+}
+function updateGaugeLive() {
+  const el = $("#gaugeLive"); if (!el) return;
+  const c = cur(), max = +$("#gauge").dataset.max, gw = +$("#gauge").dataset.w - 16;
+  if (state.c !== "bending" || state.r >= c.limit - 1e-6) { el.setAttribute("transform", "translate(-20 0)"); return; }
+  el.setAttribute("transform", "translate(" + (8 + (momentAt(state.r) / max) * gw).toFixed(1) + " 47)");
+}
+
+/* ---------- stage, 2D ---------- */
+const G = { cx: 175, top: 60, bot: 360, mid: 210, sc: 1.5, ex: 500, eu: 100 / 15, sx: 815, su: 0.5, gx: 985 };
+function sectionPath(tw, tf) {
+  const B = (I.b / 2) * G.sc, H = (I.h / 2) * G.sc, w = (tw / 2) * G.sc, t = tf * G.sc, r = I.r * G.sc, cx = G.cx, cy = G.mid;
+  const p = (x, y) => (cx + x).toFixed(2) + " " + (cy + y).toFixed(2), a = (x, y) => "A" + r + " " + r + " 0 0 0 " + p(x, y);
+  return "M" + p(-B, -H) + "L" + p(B, -H) + "L" + p(B, -H + t) + "L" + p(w + r, -H + t) + a(w, -H + t + r) + "L" + p(w, H - t - r) + a(w + r, H - t) +
+    "L" + p(B, H - t) + "L" + p(B, H) + "L" + p(-B, H) + "L" + p(-B, H - t) + "L" + p(-w - r, H - t) + a(-w, H - t - r) + "L" + p(-w, -H + t + r) + a(-w - r, -H + t) + "L" + p(-B, -H + t) + "Z";
+}
+const tick = (x, y) => '<path class="dim" d="M' + (x - 3) + " " + (y + 3) + "L" + (x + 3) + " " + (y - 3) + '"></path>';
+function dimH(xa, xb, y, parts, below) {
+  return '<path class="dim" d="M' + xa + " " + y + "H" + xb + '"></path>' + tick(xa, y) + tick(xb, y) + txt((xa + xb) / 2, y + (below ? 15 : -6), parts, ' text-anchor="middle"');
+}
+function dimV(x, ya, yb, parts, right) {
+  const ym = (ya + yb) / 2, tx = x + (right ? 14 : -8);
+  return '<path class="dim" d="M' + x + " " + ya + "V" + yb + '"></path>' + tick(x, ya) + tick(x, yb) + txt(tx, ym, parts, ' text-anchor="middle" transform="rotate(-90 ' + tx + " " + ym + ')"');
+}
+function drawStage() {
+  const c = cur(), f = factor(), tw = I.tw * f, tf = I.tf * f, lim = limit(), wi = whatIf();
+  const r = lim == null ? 0 : Math.min(state.r, lim);
+  const { cx, top, bot, mid, sc, ex, eu, sx, su, gx } = G;
+  const B = (I.b / 2) * sc, w = (tw / 2) * sc, t = tf * sc, rr = I.r * sc;
+  let s = "";
+  /* guides through all three panels */
+  s += '<path class="guide" d="M' + (cx + B + 6) + " " + top + "H" + gx + "M" + (cx + B + 6) + " " + bot + "H" + gx + "M" + (cx + w + 4) + " " + mid + "H" + gx + '"></path>';
+  s += txt(gx + 6, mid + 4, c.uniform ? "centroid" : "neutral axis", ' class="t-s"');
+  s += txt(40, 14, "Section, to scale (mm)", ' class="t-h"') + txt(ex, 14, "Strain", ' class="t-h" text-anchor="middle"') + txt(sx, 14, "Stress (N/mm²)", ' class="t-h" text-anchor="middle"');
+
+  /* section */
+  s += '<path class="steel" d="' + sectionPath(tw, tf) + '"></path>';
+  const gov = !wi && c.d.governing;
+  if (gov === "web") {
+    s += '<rect class="plate-gov comp-s" x="' + (cx - w) + '" y="' + (top + t + rr) + '" width="' + 2 * w + '" height="' + (bot - top - 2 * (t + rr)) + '"></rect>';
+  } else if (gov === "flange") {
+    s += '<rect class="plate-gov comp-s" x="' + (cx + w + rr) + '" y="' + top + '" width="' + (B - w - rr) + '" height="' + t + '"></rect><rect class="plate-gov comp-s" x="' + (cx - B) + '" y="' + top + '" width="' + (B - w - rr) + '" height="' + t + '"></rect>';
+  }
+  s += '<path class="dim" style="stroke-dasharray:8 3 2 3" d="M' + (cx - B - 14) + " " + mid + "H" + (cx + B + 4) + '"></path>';
+  s += dimH(cx - B, cx + B, top - 20, [["b", "sy"], [" = " + I.b, "t-n"]]);
+  s += dimV(cx - B - 30, top, bot, [["h", "sy"], [" = " + I.h, "t-n"]]);
+  const tl = (sym, v0) => [[sym, "sy"], [" = " + (wi ? nf(v0 * f, 1) : v0), "t-n"]];
+  s += '<path class="dim" d="M' + (cx - w - 2) + " " + (mid + 60) + "H" + (cx - B + 2) + '"></path>' + txt(cx - B + 2, mid + 54, tl("t_w", I.tw));
+  s += '<path class="dim" d="M' + (cx + B + 2) + " " + (bot - t / 2) + "h14" + '"></path>' + txt(cx + B + 20, bot - t / 2 + 4, tl("t_f", I.tf));
+  s += '<path class="dim" d="M' + (cx - w - rr * 0.3) + " " + (bot - t - rr * 0.3) + "L" + (cx - B + 8) + " " + (bot - t - 30) + '"></path>' + txt(cx - B + 2, bot - t - 36, [["r", "sy"], [" = " + I.r, "t-n"]]);
+  if (!wi && c.d.plates) {
+    const pw = c.d.plates.find((p) => p.role === "web"), pf = c.d.plates.find((p) => p.role === "flange");
+    s += dimV(cx + w + 16, top + t + rr, bot - t - rr, [["c_w", "sy"], [" = " + pw.width, "t-n"]], true);
+    s += dimH(cx + w + rr, cx + B, bot + 14, [["c_f", "sy"], [" = " + pf.width, "t-n"]], true);
+    const gp = gov === "web" ? pw : pf;
+    const lx = cx + B + 14, ly = gov === "web" ? top + t + rr + 26 : top + 4;
+    s += txt(lx, ly, "governs", ' class="t-b"') + txt(lx, ly + 15, [["λ_p", "sy"], [" = " + nf(gp.slenderness, 3), "t-n"]]);
+  }
+  if (wi) s += txt(cx, bot + 30, "every thickness × " + nf(f, 2), ' class="t-b" text-anchor="middle"');
+
+  if (lim == null) {
+    const p = SW[state.sw];
+    s += txt(660, mid - 8, [["λ_p,cs", "sy"], [" = " + nf(p[1], 2) + " is beyond " + nf(D.limits.upper, 2) + ".", ""]], ' text-anchor="middle" class="t-b" style="font-size:15px"');
+    s += txt(660, mid + 14, "Annex B does not apply (B.2), so there is no strain limit to draw.", ' text-anchor="middle"');
+    $("#stageSvg").innerHTML = s; return;
+  }
+
+  /* strain panel */
+  const sig = stressAt(r), tn = tone(c.sign);
+  s += '<path class="ref" d="M' + (ex - eu) + " " + (top - 8) + "V" + (bot + 8) + "M" + (ex + eu) + " " + (top - 8) + "V" + (bot + 8) + '"></path>';
+  [-15, -10, -5, 0, 5, 10, 15].forEach((v) => { s += '<path class="dim" d="M' + (ex + v * eu) + " " + (bot + 12) + 'v5"></path>' + (v % 15 === 0 ? txt(ex + v * eu, bot + 31, String(Math.abs(v)), ' class="t-n" text-anchor="middle"') : ""); });
+  s += txt(ex, bot + 48, [["ε / ε_y", "sy"]], ' text-anchor="middle"');
+  if (c.uniform) {
+    s += '<rect class="' + tn + '-f" x="' + Math.min(ex, ex + c.sign * r * eu).toFixed(1) + '" y="' + top + '" width="' + (r * eu).toFixed(1) + '" height="' + (bot - top) + '"></rect>';
+  } else {
+    s += '<path class="comp-f" d="M' + ex + " " + top + "L" + (ex + r * eu).toFixed(1) + " " + top + "L" + ex + " " + mid + 'Z"></path>';
+    s += '<path class="tens-f" d="M' + ex + " " + bot + "L" + (ex - r * eu).toFixed(1) + " " + bot + "L" + ex + " " + mid + 'Z"></path>';
+  }
+  s += '<path class="axis" d="M' + ex + " " + (top - 10) + "V" + (bot + 12) + '"></path>';
+  const elab = [[nf(r, r < 10 ? 2 : 1), "t-v"], [" ε_y", "sy"]];
+  if (c.uniform) s += txt(ex + c.sign * (r * eu + 8), top + 18, elab, c.sign < 0 ? ' text-anchor="end"' : "");
+  else { s += txt(ex + r * eu + 8, top + 5, elab) + txt(ex - r * eu - 8, bot + 3, elab, ' text-anchor="end"'); }
+  s += txt(ex + (c.sign < 0 && c.uniform ? 10 : -10), top - 14, c.uniform ? (c.sign > 0 ? "shortening" : "lengthening") : "shortening above, lengthening below", ' class="t-s" text-anchor="' + (c.uniform ? (c.sign < 0 ? "end" : "start") : "middle") + '"' + (c.uniform ? ' transform="translate(' + (c.sign * 16) + ' 0)"' : ' transform="translate(10 0)"'));
+
+  /* stress panel */
+  const fyx = I.fy * su, a = Math.abs(sig) * su, hard = r > 1;
+  s += '<path class="ref" d="M' + (sx - fyx) + " " + (top - 8) + "V" + (bot + 8) + "M" + (sx + fyx) + " " + (top - 8) + "V" + (bot + 8) + '"></path>';
+  [-300, -200, -100, 0, 100, 200, 300].forEach((v) => { s += '<path class="dim" d="M' + (sx + v * su) + " " + (bot + 12) + 'v5"></path>'; });
+  s += txt(sx, bot + 31, "0", ' class="t-n" text-anchor="middle"') + txt(sx + fyx, bot + 31, [["f_y", "sy"], [" " + I.fy, "t-n"]], ' text-anchor="middle"') + txt(sx - fyx, bot + 31, [["f_y", "sy"], [" " + I.fy, "t-n"]], ' text-anchor="middle"');
+  s += txt(sx - 150, bot + 48, "tension pulls", ' class="t-s"') + txt(sx + 150, bot + 48, "compression presses", ' class="t-s" text-anchor="end"');
+  if (c.uniform) {
+    const d = c.sign;
+    s += '<rect class="' + tn + '-f" x="' + Math.min(sx, sx + d * a).toFixed(1) + '" y="' + top + '" width="' + a.toFixed(1) + '" height="' + (bot - top) + '"></rect>';
+    if (hard) s += '<rect class="' + tn + '-h" x="' + Math.min(sx + d * fyx, sx + d * a).toFixed(1) + '" y="' + top + '" width="' + (a - fyx).toFixed(1) + '" height="' + (bot - top) + '"></rect>' +
+      '<path class="epp" d="M' + (sx + d * fyx) + " " + top + "V" + bot + '"></path>';
+    s += txt(sx + d * (a + 8), top + 18, [[nf(Math.abs(sig), 1), "t-v"]], d < 0 ? ' text-anchor="end"' : "");
+    if (hard) s += txt(sx + d * (a + 8), top + 34, "+" + nf((Math.abs(sig) / I.fy - 1) * 100, 1) + " % over yield", ' class="t-s"' + (d < 0 ? ' text-anchor="end"' : ""));
+  } else {
+    const yy = hard ? (bot - top) / 2 / r : 0;
+    const blk = (d, edge, cls) => {
+      const ny = mid - d * yy;
+      let o = '<path class="' + cls + '-f" d="M' + sx + " " + mid + (hard ? "L" + (sx + d * fyx) + " " + ny.toFixed(1) : "") + "L" + (sx + d * a).toFixed(1) + " " + edge + "L" + sx + " " + edge + 'Z"></path>';
+      if (hard) o += '<path class="' + cls + '-h" d="M' + (sx + d * fyx) + " " + ny.toFixed(1) + "L" + (sx + d * a).toFixed(1) + " " + edge + "L" + (sx + d * fyx) + " " + edge + 'Z"></path>' +
+        '<path class="epp" d="M' + (sx + d * fyx) + " " + ny.toFixed(1) + "V" + edge + '"></path>';
+      return o;
+    };
+    s += blk(1, top, "comp") + blk(-1, bot, "tens");
+    s += txt(sx + a + 8, top + 5, [[nf(Math.abs(sig), 1), "t-v"]]) + txt(sx - a - 8, bot + 3, [[nf(Math.abs(sig), 1), "t-v"]], ' text-anchor="end"');
+    if (hard) {
+      s += '<path class="guide" style="stroke:var(--ink-3)" d="M' + (ex - 20) + " " + (mid - yy).toFixed(1) + "H" + gx + "M" + (ex - 20) + " " + (mid + yy).toFixed(1) + "H" + gx + '"></path>';
+      s += txt(gx + 6, Math.min(mid - yy + 4, mid - 11), "yield fibre ±" + nf(I.h / 2 / r, 1) + " mm", ' class="t-s"');
+    }
+  }
+  /* arrows on the stress diagram: towards the axis line presses, away from it pulls */
+  const arr = (y, sv) => {
+    const len = Math.abs(sv) * su, d = Math.sign(sv); if (len < 18) return "";
+    const tipX = d > 0 ? sx + 2 : sx - len + 1, tailX = d > 0 ? sx + len - 1 : sx - 2, hd = 7;
+    return '<path class="arr" d="M' + tailX.toFixed(1) + " " + y + "H" + (tipX + hd).toFixed(1) + '"></path><path class="arr-h" d="M' + tipX.toFixed(1) + " " + y + "l" + hd + " -3.6v7.2Z" + '"></path>';
+  };
+  for (let i = 0; i < 8; i++) {
+    const y = top + 22 + i * ((bot - top - 44) / 7), fib = (mid - y) / ((bot - top) / 2);
+    s += arr(y.toFixed(1), c.uniform ? c.sign * Math.abs(sig) : stressAt(r * fib));
+  }
+  s += '<path class="axis" d="M' + sx + " " + (top - 10) + "V" + (bot + 12) + '"></path>';
+  $("#stageSvg").innerHTML = s;
+}
+
+/* ---------- scrubber + readout ---------- */
+function setupScrub() {
+  const lim = limit(), inp = $("#scrub"), track = $("#track");
+  track.querySelectorAll(".mark").forEach((m) => m.remove());
+  if (lim == null) { inp.disabled = true; $("#play").disabled = true; return; }
+  inp.disabled = false; $("#play").disabled = false;
+  inp.max = lim; inp.step = lim / 400; inp.value = state.r;
+  const marks = [[0, "unloaded", "start"]];
+  if (lim > 1.2) marks.push([1, "first yield", ""]);
+  if (state.c === "bending" && R_MPL && R_MPL < lim * 0.9) marks.push([R_MPL, "passes Mₚₗ", ""]);
+  marks.push([lim, (cur().d.capped && !whatIf() ? "limit, held at Ω " : "limit ") + nf(lim, lim < 10 ? 2 : 0) + " εᵧ", "end"]);
+  const tw = track.clientWidth || 600, gap = (110 / tw) * 100, endGap = (190 / tw) * 100;
+  let lastPct = -99;
+  marks.forEach(([v, label, cls]) => {
+    const pct = (v / lim) * 100;
+    if (cls === "" && (pct - lastPct < gap || pct > 100 - endGap)) return;
+    lastPct = pct;
+    const m = document.createElement("span"); m.className = "mark " + cls; m.textContent = label;
+    m.style.left = "calc(" + pct + "% + " + ((0.5 - pct / 100) * 16).toFixed(1) + "px)";
+    track.insertBefore(m, inp);
+  });
+}
+function renderReadout() {
+  const c = cur(), lim = limit(), el = $("#readout");
+  if (lim == null) { el.innerHTML = '<div><span class="k">Outside the method</span><span class="s">Move the thickness slider back, or return to your section.</span></div>'; return; }
+  const r = Math.min(state.r, lim), sig = Math.abs(stressAt(r)), atLimit = r >= lim - 1e-6;
+  let h = '<div><span class="k">Strain at the extreme fibre</span><span class="v">' + nf(r, 2) + " <small>× " + symHtml("ε_y") + " = " + nf(r * MAT.epsY, 5) + '</small></span><span class="s">' + (atLimit ? "at this section's limit" : "below the limit of " + nf(lim, 2)) + "</span></div>";
+  h += '<div><span class="k">Stress there</span><span class="v">' + nf(sig, 1) + ' <small>N/mm²</small></span><span class="s">' + (r > 1 ? "+" + nf((sig / I.fy - 1) * 100, 1) + " % over " + symHtml("f_y") + ", from strain hardening" : "elastic, below " + symHtml("f_y") + " = " + I.fy) + "</span></div>";
+  if (state.c === "bending") {
+    h += '<div><span class="k">Resistance if the limit were here</span><span class="v">' + nf(momentAt(r), 2) + ' <small>kN m</small></span><span class="s">' + (r < 1 ? "Formula B.19 branch" : "Formula B.20 branch") + ", engine curve</span></div>";
+  } else if (whatIf()) {
+    const p = SW[state.sw];
+    h += '<div><span class="k">What-if section</span><span class="v">' + S("λ_p,cs") + " " + nf(p[1], 3) + '</span><span class="s">' + p[2].replace("_", " ") + " · limit " + nf(p[3], 2) + " " + symHtml("ε_y") + " · " + nf(p[4], 1) + " N/mm² (engine sweep)</span></div>";
+  } else {
+    h += '<div><span class="k">Resistance at the limit</span><span class="v">' + nf(c.value, c.digits) + " <small>" + c.unit + '</small></span><span class="s">Formula ' + (c.d.formula || "B.12") + ", the engine's value</span></div>";
+  }
+  el.innerHTML = h;
+}
+function renderLegend() {
+  const c = cur(), sw = (cls, extra) => '<svg viewBox="0 0 22 12" aria-hidden="true"><rect class="' + cls + '" x="1" y="1" width="20" height="10"' + (extra || "") + "></rect></svg>";
+  const items = [];
+  if (!c.uniform || c.sign > 0) items.push(sw("comp-f") + "Compression");
+  if (!c.uniform || c.sign < 0) items.push(sw("tens-f") + "Tension");
+  items.push(sw((c.sign < 0 && c.uniform ? "tens" : "comp") + "-h") + "Stress above " + symHtml("f_y") + ": the strain hardening the CSM credits");
+  items.push('<svg viewBox="0 0 22 12" aria-hidden="true"><path class="epp" d="M1 6h20"></path></svg>Where a flat-yield model stops');
+  items.push('<svg viewBox="0 0 22 12" aria-hidden="true"><path class="arr" d="M21 6H8"></path><path class="arr-h" d="M1 6l7 -3.6v7.2Z"></path></svg>Stress on the cut face: an arrow towards the section presses, one away from it pulls');
+  if (c.d.plates) items.push(sw("comp-s", ' style="stroke-width:0"') + "Plate that sets the strain limit");
+  $("#legend").innerHTML = items.map((i) => "<li>" + i.replace(/<\/svg>(.*)$/, "</svg><span>$1</span>") + "</li>").join("");
+}
+
+/* ---------- charts ---------- */
+const charts = {};
+function chart(host, c) {
+  const W = 420, H = 250, m = { l: 44, r: 16, t: 26, b: 40 }, pw = W - m.l - m.r, ph = H - m.t - m.b;
+  const X = (v) => m.l + ((v - c.x[0]) / (c.x[1] - c.x[0])) * pw;
+  const Y = c.ylog ? (v) => m.t + ph - ((Math.log(v) - Math.log(c.y[0])) / (Math.log(c.y[1]) - Math.log(c.y[0]))) * ph
+                   : (v) => m.t + ph - ((v - c.y[0]) / (c.y[1] - c.y[0])) * ph;
+  const path = (pts) => pts.map((p, i) => (i ? "L" : "M") + X(p[0]).toFixed(1) + " " + Y(p[1]).toFixed(1)).join("");
+  let s = '<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="' + esc(c.label) + '">';
+  (c.bands || []).forEach((b) => {
+    s += '<rect class="' + b.cls + '" x="' + X(b.x0).toFixed(1) + '" y="' + m.t + '" width="' + (X(b.x1) - X(b.x0)).toFixed(1) + '" height="' + ph + '"></rect>';
+    s += txt((X(b.x0) + X(b.x1)) / 2, m.t + 13, b.label, ' class="t-s" text-anchor="middle"');
+  });
+  c.yTicks.forEach((v) => { s += '<path class="grid" d="M' + m.l + " " + Y(v).toFixed(1) + "H" + (W - m.r) + '"></path>' + txt(m.l - 6, Y(v) + 4, String(v), ' class="t-n" text-anchor="end"'); });
+  c.xTicks.forEach((v) => { s += '<path class="dim" d="M' + X(v).toFixed(1) + " " + (m.t + ph) + 'v4"></path>' + txt(X(v), m.t + ph + 17, String(v), ' class="t-n" text-anchor="middle"'); });
+  s += '<path class="axis" d="M' + m.l + " " + m.t + "V" + (m.t + ph) + "H" + (W - m.r) + '"></path>';
+  s += txt(m.l - 34, 14, c.yLabel) + txt(W - m.r, H - 6, c.xLabel, ' text-anchor="end"');
+  (c.hrefs || []).forEach((h) => { s += '<path class="ref" d="M' + m.l + " " + Y(h.y).toFixed(1) + "H" + (W - m.r) + '"></path>' + txt(h.left ? m.l + 6 : W - m.r - 4, Y(h.y) + (h.below ? 13 : -5), h.label, ' text-anchor="' + (h.left ? "start" : "end") + '"'); });
+  (c.areas || []).forEach((a) => { s += '<path class="' + a.cls + '" d="' + path(a.pts) + 'Z"></path>'; });
+  c.lines.forEach((l) => { s += '<path class="curve ' + (l.cls || "") + '" d="' + path(l.pts) + '"></path>'; });
+  (c.notes || []).forEach((n) => { s += txt(X(n.x) + (n.dx || 0), Y(n.y) + (n.dy || 0), n.label, ' class="t-s" text-anchor="' + (n.anchor || "start") + '"'); });
+  s += '<g class="hover" visibility="hidden"><path class="xhair" d="M0 ' + m.t + "V" + (m.t + ph) + '"></path><circle class="pt ink" r="4"></circle></g>';
+  (c.points || []).forEach((p) => {
+    const x = X(p.x), y = Y(p.y), cls = "pt " + (p.active ? (p.tone ? p.tone + "-s" : "ink") : "off");
+    s += p.shape === "diamond" ? '<path class="' + cls + '" d="M' + x.toFixed(1) + " " + (y - 7).toFixed(1) + "l7 7l-7 7l-7 -7Z" + '"></path>' : '<circle class="' + cls + '" cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="' + (p.active ? 6 : 5) + '"></circle>';
+    s += txt(x + (p.dx == null ? 10 : p.dx), y + (p.dy == null ? -9 : p.dy), p.label, ' text-anchor="' + (p.anchor || "start") + '"' + (p.active ? ' class="t-b"' : ""));
+  });
+  s += '<circle class="live" r="5.5" visibility="hidden"></circle>';
+  s += "</svg>";
+  host.innerHTML = s + '<div class="tip" hidden></div>';
+  const svg = $("svg", host), tip = $(".tip", host), hov = $(".hover", svg), live = $(".live", svg);
+  if (c.hover) {
+    const move = (e) => {
+      const b = svg.getBoundingClientRect(), vx = ((e.clientX - b.left) / b.width) * W, dx = c.x[0] + ((vx - m.l) / pw) * (c.x[1] - c.x[0]);
+      const y = dx >= c.hover.from && dx <= c.hover.to ? c.hover.f(dx) : null;
+      if (y == null || !isFinite(y)) { hov.setAttribute("visibility", "hidden"); tip.hidden = true; return; }
+      hov.setAttribute("visibility", "visible");
+      hov.firstChild.setAttribute("transform", "translate(" + vx.toFixed(1) + " 0)");
+      hov.lastChild.setAttribute("cx", vx.toFixed(1)); hov.lastChild.setAttribute("cy", Y(y).toFixed(1));
+      tip.hidden = false; tip.innerHTML = c.hover.fmt(dx, y);
+      tip.style.left = clamp((vx / W) * b.width, 70, b.width - 70) + "px"; tip.style.top = ((Y(y) / H) * b.height - 12) + "px";
+    };
+    svg.addEventListener("pointermove", move); svg.addEventListener("pointerdown", move);
+    svg.addEventListener("pointerleave", () => { hov.setAttribute("visibility", "hidden"); tip.hidden = true; });
+  }
+  return { setLive(x, y) { if (x == null) { live.setAttribute("visibility", "hidden"); return; } live.setAttribute("visibility", "visible"); live.setAttribute("cx", X(x).toFixed(1)); live.setAttribute("cy", Y(y).toFixed(1)); } };
+}
+
+const sy = (s) => [[s, "sy"]];
+function baseChart(host) {
+  const c = state.c, L = D.limits, pts = [
+    { x: D.compression.lambda, y: D.compression.ratio, label: "compression", active: c === "compression", tone: "comp", dx: 10, dy: 4 },
+    { x: D.bending.lambda, y: D.bending.ratio, label: "bending", active: c === "bending", shape: "diamond", dx: 10, dy: -8 },
+  ];
+  return chart(host, {
+    label: "Base curve of B.5: strain limit ratio against cross-section slenderness, with this section in compression and in bending",
+    x: [0, 1.75], y: [0.4, 60], ylog: true, xTicks: [0, 0.5, 1, 1.5], yTicks: [0.5, 1, 2, 5, 10, 15],
+    xLabel: sy("λ_p,cs"), yLabel: sy("ε_csm / ε_y"),
+    bands: [{ x0: 0, x1: L.switch, cls: "band-b", label: "stocky" }, { x0: L.switch, x1: L.upper, cls: "band-a", label: "slender" }, { x0: L.upper, x1: 1.75, cls: "band-x", label: "" }],
+    hrefs: [{ y: 1, label: "yield strain", below: true }, { y: L.cap, label: [["cap: Ω = " + I.omega, ""]] }],
+    notes: [{ x: L.upper, y: 4, label: "outside", dx: 3, anchor: "start" }, { x: L.upper, y: 4, label: "Annex B", dx: 3, dy: 13, anchor: "start" }],
+    lines: [{ pts: D.baseCurve }], points: pts,
+    hover: { from: D.baseCurve[0][0], to: L.upper, f: (x) => interp(D.baseCurve, x), fmt: (x, y) => "λ <b>" + nf(x, 3) + "</b> gives a limit of <b>" + nf(y, 2) + "</b> εᵧ" },
+  });
+}
+function materialChart(host) {
+  const c = cur(), xm = 18, lim = c.limit, t = tone(c.sign);
+  const csm = [[0, 0], [1, I.fy], [xm, stressAt(xm)]], epp = [[0, 0], [1, I.fy], [xm, I.fy]];
+  const groups = {};
+  ORDER.filter((k) => k !== c.key && Math.abs(CASES[k].limit - lim) > 0.01).forEach((k) => { const key = CASES[k].limit.toFixed(2); (groups[key] = groups[key] || []).push(k); });
+  const others = Object.keys(groups).map((key) => { const x = CASES[groups[key][0]].limit, lo = x < lim; return { x: x, y: stressAt(x), label: groups[key].map((k) => CASES[k].name.toLowerCase()).join(", "), dy: lo ? 20 : -10, dx: lo ? 2 : -8, anchor: lo ? "start" : "end" }; });
+  return chart(host, {
+    label: "B.4 material curve: stress against strain, with the strain limit of this load case",
+    x: [0, xm], y: [0, 320], xTicks: [0, 1, 5, 10, 15], yTicks: [0, 100, 200, 300],
+    xLabel: sy("ε / ε_y"), yLabel: [["σ", "sy"], ["  N/mm²", ""]],
+    hrefs: [{ y: I.fy, label: [["f_y", "sy"], [" = " + I.fy, ""]], below: true }],
+    areas: lim > 1 ? [{ cls: t + "-h", pts: [[1, I.fy], [lim, stressAt(lim)], [lim, I.fy]] }] : [],
+    lines: [{ pts: epp, cls: "soft" }, { pts: csm }],
+    notes: [{ x: xm, y: 95, label: [["the line runs on to ", ""], ["f_u", "sy"], [" = " + I.fu + " at " + nf(MAT.ratioEnd, 0) + " ", ""], ["ε_y", "sy"]], anchor: "end" }, { x: 7.5, y: I.fy, label: "flat-yield model", dy: 15 }],
+    points: others.concat([{ x: lim, y: stressAt(lim), label: [[nf(stressAt(lim), 1), "t-v"]], active: true, tone: state.c === "bending" ? null : t, shape: state.c === "bending" ? "diamond" : "", dx: lim > 12 ? 0 : 10, dy: lim > 12 ? -14 : -10, anchor: lim > 12 ? "middle" : "start" }]),
+    hover: { from: 0, to: xm, f: stressAt, fmt: (x, y) => "<b>" + nf(x, 2) + "</b> εᵧ reaches <b>" + nf(y, 1) + "</b> N/mm²" },
+  });
+}
+function momentChart(host) {
+  const b = D.bending, all = M19.concat(M20);
+  return chart(host, {
+    label: "Bending resistance against the strain limit ratio, Formulae B.19 and B.20, with the elastic and plastic moments",
+    x: [0, 16], y: [0, 58], xTicks: [0, 1, 5, 10, 15], yTicks: [0, 20, 40],
+    xLabel: sy("ε_csm / ε_y"), yLabel: [["M_csm,c,Rd", "sy"], ["  kN m", ""]],
+    hrefs: [{ y: b.mEl / 1e6, label: [["M_el", "sy"], [" " + nf(b.mEl / 1e6, 2), ""]], below: true }, { y: b.mPl / 1e6, label: [["M_pl", "sy"], [" " + nf(b.mPl / 1e6, 2), ""]], left: false }],
+    lines: [{ pts: M19, cls: "dash" }, { pts: M20 }],
+    notes: [{ x: 0.5, y: 16, label: "B.19", dx: 8 }, { x: 8, y: 46, label: "B.20", dy: -8 }],
+    points: [{ x: b.ratio, y: b.resistance / 1e6, label: [[nf(b.resistance / 1e6, 2), "t-v"]], active: true, shape: "diamond", dx: 0, dy: -14, anchor: "middle" }],
+    hover: { from: 0, to: b.ratio, f: (x) => interp(all, x), fmt: (x, y) => "limit <b>" + nf(x, 2) + "</b> εᵧ gives <b>" + nf(y, 2) + "</b> kN m" },
+  });
+}
+function capacityChart(host) {
+  const d = D.compression, all = d.capacity16.concat(d.capacity15);
+  return chart(host, {
+    label: "Compression resistance, as a share of A f_y / gamma_M0, against slenderness, Formulae B.15 and B.16",
+    x: [0, 1.75], y: [0, 1.4], xTicks: [0, 0.5, 1, 1.5], yTicks: [0, 0.5, 1],
+    xLabel: sy("λ_p,cs"), yLabel: [["N_csm,Rd", "sy"], [" / (", ""], ["A f_y / γ_M0", "sy"], [")", ""]],
+    hrefs: [{ y: 1, label: "yield resistance", below: true }, { y: d.capNormalised, label: "at the cap Ω: " + nf(d.capNormalised, 3) }],
+    lines: [{ pts: d.capacity16 }, { pts: d.capacity15, cls: "dash" }],
+    notes: [{ x: 0.42, y: 1.1, label: "B.16", dy: -6, dx: 4 }, { x: 1.1, y: 0.72, label: "B.15", dy: -8 }],
+    points: [{ x: d.lambda, y: d.normalised, label: [[nf(d.normalised, 3), "t-v"]], active: true, tone: "comp", dx: 6, dy: 20 }],
+    hover: { from: all[0][0], to: D.limits.upper, f: (x) => interp(all, x), fmt: (x, y) => "λ <b>" + nf(x, 3) + "</b> gives <b>" + nf(y, 3) + "</b> of yield" },
+  });
+}
+function barsHtml(rows, max, label) {
+  const W = 420, x0 = 150, x1 = 404, X = (v) => x0 + (v / max) * (x1 - x0);
+  let s = '<svg viewBox="0 0 ' + W + " " + (rows.length * 46 + 14) + '" role="img" aria-label="' + esc(label) + '">';
+  rows.forEach((r, i) => {
+    const y = 12 + i * 46;
+    s += txt(0, y + 13, r.label) + txt(0, y + 28, r.sub || "", ' class="t-s"');
+    s += '<rect x="' + x0 + '" y="' + y + '" width="' + (X(r.v) - x0).toFixed(1) + '" height="20" class="' + r.cls + '"' + (r.plain ? ' style="fill:var(--steel);stroke-width:0"' : "") + "></rect>";
+    s += txt(X(r.v) - 6, y + 14, [[r.text, "t-v"]], ' text-anchor="end"');
+  });
+  return s + "</svg>";
+}
+function workingHtml(steps) {
+  return '<details class="working"><summary>Working: ' + steps.length + (steps.length === 1 ? " engine step" : " engine steps") + "</summary><ol>" +
+    steps.map((st) => '<li><span class="wline sym" style="font-size:14px">' + symHtml(st.line) + '</span><span class="src"><i>' + esc(st.kind) + "</i>" + esc(st.cite) + "</span></li>").join("") + "</ol></details>";
+}
+const io = (a, b) => '<p class="io">' + a + '<span class="arrow" aria-hidden="true">→</span>' + b + "</p>";
+const kv = (sym, v, unit) => "<span>" + S(sym) + ' <span class="num">' + v + "</span>" + (unit ? " " + unit : "") + "</span>";
+const head = (n, title, clause) => '<div class="step-head"><span class="step-n" aria-hidden="true">' + n + "</span><h3>" + title + '</h3><span class="clause">' + clause + "</span></div>";
+
+function renderSteps() {
+  const c = cur(), d = c.d, k = state.c, host = $("#steps");
+  let h = "";
+  /* step 1: strain limit */
+  h += '<article class="step card">' + head(1, "How far can it strain?", k === "tension" ? "B.6.1 · B.14" : "B.5");
+  if (k === "tension") {
+    h += io(kv("C₁ε_u / ε_y", nf(MAT.ratioC1, 1)), kv("ε_csm,t / ε_y", nf(d.ratio, 0)));
+    h += '<div class="plot">' + barsHtml([
+      { label: [["fixed limit", "t-b"]], sub: "governs", v: 15, text: "15", cls: "tens-s", },
+      { label: [["C₁ε_u / ε_y", "sy"]], sub: "ductility of the grade", v: MAT.ratioC1, text: nf(MAT.ratioC1, 1), cls: "", plain: true },
+    ], 60, "The two strain limits of Formula B.14: the fixed limit 15 governs over the ductility limit 55.2") + "</div>";
+    h += '<p class="cap">Tension has no buckling, so the limit is the smaller of 15 and the grade\'s ductility limit.</p>';
+  } else {
+    h += io(kv("λ_p,cs", nf(d.lambda, 3)), kv("ε_csm / ε_y", nf(d.ratio, 2)));
+    h += '<div class="plot" id="plotBase"></div>';
+    const g = d.plates.find((p) => p.governing);
+    h += '<p class="cap">The ' + g.label + " governs: " + S("c / t") + " " + nf(g.width_to_thickness, 1) + ", " + S("k_σ") + " " + g.k_sigma + ", " + S("σ_cr") + " " + nf(g.sigma_cr, 0) + " N/mm²." +
+      (d.capped ? " The curve gives " + nf(d.rawRatio, 1) + "; the limit is held at Ω = " + I.omega + "." : "") + "</p>";
+    h += '<table class="plates"><thead><tr><th>Plate</th><th>' + symHtml("c") + " / " + symHtml("t") + "</th><th>" + symHtml("k_σ") + "</th><th>" + symHtml("σ_cr,p") + "</th><th>" + symHtml("λ_p") + "</th></tr></thead><tbody>" +
+      d.plates.map((p) => '<tr class="' + (p.governing ? "gov" : "") + '"><td>' + p.label + (p.governing ? " (governs)" : "") + "</td><td>" + nf(p.width_to_thickness, 1) + "</td><td>" + p.k_sigma + "</td><td>" + nf(p.sigma_cr, 0) + "</td><td>" + nf(p.slenderness, 3) + "</td></tr>").join("") + "</tbody></table>";
+    if (k === "compression") h += '<p class="cap">The thickness slider under the drawing moves a ring along this curve.</p>';
+  }
+  h += workingHtml(d.steps.limit) + "</article>";
+
+  /* step 2: stress */
+  h += '<article class="step card">' + head(2, "What stress is that?", "B.4");
+  h += io(kv(k === "tension" ? "ε_csm,t / ε_y" : "ε_csm / ε_y", nf(d.ratio, 2)), kv(k === "tension" ? "f_csm,t" : k === "compression" ? "f_csm" : "σ_edge", nf(stressAt(d.ratio), 1), "N/mm²"));
+  h += '<div class="plot" id="plotMat"></div>';
+  h += '<p class="cap">Past yield the CSM follows the hardening line, ' + S("E_sh") + " = " + nf(MAT.Esh, 0) + " N/mm² (" + nf(MAT.EshOverE * 100, 2) + " % of " + S("E") + "). The hatched wedge is stress a flat-yield model leaves out.</p>";
+  h += workingHtml(d.steps.stress) + "</article>";
+
+  /* step 3: resistance */
+  h += '<article class="step card">' + head(3, "What does it resist?", c.clause + " · " + (d.formula || "B.12"));
+  if (k === "bending") {
+    h += io(kv("ε_csm / ε_y", nf(d.ratio, 0)), kv(c.symbol, nf(c.value, 2), "kN m"));
+    h += '<div class="plot" id="plotRes"></div>';
+    h += '<p class="cap">B.19 scales the elastic moment up to first yield. B.20 then climbs past ' + S("M_pl") + " because the outer fibres keep hardening.</p>";
+  } else if (k === "compression") {
+    h += io(kv("f_csm", nf(d.stress, 1), "N/mm²"), kv(c.symbol, nf(c.value, 1), "kN"));
+    h += '<div class="plot" id="plotRes"></div>';
+    h += '<p class="cap">Stockier than λ = ' + D.limits.switch + ", the section gains on yield (B.16). More slender, it buckles first and B.15 scales the yield resistance down.</p>";
+  } else {
+    h += io(kv("f_csm,t", nf(d.stress, 1), "N/mm²"), kv(c.symbol, nf(c.value, 1), "kN"));
+    h += '<div class="plot">' + barsHtml([
+      { label: [["A f_y / γ_M0", "sy"]], sub: "yield resistance", v: NY / 1e3, text: nf(NY / 1e3, 1) + " kN", cls: "", plain: true },
+      { label: [["N_csm,t,Rd", "sy"]], sub: "Formula B.12", v: c.value, text: nf(c.value, 1) + " kN", cls: "tens-s" },
+    ], c.value * 1.02, "Tension resistance 664.0 kN against the yield resistance 543.7 kN") + "</div>";
+    h += '<p class="eq sym">' + symHtml(d.steps.resistance[0].line) + "</p>";
+  }
+  h += workingHtml(d.steps.resistance) + "</article>";
+  host.innerHTML = h;
+
+  charts.base = $("#plotBase") ? baseChart($("#plotBase")) : null;
+  charts.mat = materialChart($("#plotMat"));
+  charts.res = k === "bending" ? momentChart($("#plotRes")) : k === "compression" ? capacityChart($("#plotRes")) : null;
+  updateThickLabel();
+  $("#chainLede").innerHTML = k === "tension"
+    ? "Tension needs no slenderness. The strain limit comes from the grade, the stress from the material curve, the force from the area."
+    : "Each step hands one number to the next. The slenderness of the worst plate sets the strain the section can reach; the material curve turns that strain into a stress; the formula turns it into a resistance.";
+}
+function updateThickLabel() {
+  const el = $("#thickVal"); if (!el) return;
+  const p = SW[state.sw];
+  el.textContent = "× " + nf(p[0], 2) + (state.sw === YOURS ? " (your section)" : " · " + p[2].replace("_", " "));
+}
+function updateLive() {
+  const lim = limit(), r = lim == null ? null : Math.min(state.r, lim), c = cur();
+  const moving = r != null && r < lim - 1e-6;
+  if (charts.mat) charts.mat.setLive(moving ? r : null, moving ? Math.abs(stressAt(r)) : 0);
+  if (charts.res && state.c === "bending") charts.res.setLive(moving ? r : null, moving ? momentAt(r) : 0);
+  if (charts.base) { if (whatIf() && SW[state.sw][3] != null) charts.base.setLive(SW[state.sw][1], SW[state.sw][3]); else charts.base.setLive(null); }
+  if (charts.res && state.c === "compression") { if (whatIf() && SW[state.sw][3] != null && SW[state.sw][1] >= D.compression.capacity16[0][0]) charts.res.setLive(SW[state.sw][1], interp(D.compression.capacity16.concat(D.compression.capacity15), SW[state.sw][1])); else charts.res.setLive(null); }
+  updateGaugeLive();
+}
+
+/* ---------- 3D cut ---------- */
+const G3 = { ok: false, tried: false };
+const K = 0.72, LM = 360;                                    // mm of block depth per N/mm²; member length drawn
+function cssColor(name) { return new THREE.Color(getComputedStyle(document.documentElement).getPropertyValue(name).trim() || "#888"); }
+function levels(tw, tf, extra) {
+  const H = I.h / 2, B = I.b / 2, r = I.r, w = tw / 2, yi = H - tf, yw = yi - r, up = [];
+  const web = []; for (let i = 0; i <= 26; i++) web.push((yw * i) / 26);
+  extra.forEach((y) => { if (y > 0.01 && y < yw) web.push(y); });
+  web.sort((a, b) => a - b).forEach((y) => up.push([y, w]));
+  for (let j = 1; j <= 10; j++) { const d = (r * j) / 10; up.push([yw + d, w + r - Math.sqrt(Math.max(0, r * r - d * d))]); }
+  up.push([yi, B]);
+  extra.forEach((y) => { if (y > yi + 0.01 && y < H) up.push([y, B]); });
+  up.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  up.push([H, B]);
+  return up.slice(1).map(([y, ww]) => [-y, ww]).reverse().concat(up);
+}
+function loft(lv, zb, zf, col, backCap) {
+  const pos = [], colr = [];
+  const quad = (a, b, c, d, ca, cb, cc, cd) => { [[a, ca], [b, cb], [c, cc], [a, ca], [c, cc], [d, cd]].forEach(([p, k]) => { pos.push(p[0], p[1], p[2]); colr.push(k.r, k.g, k.b); }); };
+  for (let i = 0; i < lv.length - 1; i++) {
+    const [y0, w0] = lv[i], [y1, w1] = lv[i + 1], z0 = zf(y0), z1 = zf(y1), c0 = col(y0), c1 = col(y1);
+    quad([-w0, y0, z0], [w0, y0, z0], [w1, y1, z1], [-w1, y1, z1], c0, c0, c1, c1);
+    quad([w0, y0, zb], [w0, y0, z0], [w1, y1, z1], [w1, y1, zb], c0, c0, c1, c1);
+    quad([-w0, y0, zb], [-w1, y1, zb], [-w1, y1, z1], [-w0, y0, z0], c0, c1, c1, c0);
+    if (backCap) quad([-w0, y0, zb], [w0, y0, zb], [w1, y1, zb], [-w1, y1, zb], c0, c0, c1, c1);
+  }
+  [0, lv.length - 1].forEach((i) => { const [y, w] = lv[i], z = zf(y), c = col(y); quad([-w, y, zb], [w, y, zb], [w, y, z], [-w, y, z], c, c, c, c); });
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute("color", new THREE.Float32BufferAttribute(colr, 3));
+  g.computeVertexNormals();
+  return g;
+}
+function outline(lv, zf, zb) {
+  const p = [], seg = (a, b) => p.push(a[0], a[1], a[2], b[0], b[1], b[2]);
+  for (let i = 0; i < lv.length - 1; i++) {
+    const [y0, w0] = lv[i], [y1, w1] = lv[i + 1];
+    seg([w0, y0, zf(y0)], [w1, y1, zf(y1)]); seg([-w0, y0, zf(y0)], [-w1, y1, zf(y1)]);
+    if (zb != null && (i === 0 || Math.abs(w0 - w1) > 5)) { [[y0, w0], [y1, w1]].forEach(([y, w]) => { if (w > I.b / 2 - 0.01) { seg([w, y, zb], [w, y, zf(y)]); seg([-w, y, zb], [-w, y, zf(y)]); } }); }
+  }
+  [0, lv.length - 1].forEach((i) => { const [y, w] = lv[i]; seg([-w, y, zf(y)], [w, y, zf(y)]); if (zb != null) { seg([w, y, zb], [w, y, zf(y)]); seg([-w, y, zb], [-w, y, zf(y)]); } });
+  const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(p, 3)); return g;
+}
+const NSEG = 28;
+/* the drawn length of member, each point moved by the strain picture (magnified by m) */
+function makeWarp(c, r, m) {
+  const e = r * MAT.epsY * m, H = I.h / 2;
+  if (c.uniform) {
+    const k = 1 - c.sign * e;
+    return { pt: (x, y, z) => [x, y, -LM + (z + LM) * k], fy: 0, fz: -LM + LM * k, th: 0 };
+  }
+  const kap = e / H;
+  if (kap < 1e-9) return { pt: (x, y, z) => [x, y, z], fy: 0, fz: 0, th: 0 };
+  const pt = (x, y, z) => { const th = kap * (z + LM); return [x, (1 - Math.cos(th)) / kap + y * Math.cos(th), -LM + Math.sin(th) / kap - y * Math.sin(th)]; };
+  const th = kap * LM;
+  return { pt: pt, fy: (1 - Math.cos(th)) / kap, fz: -LM + Math.sin(th) / kap, th: th };
+}
+function bodyGeometry(lv, warp, colSide, colCut) {
+  const pos = [], colr = [];
+  const quad = (a, b, c, d, k) => { [a, b, c, a, c, d].forEach((q) => { const w = warp(q[0], q[1], q[2]); pos.push(w[0], w[1], w[2]); colr.push(k.r, k.g, k.b); }); };
+  for (let s = 0; s < NSEG; s++) {
+    const z0 = -LM + (LM * s) / NSEG, z1 = -LM + (LM * (s + 1)) / NSEG;
+    for (let i = 0; i < lv.length - 1; i++) {
+      const [y0, w0] = lv[i], [y1, w1] = lv[i + 1];
+      quad([w0, y0, z0], [w0, y0, z1], [w1, y1, z1], [w1, y1, z0], colSide);
+      quad([-w0, y0, z0], [-w1, y1, z0], [-w1, y1, z1], [-w0, y0, z1], colSide);
+    }
+    [0, lv.length - 1].forEach((i) => { const [y, w] = lv[i]; quad([-w, y, z0], [w, y, z0], [w, y, z1], [-w, y, z1], colSide); });
+  }
+  for (let i = 0; i < lv.length - 1; i++) {
+    const [y0, w0] = lv[i], [y1, w1] = lv[i + 1];
+    quad([-w0, y0, 0], [w0, y0, 0], [w1, y1, 0], [-w1, y1, 0], colCut);
+    quad([-w0, y0, -LM], [w0, y0, -LM], [w1, y1, -LM], [-w1, y1, -LM], colSide);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute("color", new THREE.Float32BufferAttribute(colr, 3));
+  g.computeVertexNormals();
+  return g;
+}
+function bodyOutline(lv, warp) {
+  const p = [], seg = (a, b) => { const u = warp(a[0], a[1], a[2]), v = warp(b[0], b[1], b[2]); p.push(u[0], u[1], u[2], v[0], v[1], v[2]); };
+  [0, -LM].forEach((z) => {
+    for (let i = 0; i < lv.length - 1; i++) { const [y0, w0] = lv[i], [y1, w1] = lv[i + 1]; seg([w0, y0, z], [w1, y1, z]); seg([-w0, y0, z], [-w1, y1, z]); }
+    [0, lv.length - 1].forEach((i) => { const [y, w] = lv[i]; seg([-w, y, z], [w, y, z]); });
+  });
+  lv.forEach(([y, w], i) => {
+    const corner = i === 0 || i === lv.length - 1 || (i > 0 && Math.abs(lv[i - 1][1] - w) > 5 && w > I.b / 2 - 0.01) || (i < lv.length - 1 && Math.abs(lv[i + 1][1] - w) > 5 && w > I.b / 2 - 0.01);
+    if (!corner) return;
+    for (let s = 0; s < NSEG; s++) { const z0 = -LM + (LM * s) / NSEG, z1 = -LM + (LM * (s + 1)) / NSEG; seg([w, y, z0], [w, y, z1]); seg([-w, y, z0], [-w, y, z1]); }
+  });
+  const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(p, 3)); return g;
+}
+function init3d() {
+  if (G3.tried) return; G3.tried = true;
+  const host = $("#gl");
+  try {
+    if (!window.THREE) throw new Error("no three");
+    G3.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  } catch (e) { host.innerHTML = '<p class="gl-fail">This browser could not start WebGL, so the 3D cut is not shown. The drawing holds the same values.</p>'; return; }
+  G3.ok = true;
+  G3.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  host.appendChild(G3.renderer.domElement);
+  G3.scene = new THREE.Scene();
+  G3.camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 1, 4000);
+  G3.scene.add(new THREE.AmbientLight(0xffffff, 0.78));
+  G3.sun = new THREE.DirectionalLight(0xffffff, 0.5); G3.scene.add(G3.sun);
+  G3.group = new THREE.Group(); G3.scene.add(G3.group);
+  G3.labels = document.createElement("div"); host.appendChild(G3.labels);
+  let drag = null;
+  host.addEventListener("pointerdown", (e) => { drag = { x: e.clientX, y: e.clientY }; host.classList.add("dragging"); host.setPointerCapture(e.pointerId); });
+  host.addEventListener("pointermove", (e) => {
+    if (!drag) return;
+    state.az -= (e.clientX - drag.x) * 0.008; state.el = clamp(state.el + (e.clientY - drag.y) * 0.006, -0.35, 1.3);
+    drag = { x: e.clientX, y: e.clientY }; state.cam = ""; camButtons(); render3d();
+  });
+  const end = () => { drag = null; host.classList.remove("dragging"); };
+  host.addEventListener("pointerup", end); host.addEventListener("pointercancel", end);
+  if (window.ResizeObserver) new ResizeObserver(() => render3d()).observe(host);
+}
+function camButtons() { document.querySelectorAll("[data-cam]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.cam === state.cam))); }
+function build3d() {
+  if (!G3.ok) return;
+  const g = G3.group, c = cur(), f = factor(), lim = limit();
+  g.traverse((o) => { if (o.geometry) o.geometry.dispose(); });
+  while (g.children.length) g.remove(g.children[0]);
+  const pal = { steel: cssColor("--steel"), cut: cssColor("--steel-cut"), edge: cssColor("--steel-edge"), ink: cssColor("--ink"),
+    comp: [cssColor("--surface-2"), cssColor("--comp-soft"), cssColor("--comp"), cssColor("--comp-deep")],
+    tens: [cssColor("--surface-2"), cssColor("--tens-soft"), cssColor("--tens"), cssColor("--tens-deep")] };
+  G3.pal = pal;
+  const r = lim == null ? 0 : Math.min(state.r, lim), H = I.h / 2;
+  const sAt = (y) => (c.uniform ? c.sign * Math.abs(stressAt(r)) : stressAt((r * y) / H));
+  const colAt = (y) => {
+    const s = sAt(y), a = Math.abs(s), p = s >= 0 ? pal.comp : pal.tens;
+    return a < I.fy - 1e-6 ? p[0].clone().lerp(p[1], a / I.fy) : p[2].clone().lerp(p[3], clamp((a - I.fy) / (SIGMA_MAX - I.fy), 0, 1));
+  };
+  const yy = !c.uniform && r > 1 ? H / r : null, extra = yy ? [yy] : [];
+  const lv = levels(I.tw * f, I.tf * f, extra);
+  /* deformation: every fibre changes length by its strain, drawn m times larger so it can be seen */
+  const m = lim == null ? 0 : Number((45 / (lim * MAT.epsY * LM)).toPrecision(1));
+  const warp = makeWarp(c, r, m);
+  G3.mag = m; G3.faceY = warp.fy;
+  g.add(new THREE.Mesh(bodyGeometry(lv, warp.pt, pal.steel, pal.cut), new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide })));
+  g.add(new THREE.LineSegments(bodyOutline(lv, warp.pt), new THREE.LineBasicMaterial({ color: pal.edge })));
+  if (r > 0.001) g.add(new THREE.LineSegments(bodyOutline(lv, (x, y, z) => [x, y, z]), new THREE.LineBasicMaterial({ color: pal.ink, transparent: true, opacity: 0.5 })));
+  const fg = new THREE.Group(); fg.position.set(0, warp.fy, warp.fz); fg.rotation.x = -warp.th; g.add(fg); G3.face = fg;
+  const labels = [];
+  if (lim != null && r > 0.001) {
+    const zf = (y) => K * Math.abs(sAt(y));
+    const blockMat = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide, transparent: true, opacity: 0.3, depthWrite: false });
+    fg.add(new THREE.Mesh(loft(lv, 0.5, zf, colAt, false), blockMat));
+    fg.add(new THREE.LineSegments(outline(lv, zf, 0.5), new THREE.LineBasicMaterial({ color: pal.ink })));
+    const sMax = Math.abs(stressAt(r));
+    if (c.uniform) {
+      labels.push({ local: true, p: [0, H + 16, zf(H)], html: '<b class="num">' + nf(sMax, 1) + "</b> N/mm² " + (c.sign > 0 ? "compression, pressing on the face" : "tension, pulling on the face") });
+    } else {
+      labels.push({ local: true, p: [0, H + 16, zf(H)], html: '<b class="num">' + nf(sMax, 1) + "</b> N/mm² compression, pressing in" });
+      labels.push({ local: true, p: [0, -H - 16, zf(-H)], html: '<b class="num">' + nf(sMax, 1) + "</b> N/mm² tension, pulling out" });
+      if (yy) {
+        const w = lv.find((l) => Math.abs(l[0] - yy) < 1e-6)[1], yl = [];
+        [yy, -yy].forEach((y) => yl.push(-w, y, zf(y) + 0.6, w, y, zf(y) + 0.6));
+        const gy = new THREE.BufferGeometry(); gy.setAttribute("position", new THREE.Float32BufferAttribute(yl, 3));
+        fg.add(new THREE.LineSegments(gy, new THREE.LineBasicMaterial({ color: pal.ink })));
+        labels.push({ local: true, p: [I.b / 2 + 34, 0, K * I.fy], html: symHtml("f_y") + ' = <b class="num">' + I.fy + "</b> at the yield fibres" });
+      }
+    }
+    /* compression presses on the cut face (heads at the face); tension pulls on it (heads away from it) */
+    const mats = { comp: new THREE.MeshBasicMaterial({ color: pal.comp[3] }), tens: new THREE.MeshBasicMaterial({ color: pal.tens[3] }) };
+    const arrow = (x, y) => {
+      const s = sAt(y), len = zf(y), into = s >= 0, mat = into ? mats.comp : mats.tens;
+      if (len < 16) return;
+      const hh = Math.min(17, len * 0.45), sl = len - hh;
+      const shaft = new THREE.Mesh(new THREE.CylinderGeometry(1.7, 1.7, sl, 10), mat), tip = new THREE.Mesh(new THREE.ConeGeometry(5.6, hh, 14), mat);
+      shaft.rotation.x = Math.PI / 2; tip.rotation.x = (into ? -1 : 1) * Math.PI / 2;
+      shaft.position.set(x, y, into ? hh + sl / 2 : 1 + sl / 2);
+      tip.position.set(x, y, into ? 1 + hh / 2 : 1 + sl + hh / 2);
+      fg.add(shaft); fg.add(tip);
+    };
+    const yf = H - (I.tf * f) / 2;
+    for (let i = 0; i < 9; i++) arrow(0, -72 + i * 18);
+    [-yf, yf].forEach((y) => [-40, -20, 0, 20, 40].forEach((x) => arrow(x, y)));
+  } else if (lim == null) {
+    labels.push({ p: [0, 0, 30], html: "beyond the limit of Annex B" });
+  }
+  labels.push({ p: [0, -H - 24, -LM + 30], html: "member continues", cls: "plain" });
+  if (r > 0.001 && lim != null) {
+    labels.push({ p: [0, -H - 18, 0], html: "unloaded outline", cls: "plain" });
+    if (c.uniform && Math.abs(warp.fz) > 4) {
+      /* a dimension from the unloaded face to the loaded one */
+      const x = I.b / 2 + 16, y = H, d = [x, y, 0, x, y, warp.fz, x - 6, y, 0, x + 6, y, 0, x - 6, y, warp.fz, x + 6, y, warp.fz, I.b / 2, y, 0, x, y, 0, I.b / 2, y, warp.fz, x, y, warp.fz];
+      const gd = new THREE.BufferGeometry(); gd.setAttribute("position", new THREE.Float32BufferAttribute(d, 3));
+      g.add(new THREE.LineSegments(gd, new THREE.LineBasicMaterial({ color: pal.ink })));
+      labels.push({ p: [x + 10, y + 14, warp.fz / 2], html: (c.sign > 0 ? "shortens" : "lengthens") + ", drawn ×" + m });
+    }
+  }
+  $("#glBadge").innerHTML = lim == null ? "Beyond the limit of Annex B there is no strain limit to draw." :
+    "<b>The member deforms by its strain, drawn " + m + " times larger so it shows.</b> " +
+    (c.uniform ? (c.sign > 0 ? "Every fibre shortens by the same amount, so the cut face moves in from the unloaded outline." : "Every fibre lengthens by the same amount, so the cut face moves out past the unloaded outline.")
+               : "Top fibres shorten and bottom fibres lengthen, so the cut face turns about the neutral axis and the member curves.") +
+    " Arrow length is the stress at that fibre. The drawn length is illustrative and no displacement is calculated.";
+  G3.labelData = labels;
+  G3.labels.innerHTML = labels.map((l) => '<span class="lbl ' + (l.cls || "") + '">' + l.html + "</span>").join("");
+  render3d();
+}
+function render3d() {
+  if (!G3.ok || state.view !== "3d") return;
+  const host = $("#gl"), w = host.clientWidth, h = host.clientHeight; if (!w || !h) return;
+  G3.renderer.setSize(w, h, false);
+  const cam = G3.camera, half = w < 520 ? 270 : 205, asp = w / h, tgt = new THREE.Vector3(0, (G3.faceY || 0) * 0.45, -80);
+  if (asp >= 1) { cam.top = half; cam.bottom = -half; cam.left = -half * asp; cam.right = half * asp; }
+  else { cam.left = -half; cam.right = half; cam.top = half / asp; cam.bottom = -half / asp; }
+  cam.updateProjectionMatrix();
+  const R = 1500, ce = Math.cos(state.el);
+  cam.position.set(tgt.x + R * Math.sin(state.az) * ce, tgt.y + R * Math.sin(state.el), tgt.z + R * Math.cos(state.az) * ce);
+  cam.lookAt(tgt);
+  G3.sun.position.copy(cam.position).add(new THREE.Vector3(-300, 600, 0));
+  G3.renderer.render(G3.scene, cam);
+  const els = G3.labels.children;
+  (G3.labelData || []).forEach((l, i) => {
+    const v = new THREE.Vector3(l.p[0], l.p[1], l.p[2]);
+    if (l.local) G3.face.localToWorld(v);
+    v.project(cam);
+    els[i].style.transform = "translate(-50%, -50%) translate(" + clamp(((v.x + 1) / 2) * w, 70, w - 70).toFixed(1) + "px," + clamp(((1 - v.y) / 2) * h, 16, h - 16).toFixed(1) + "px)";
+  });
+}
+const CAMS = { iso: [0.72, 0.36], side: [Math.PI / 2, 0], front: [0, 0] };
+document.querySelectorAll("[data-cam]").forEach((b) => b.addEventListener("click", () => { state.cam = b.dataset.cam; state.az = CAMS[state.cam][0]; state.el = CAMS[state.cam][1]; camButtons(); render3d(); }));
+
+/* ---------- wiring ---------- */
+function setView(v) {
+  state.view = v;
+  $("#view2d").setAttribute("aria-pressed", String(v === "2d")); $("#view3d").setAttribute("aria-pressed", String(v === "3d"));
+  $("#stage2d").hidden = v !== "2d"; $("#stage3d").hidden = v !== "3d";
+  if (v === "3d") { init3d(); build3d(); }
+}
+$("#view2d").addEventListener("click", () => setView("2d"));
+$("#view3d").addEventListener("click", () => setView("3d"));
+
+function renderStageAll() {
+  const c = cur(), lim = limit();
+  $("#stageSub").innerHTML = c.uniform
+    ? "Every fibre carries the same strain, so the stress block is a rectangle."
+    : "Strain is a straight line through the depth. Stress follows the material curve at each fibre.";
+  const b = $("#banner");
+  if (whatIf()) {
+    b.hidden = false;
+    b.innerHTML = "<span>What-if: every thickness × " + nf(factor(), 2) + ". Strain limit and stress are the engine's sweep values; the resistance above stays that of your section.</span><button type=\"button\" class=\"link-btn\" id=\"backYours\">Back to your section</button>";
+    $("#backYours").addEventListener("click", () => { state.sw = YOURS; state.r = limit(); const t = $("#thick"); if (t) t.value = YOURS; renderWhatIf(); });
+  } else { b.hidden = true; b.innerHTML = ""; }
+  setupScrub(); drawStage(); renderReadout(); renderLegend(); updateLive();
+  if (state.view === "3d") build3d();
+}
+function renderWhatIf() { updateThickLabel(); renderStageAll(); }
+function renderLive() { drawStage(); renderReadout(); updateLive(); if (state.view === "3d") build3d(); }
+function setCase(k) {
+  stopPlay();
+  state.c = k; state.sw = YOURS; state.r = CASES[k].limit;
+  ORDER.forEach((o) => $("#case-" + o).setAttribute("aria-selected", String(o === k)));
+  $("#caseInputs").innerHTML = caseInputsHtml();
+  $("#thickRow").hidden = k !== "compression"; $("#thick").value = YOURS;
+  renderResult(); renderSteps(); renderStageAll();
+}
+$("#thick").max = SW.length - 1;
+$("#thickNote").textContent = "engine sweep, " + SW.length + " full B.5 runs";
+$("#thick").addEventListener("input", (e) => { state.sw = +e.target.value; state.r = limit() == null ? 0 : limit(); stopPlay(); renderWhatIf(); });
+$("#scrub").addEventListener("input", (e) => { stopPlay(); state.r = +e.target.value; renderLive(); });
+let raf = 0;
+function stopPlay() { if (raf) cancelAnimationFrame(raf); raf = 0; state.playing = false; $("#play").textContent = "Load it"; }
+$("#play").addEventListener("click", () => {
+  if (state.playing) { stopPlay(); return; }
+  const lim = limit(); if (lim == null) return;
+  const calm = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const dur = 4200, t0 = performance.now();
+  state.playing = true; $("#play").textContent = "Stop";
+  const stepFn = (now) => {
+    let u = clamp((now - t0) / dur, 0, 1);
+    if (calm) u = Math.round(u * 6) / 6;
+    /* spend half the time below 2 x yield, where the picture changes fastest */
+    const e = u < 0.5 ? (u / 0.5) * Math.min(2, lim) / lim : Math.min(2, lim) / lim + ((u - 0.5) / 0.5) * (1 - Math.min(2, lim) / lim);
+    state.r = lim * e; $("#scrub").value = state.r; renderLive();
+    if (u < 1) raf = requestAnimationFrame(stepFn); else stopPlay();
+  };
+  raf = requestAnimationFrame(stepFn);
+});
+const retheme = () => { if (state.view === "3d") build3d(); };
+let rz = 0;
+window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(() => { renderGauge(); setupScrub(); }, 150); });
+if (window.matchMedia) { const mq = window.matchMedia("(prefers-color-scheme: dark)"); if (mq.addEventListener) mq.addEventListener("change", retheme); }
+if (window.MutationObserver) new MutationObserver(retheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+setCase("bending");
+})();
+</script>
+
+</body></html>
