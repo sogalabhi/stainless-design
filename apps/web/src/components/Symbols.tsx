@@ -23,6 +23,11 @@ export function renderSymbols(text: string): ReactNode[] {
   });
 }
 
+/** The same text as it reads once typeset (k_σ reads "kσ"), for aria-labels and titles. */
+export function plainSymbols(text: string): string {
+  return text.replace(RUN, (part) => part.replace("_", ""));
+}
+
 export function Sym({ text }: { text: string }) {
   return <>{renderSymbols(text)}</>;
 }

@@ -15,7 +15,11 @@ import type { TensionFormState } from "./tension";
  * pattern. Those k_σ are separate from the compression ones (a web in pure bending is held back less
  * than one in uniform compression), so the compression fields stay as they are.
  */
+/** Sagging: compression at the top, +M. Hogging: compression at the bottom, -M (see Help, Sign convention). */
+export type BendingDirection = "sagging" | "hogging";
+
 export type BendingFormState = {
+  direction: BendingDirection; // a drawing and sign choice, not an engineering value: Annex B gives magnitudes
   axis: BendingAxisKey | null; // y-y is major, z-z is minor; a circular hollow section needs no choice
   wEl: number | null; // mm3, about the axis of bending
   wPl: number | null; // mm3
@@ -26,6 +30,7 @@ export type BendingFormState = {
 };
 
 export const defaultBendingForm: BendingFormState = {
+  direction: "sagging",
   axis: null,
   wEl: null,
   wPl: null,

@@ -1,8 +1,19 @@
-import { Plus, Ruler, Trash2 } from "lucide-react";
+import { Ruler } from "lucide-react";
 import type { ReactNode } from "react";
 import type { BendingAxisKey, FamilyKey, GradeOut, SectionType, StainlessFamily } from "../api/types";
 import { asksForAxis, type BendingFormState } from "../lib/bending";
-import { CIRCULAR, dimsOf, usesDimensions, type DeformationFormState, type PlateRow } from "../lib/geometry";
+import {
+  CIRCULAR,
+  dimsOf,
+  geometryKind,
+  usesDimensions,
+  withCustom,
+  type DeformationFormState,
+  platesFromLinks,
+  type LinkRow,
+  type NodeRow,
+  type PlateRow,
+} from "../lib/geometry";
 import {
   needsFabrication,
   plateRoles,
@@ -23,6 +34,7 @@ import {
 import type { TensionFormState } from "../lib/tension";
 import { renderSymbols } from "./Symbols";
 import { SectionThumbnail } from "./SectionSketch";
+import { DataTable, type DataColumn } from "./DataTable";
 import { CheckField, NumberField, SelectField } from "./ui";
 
 const FAMILIES: { value: StainlessFamily; label: string }[] = [
@@ -235,6 +247,18 @@ export function SectionInputs({
         fieldKey="sectionType"
         onChange={onSectionType}
       />
+      {sectionType !== null && sectionType !== CIRCULAR && form.kind !== "sigma_cr" ? (
+        <SelectField
+          label="Geometry"
+          value={form.custom ? "custom" : "template"}
+          options={[
+            { value: "template", label: "Template: the standard dimensions" },
+            { value: "custom", label: "Custom: nodes and links in two tables (paste from Excel)" },
+          ]}
+          fieldKey="geometry"
+          onChange={(choice) => onFormChange(withCustom(form, choice === "custom"))}
+        />
+      ) : null}
       {sectionType !== null && form.kind === "template" && needsFabrication(sectionType) ? (
         <FabricationField value={form.fabrication} onChange={(fabrication) => set({ fabrication })} />
       ) : null}
@@ -249,12 +273,9 @@ export function SectionInputs({
           </span>
         </button>
       ) : null}
-      {sectionType !== null && !showDimensions ? (
-        <p className="muted">
-          {form.kind === "plates"
-            ? "The flat plates are entered one by one in the Deformation group, so no section dimensions are asked for here."
-            : "A typed σ_cr,cs needs no section dimensions."}
-        </p>
+      {form.kind === "plates" ? <PlatesEditor form={form} onChange={onFormChange} /> : null}
+      {sectionType !== null && form.kind === "sigma_cr" ? (
+        <p className="muted">{renderSymbols("A typed σ_cr,cs needs no section dimensions.")}</p>
       ) : null}
       <DimensionFields
         fields={fields}
@@ -315,8 +336,12 @@ export function DeformationInputs({
                 { value: "sigma_cr", label: "A typed critical stress σ_cr,cs" },
               ]
             : [
-                { value: "template", label: "Section dimensions (8.2.2(5))" },
-                { value: "plates", label: "Flat plates entered one by one" },
+                {
+                  value: geometryKind(form, sectionType),
+                  label: form.custom
+                    ? "The custom plates of the Section group (B.9)"
+                    : "Section dimensions (8.2.2(5))",
+                },
                 { value: "sigma_cr", label: "A typed critical stress σ_cr,cs" },
               ]
         }
@@ -343,7 +368,11 @@ export function DeformationInputs({
           ))}
         </>
       ) : null}
-      {form.kind === "plates" ? <PlatesEditor form={form} onChange={onChange} /> : null}
+      {form.kind === "plates" ? (
+        <p className="muted">
+          {renderSymbols("b̄ is the length of each link between its two nodes; t and k_σ are columns of the links table in the Section group.")}
+        </p>
+      ) : null}
       {form.kind === "sigma_cr" ? (
         <>
           <NumberField
@@ -375,6 +404,101 @@ export function DeformationInputs({
   );
 }
 
+const NODE_LIMIT = 40;
+const LINK_LIMIT = 40;
+
+const NODE_COLUMNS: DataColumn<NodeRow>[] = [
+  {
+    key: "id",
+    label: "Node",
+    kind: "number",
+    get: (row) => row.id,
+    set: (row, value) => ({ ...row, id: value as number | null }),
+  },
+  {
+    key: "x",
+    label: "x",
+    unit: "mm",
+    kind: "number",
+    get: (row) => row.x,
+    set: (row, value) => ({ ...row, x: value as number | null }),
+    fieldKey: (row) => `node-${row.uid}-x`,
+  },
+  {
+    key: "y",
+    label: "y",
+    unit: "mm",
+    kind: "number",
+    get: (row) => row.y,
+    set: (row, value) => ({ ...row, y: value as number | null }),
+    fieldKey: (row) => `node-${row.uid}-y`,
+  },
+];
+
+const LINK_COLUMNS: DataColumn<LinkRow>[] = [
+  {
+    key: "label",
+    label: "Name",
+    kind: "text",
+    get: (row) => row.label,
+    set: (row, value) => ({ ...row, label: String(value ?? "") }),
+  },
+  {
+    key: "from",
+    label: "From node",
+    short: "From",
+    kind: "number",
+    get: (row) => row.from,
+    set: (row, value) => ({ ...row, from: value as number | null }),
+    fieldKey: (row) => `plate-${row.uid}-width`,
+  },
+  {
+    key: "to",
+    label: "To node",
+    short: "To",
+    kind: "number",
+    get: (row) => row.to,
+    set: (row, value) => ({ ...row, to: value as number | null }),
+  },
+  {
+    key: "thickness",
+    label: "Thickness t",
+    short: "t",
+    unit: "mm",
+    kind: "number",
+    get: (row) => row.thickness,
+    set: (row, value) => ({ ...row, thickness: value as number | null }),
+    fieldKey: (row) => `plate-${row.uid}-thickness`,
+    helpKey: "plate-1-thickness",
+  },
+  {
+    key: "kSigma",
+    label: "k_σ",
+    kind: "number",
+    get: (row) => row.kSigma,
+    set: (row, value) => ({ ...row, kSigma: value as number | null }),
+    fieldKey: (row) => `plate-${row.uid}-kSigma`,
+    helpKey: "plate-1-kSigma",
+  },
+];
+
+/** A new node gets the next free number; x and y start empty. */
+export function newNodeRow(rows: NodeRow[]): NodeRow {
+  const uid = Math.max(0, ...rows.map((row) => row.uid)) + 1;
+  const id = Math.max(0, ...rows.map((row) => row.id ?? 0)) + 1;
+  return { uid, id, x: null, y: null };
+}
+
+export function newLinkRow(rows: LinkRow[]): LinkRow {
+  const uid = Math.max(0, ...rows.map((row) => row.uid)) + 1;
+  return { uid, label: `link ${uid}`, from: null, to: null, thickness: null, kSigma: null };
+}
+
+/**
+ * The custom section is two tables, as in a finite-strip or FE model: the nodes (x, y) and the links
+ * between them (from node, to node, thickness, k_σ). The flat width b̄ of each link is the distance
+ * between its nodes, so the geometry is drawn, not listed.
+ */
 function PlatesEditor({
   form,
   onChange,
@@ -382,64 +506,116 @@ function PlatesEditor({
   form: DeformationFormState;
   onChange: (form: DeformationFormState) => void;
 }) {
-  const update = (id: number, patch: Partial<PlateRow>) =>
-    onChange({ ...form, plates: form.plates.map((row) => (row.id === id ? { ...row, ...patch } : row)) });
-  const add = () => {
-    const id = Math.max(0, ...form.plates.map((row) => row.id)) + 1;
-    onChange({
-      ...form,
-      plates: [...form.plates, { id, label: `plate ${id}`, width: null, thickness: null, kSigma: null }],
-    });
-  };
+  const update = (nodes: NodeRow[], links: LinkRow[]) =>
+    onChange({ ...form, nodes, links, plates: platesFromLinks(nodes, links) });
+  const area = form.plates.reduce<number | null>(
+    (sum, p) => (sum === null || p.width === null || p.thickness === null ? null : sum + p.width * p.thickness),
+    0,
+  );
   return (
-    <div className="plates-editor">
-      {form.plates.map((row) => (
-        <fieldset key={row.id} className="plate-row">
-          <legend>{row.label || "plate"}</legend>
-          <div className="field">
-            <label htmlFor={`plate-label-${row.id}`}>Name</label>
-            <input
-              id={`plate-label-${row.id}`}
-              type="text"
-              value={row.label}
-              onChange={(event) => update(row.id, { label: event.target.value })}
-            />
-          </div>
-          <NumberField
-            label="Flat width b̄"
-            unit="mm"
-            value={row.width}
-            fieldKey={`plate-${row.id}-width`}
-            onChange={(width) => update(row.id, { width })}
-          />
-          <NumberField
-            label="Thickness t"
-            unit="mm"
-            value={row.thickness}
-            fieldKey={`plate-${row.id}-thickness`}
-            onChange={(thickness) => update(row.id, { thickness })}
-          />
-          <NumberField
-            label="k_σ"
-            value={row.kSigma}
-            step={0.01}
-            fieldKey={`plate-${row.id}-kSigma`}
-            onChange={(kSigma) => update(row.id, { kSigma })}
-          />
-          <button
-            type="button"
-            className="icon-button"
-            disabled={form.plates.length <= 1}
-            onClick={() => onChange({ ...form, plates: form.plates.filter((item) => item.id !== row.id) })}
-          >
-            <Trash2 size={16} aria-hidden="true" /> Remove plate
-          </button>
-        </fieldset>
-      ))}
-      <button type="button" className="icon-button" onClick={add} disabled={form.plates.length >= 20}>
-        <Plus size={16} aria-hidden="true" /> Add plate
-      </button>
+    <div className="node-editor">
+      <DataTable
+        caption="Nodes: the corner and end points of the section (x, y)"
+        columns={NODE_COLUMNS}
+        rows={form.nodes}
+        onChange={(nodes) => update(nodes, form.links)}
+        rowKey={(row) => row.uid}
+        rowName={(row) => `node ${row.id ?? row.uid}`}
+        newRow={newNodeRow}
+        isEmpty={(row) => row.x === null && row.y === null}
+        minRows={2}
+        maxRows={NODE_LIMIT}
+      />
+      <DataTable
+        caption="Links: the flat plates between two nodes"
+        columns={LINK_COLUMNS}
+        rows={form.links}
+        onChange={(links) => update(form.nodes, links)}
+        rowKey={(row) => row.uid}
+        rowName={(row) => row.label || `link ${row.uid}`}
+        newRow={newLinkRow}
+        isEmpty={(row) =>
+          row.from === null &&
+          row.to === null &&
+          row.thickness === null &&
+          row.kSigma === null &&
+          (row.label.trim() === "" || row.label === `link ${row.uid}`)
+        }
+        minRows={1}
+        maxRows={LINK_LIMIT}
+      />
+      <NodeLinkPreview nodes={form.nodes} links={form.links} plates={form.plates} />
+      {area !== null && form.plates.length > 0 ? (
+        <p className="muted">
+          {renderSymbols(`Σ b̄·t = ${Math.round(area * 10) / 10} mm² from the links; the link lengths are the flat widths b̄.`)}
+        </p>
+      ) : null}
     </div>
+  );
+}
+
+/** The section the tables describe: each link a line as thick as the plate (to scale), nodes numbered. */
+function NodeLinkPreview({ nodes, links, plates }: { nodes: NodeRow[]; links: LinkRow[]; plates: PlateRow[] }) {
+  const pts = nodes.filter((n) => n.id !== null && n.x !== null && n.y !== null) as {
+    id: number;
+    x: number;
+    y: number;
+  }[];
+  if (pts.length < 2) return null;
+  const xs = pts.map((n) => n.x);
+  const ys = pts.map((n) => n.y);
+  const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+  const span = Math.max(x1 - x0, y1 - y0, 1);
+  const pad = span * 0.14;
+  const W = x1 - x0 + 2 * pad;
+  const H = y1 - y0 + 2 * pad;
+  const at = (id: number | null) => pts.find((n) => n.id === id);
+  const fy = (y: number) => y1 - y + pad; // y points up on the page
+  const fx = (x: number) => x - x0 + pad;
+  return (
+    <svg
+      className="node-preview"
+      role="img"
+      aria-label="Section drawn from the nodes and links"
+      viewBox={`0 0 ${W} ${H}`}
+      style={{ width: "100%", maxHeight: 240 }}
+    >
+      {links.map((link) => {
+        const a = at(link.from);
+        const b = at(link.to);
+        if (!a || !b) return null;
+        const plate = plates.find((p) => p.id === link.uid);
+        const t = Math.max(link.thickness ?? span * 0.012, span * 0.008);
+        return (
+          <line
+            key={link.uid}
+            x1={fx(a.x)}
+            y1={fy(a.y)}
+            x2={fx(b.x)}
+            y2={fy(b.y)}
+            stroke="currentColor"
+            strokeOpacity={0.75}
+            strokeWidth={t}
+            strokeLinecap="butt"
+          >
+            <title>{`${plate?.label ?? "link"}: b̄ = ${plate?.width ?? "?"} mm`}</title>
+          </line>
+        );
+      })}
+      {pts.map((n) => (
+        <g key={n.id}>
+          <circle cx={fx(n.x)} cy={fy(n.y)} r={span * 0.012} fill="var(--accent, #c0392b)" />
+          <text
+            x={fx(n.x) + span * 0.025}
+            y={fy(n.y) - span * 0.025}
+            fontSize={span * 0.05}
+            fill="currentColor"
+          >
+            {n.id}
+          </text>
+        </g>
+      ))}
+    </svg>
   );
 }
 
@@ -494,6 +670,19 @@ export function BendingInputs({
           onChange={(axis) => set({ axis })}
         />
       ) : null}
+      <SelectField
+        label="Direction of bending"
+        value={form.direction}
+        options={[
+          { value: "sagging", label: "Sagging (+M): compression at the top" },
+          { value: "hogging", label: "Hogging (−M): compression at the bottom" },
+        ]}
+        fieldKey="direction"
+        onChange={(direction) => set({ direction })}
+      />
+      <p className="muted">
+        {renderSymbols("Sets the compression side on the Stage and the sign of M and κ; the resistance is a magnitude. For a section that is not symmetric, give W_el and W_pl for the side in compression.")}
+      </p>
       {known && !asksForAxis(sectionType) ? (
         <p className="muted">A circular hollow section bends alike about every axis, so no axis is asked for (Table B.2: any).</p>
       ) : null}

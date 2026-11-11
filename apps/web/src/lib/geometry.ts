@@ -25,9 +25,44 @@ export type PlateRow = {
   kSigma: number | null;
 };
 
+/** A point of the custom section's line model (mm). `id` is the number the links refer to. */
+export type NodeRow = { uid: number; id: number | null; x: number | null; y: number | null };
+
+/** A flat plate between two nodes: its flat width b̄ is the distance between them. */
+export type LinkRow = {
+  uid: number;
+  label: string;
+  from: number | null;
+  to: number | null;
+  thickness: number | null;
+  kSigma: number | null;
+};
+
+/**
+ * The plates of the custom route, from the nodes and the links: b̄ of a link is the length between its
+ * two nodes. A link with a missing or unknown node has no width yet. The link's uid is the plate's id.
+ */
+export function platesFromLinks(nodes: NodeRow[], links: LinkRow[]): PlateRow[] {
+  const at = (id: number | null) => nodes.find((n) => n.id !== null && n.id === id);
+  return links.map((link) => {
+    const a = at(link.from);
+    const b = at(link.to);
+    const ok = a && b && a.x !== null && a.y !== null && b.x !== null && b.y !== null;
+    const width = ok ? Math.hypot(b.x! - a.x!, b.y! - a.y!) : null;
+    return {
+      id: link.uid,
+      label: link.label.trim() || `link ${link.uid}`,
+      width: width !== null && width > 0 ? Math.round(width * 1000) / 1000 : null,
+      thickness: link.thickness,
+      kSigma: link.kSigma,
+    };
+  });
+}
+
 /** Every number starts empty: nothing is assumed. */
 export type DeformationFormState = {
   kind: GeometryKindKey | null; // null until the section type is chosen: the type sets the route
+  custom: boolean; // Section group: a custom section of flat plates typed in a table, not a template
   shape: SectionType | null; // the section type, which the template route sends to the engine
   fabrication: Fabrication | null; // I-section, channel and T-section: a choice the user makes
   // the section dimensions (mm), typed in the Section group
@@ -42,7 +77,9 @@ export type DeformationFormState = {
   cStem: number | null;
   rO: number | null; // RHS outer corner radius: section properties and drawing only, never c
   kSigma: Record<PlateRoleKey, number | null>; // one input per plate role (template route)
-  plates: PlateRow[];
+  plates: PlateRow[]; // custom route: derived from `nodes` and `links`
+  nodes: NodeRow[];
+  links: LinkRow[];
   sigmaCr: number | null;
   family: FamilyKey | null;
   poissonRatio: number | null;
@@ -51,6 +88,7 @@ export type DeformationFormState = {
 
 export const defaultDeformationForm: DeformationFormState = {
   kind: null,
+  custom: false,
   shape: null,
   fabrication: null,
   d: null,
@@ -64,7 +102,9 @@ export const defaultDeformationForm: DeformationFormState = {
   cStem: null,
   rO: null,
   kSigma: { web: null, flange: null, stem: null, leg: null },
-  plates: [{ id: 1, label: "plate 1", width: null, thickness: null, kSigma: null }],
+  plates: [{ id: 1, label: "link 1", width: null, thickness: null, kSigma: null }],
+  nodes: [{ uid: 1, id: 1, x: null, y: null }],
+  links: [{ uid: 1, label: "link 1", from: null, to: null, thickness: null, kSigma: null }],
   sigmaCr: null,
   family: null,
   poissonRatio: null,
@@ -74,15 +114,26 @@ export const defaultDeformationForm: DeformationFormState = {
 export const CIRCULAR: SectionType = "circular hollow section";
 
 /**
- * The section type picks the B.5 route: a circular hollow section uses B.10 and B.11 (diameter and
- * thickness), every other type is a section template (8.2.2(5)) unless the user chose to enter the
- * flat plates one by one. A typed critical stress stays a typed critical stress.
+ * The route the section geometry gives: a circular hollow section uses B.10 and B.11 (diameter and
+ * thickness); every other type is a template (8.2.2(5)) or, when the user chose Custom, the flat plates
+ * typed in the table.
  */
+export function geometryKind(form: DeformationFormState, type: SectionType | null = form.shape): GeometryKindKey {
+  if (type === CIRCULAR) return "chs";
+  return form.custom ? "plates" : "template";
+}
+
+/** The section type picks the route and the family. A typed critical stress stays a typed critical stress. */
 export function withSectionType(form: DeformationFormState, type: SectionType): DeformationFormState {
   const circular = type === CIRCULAR;
-  const kind =
-    form.kind === "sigma_cr" ? "sigma_cr" : circular ? "chs" : form.kind === "plates" ? "plates" : "template";
+  const kind = form.kind === "sigma_cr" ? "sigma_cr" : geometryKind(form, type);
   return { ...form, shape: type, kind, family: circular ? "circular_hollow" : "flat_plates" };
+}
+
+/** Template or Custom, chosen in the Section group. */
+export function withCustom(form: DeformationFormState, custom: boolean): DeformationFormState {
+  const next = { ...form, custom };
+  return form.kind === null || form.kind === "sigma_cr" ? next : { ...next, kind: geometryKind(next) };
 }
 
 /** The typed dimensions as the sketch and the field list read them. */
@@ -147,7 +198,7 @@ export function missingDeformationItems(form: DeformationFormState, withStressPa
       ].filter((gap) => gap !== null);
       if (gaps.length > 0) {
         missing.push(
-          item(
+          sectionItem(
             `${gaps.map((gap) => gap.symbol).join(", ")} of ${row.label || "the plate"}`,
             `plate-${row.id}-${gaps[0].key}`,
           ),

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { defaultDeformationForm, deformationRequest, missingDeformationItems, withSectionType } from "./geometry";
+import { defaultDeformationForm, deformationRequest, missingDeformationItems, withCustom, withSectionType } from "./geometry";
 import { countByGroup, uniqueItems } from "./inputs";
 import { defaultMaterialForm, missingMaterialItems } from "./material";
 import { defaultTensionForm, missingTensionItems } from "./tension";
@@ -45,7 +45,8 @@ describe("the section type picks the B.5 route", () => {
   );
 
   it("the plates entered one by one stay chosen when the section type changes", () => {
-    const manual = { ...withSectionType(defaultDeformationForm, "I-section"), kind: "plates" as const };
+    const manual = withCustom(withSectionType(defaultDeformationForm, "I-section"), true);
+    expect(manual.kind).toBe("plates");
     expect(withSectionType(manual, "channel").kind).toBe("plates");
     expect(withSectionType(manual, "circular hollow section").kind).toBe("chs");
   });
