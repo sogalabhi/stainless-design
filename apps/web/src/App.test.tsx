@@ -237,13 +237,14 @@ describe("Deformation capacity step", () => {
     const user = await openDeformation();
     await user.click(screen.getByRole("radio", { name: "Expert" }));
     await user.selectOptions(await screen.findByLabelText("Section"), "plates");
-    const rows = () => document.querySelectorAll("fieldset.plate-row").length;
+    // one row per plate, and the last row is always empty: typing there adds a plate
+    const rows = () => document.querySelectorAll(".data-table tbody tr:not(.data-row-new)").length;
     expect(rows()).toBe(1);
-    await user.click(screen.getByRole("button", { name: /Add plate/ }));
+    await user.type(screen.getByLabelText(/^New row: Flat width/), "100");
     expect(rows()).toBe(2);
-    await user.click(screen.getAllByRole("button", { name: /Remove plate/ })[1]);
+    await user.click(screen.getByRole("button", { name: "Delete plate 2" }));
     expect(rows()).toBe(1);
-    expect(screen.getByRole("button", { name: /Remove plate/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Delete plate 1" })).toBeDisabled();
   });
 
   it("sends omega only in expert mode", async () => {

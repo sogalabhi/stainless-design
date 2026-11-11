@@ -52,7 +52,9 @@ function inspectDock() {
     .forEach((element) => {
       const key = element.dataset.field as string;
       keys.push(key);
-      if (!element.querySelector("button[data-help-for]")) bare.push(key);
+      // a table cell is explained once, by the "?" in its column heading
+      const heading = element.closest("table")?.querySelector(`thead button[data-help-for="${helpKeyOf(key)}"]`);
+      if (!element.querySelector("button[data-help-for]") && !heading) bare.push(key);
     });
   return { keys, bare };
 }
@@ -122,23 +124,34 @@ describe("the ? button on every input", () => {
         collect();
       }
     }
+    // Custom: the plates table instead of the dimensions
+    await user.selectOptions(within(dock()).getByLabelText(/^Section type/), "I-section");
+    await user.selectOptions(within(dock()).getByLabelText(/^Geometry/), "custom");
+    collect();
 
-    // the three routes of the Deformation group, on a shape with flat plates and on the tube
-    for (const type of ["I-section", "circular hollow section"]) {
+    // the routes of the Deformation group: custom plates, a template and the tube
+    for (const [type, geometry] of [
+      ["I-section", "custom"],
+      ["I-section", "template"],
+      ["circular hollow section", null],
+    ] as const) {
       await openGroup(user, /^Section/);
       await user.selectOptions(within(dock()).getByLabelText(/^Section type/), type);
+      if (geometry) await user.selectOptions(within(dock()).getByLabelText(/^Geometry/), geometry);
       await openGroup(user, /^Deformation capacity/);
       const route = within(dock()).getByLabelText(/^Slenderness from/) as HTMLSelectElement;
       const routes = [...route.options].map((option) => option.value).filter(Boolean);
       for (const value of routes) {
         await openGroup(user, /^Deformation capacity/);
         await user.selectOptions(within(dock()).getByLabelText(/^Slenderness from/), value);
-        if (value === "plates") await user.click(within(dock()).getByRole("button", { name: /Add plate/ }));
         collect();
         // the Bending group follows the route: bending k_σ per plate, per role, or a typed σ_cr,cs
         await openGroup(user, /^Bending/);
         collect();
       }
+      // back to the geometry, so the next pass can choose Template or Custom again
+      await openGroup(user, /^Deformation capacity/);
+      await user.selectOptions(within(dock()).getByLabelText(/^Slenderness from/), routes[0]);
     }
 
     expect(seen.size).toBeGreaterThan(20);

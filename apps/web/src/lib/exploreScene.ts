@@ -1,7 +1,18 @@
 import type { AnchoredLabel, Arrow, Displacement, Solid, Vec2, ViewerItem } from "../components/viewer3d/types";
+import type { SectionType } from "../api/types";
 import type { SceneSection, Zone } from "./comparison";
 import { pathPolygons, sectionOutline } from "./sectionOutline";
-import { ANGLE, CHANNEL, CHS, EMPTY_DIMS, I_SECTION, RHS, T_SECTION } from "./sectionTemplates";
+import {
+  ANGLE,
+  CHANNEL,
+  CHS,
+  EMPTY_DIMS,
+  I_SECTION,
+  RHS,
+  T_SECTION,
+  type Fabrication,
+  type SketchDims,
+} from "./sectionTemplates";
 
 /**
  * The Explore tab's sections as items of the shared 3D viewer. The outline is the true one, drawn from
@@ -66,10 +77,14 @@ export function sceneSolids(section: SceneSection): Solid[] {
       ] as Vec2[],
     }));
   }
-  const outline =
-    section.kind === "chs"
-      ? sectionOutline(CHS, null, { ...EMPTY_DIMS, d: section.d, t: section.t })
-      : sectionOutline(section.shape, section.fabrication, section.dims);
+  return section.kind === "chs"
+    ? outlineSolids(CHS, null, { ...EMPTY_DIMS, d: section.d, t: section.t })
+    : outlineSolids(section.shape, section.fabrication, section.dims);
+}
+
+/** A section template's outline from its dimensions as polygons: the outer boundary with its holes, and any weld triangles. */
+export function outlineSolids(shape: SectionType, fabrication: Fabrication | null, dims: SketchDims): Solid[] {
+  const outline = sectionOutline(shape, fabrication, dims);
   const [outer, ...holes] = pathPolygons(outline.paths);
   return [{ outer, holes }, ...pathPolygons(outline.welds).map((weld) => ({ outer: weld }))];
 }

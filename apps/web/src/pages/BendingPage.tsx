@@ -58,7 +58,7 @@ function BendingGate({ error }: { error: ApiError }) {
 }
 
 /** Table B.2 as printed, with the row that gave α lit. */
-function TableB2({ rows }: { rows: BendingParameterRowOut[] }) {
+export function TableB2({ rows }: { rows: BendingParameterRowOut[] }) {
   return (
     <div className="table-wrap">
       <h3>Table B.2: CSM bending parameter α</h3>

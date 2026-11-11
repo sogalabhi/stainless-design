@@ -301,7 +301,7 @@ describe("the Deformation group on the template route", () => {
     expect(within(dock()).getByLabelText(/^Ω/)).toHaveValue(null);
   });
 
-  it("offers the three routes for a template shape and two for a tube", async () => {
+  it("offers two routes for a template shape and two for a tube", async () => {
     const user = userEvent.setup();
     renderApp();
     await openSection(user);
@@ -310,7 +310,6 @@ describe("the Deformation group on the template route", () => {
     const route = within(dock()).getByLabelText(/^Slenderness from/);
     expect(within(route).getAllByRole("option").map((o) => o.textContent)).toEqual([
       "Section dimensions (8.2.2(5))",
-      "Flat plates entered one by one",
       "A typed critical stress σ_cr,cs",
     ]);
     expect(field("kSigma-leg")).toHaveTextContent(/b̄ = h/);
@@ -336,17 +335,27 @@ describe("the Deformation group on the template route", () => {
     expect(within(dock()).queryByRole("img", { name: /Thumbnail/ })).not.toBeInTheDocument();
   });
 
-  it("the manual plates route still works", async () => {
+  it("Custom in the Section group swaps the dimensions for the plates table", async () => {
     const user = userEvent.setup();
     renderApp();
     await openSection(user);
     await user.selectOptions(within(dock()).getByLabelText(/^Section type/), "I-section");
-    await user.click(group(/^Deformation capacity/));
-    await user.selectOptions(within(dock()).getByLabelText(/^Slenderness from/), "plates");
+    expect(within(dock()).getByLabelText(/^Geometry/)).toHaveValue("template");
+    await user.selectOptions(within(dock()).getByLabelText(/^Geometry/), "custom");
     expect(within(dock()).getByLabelText(/^Flat width/)).toBeInTheDocument();
-    await user.click(group(/^Section/));
     expect(within(dock()).queryByLabelText(/^Overall height h/)).not.toBeInTheDocument();
-    expect(within(dock()).getByText(/entered one by one in the Deformation group/)).toBeInTheDocument();
+    expect(within(dock()).queryByLabelText(/^Fabrication/)).not.toBeInTheDocument();
+    await user.click(group(/^Deformation capacity/));
+    expect(within(dock()).getByLabelText(/^Slenderness from/)).toHaveValue("plates");
+    expect(within(dock()).getByText(/columns of the plates table in the Section group/)).toBeInTheDocument();
+    // a typed σ_cr,cs and back: Custom is remembered
+    await user.selectOptions(within(dock()).getByLabelText(/^Slenderness from/), "sigma_cr");
+    await user.selectOptions(within(dock()).getByLabelText(/^Slenderness from/), "plates");
+    await user.click(group(/^Section/));
+    expect(within(dock()).getByLabelText(/^Flat width/)).toBeInTheDocument();
+    // a tube has no Custom
+    await user.selectOptions(within(dock()).getByLabelText(/^Section type/), "circular hollow section");
+    expect(within(dock()).queryByLabelText(/^Geometry/)).not.toBeInTheDocument();
   });
 });
 

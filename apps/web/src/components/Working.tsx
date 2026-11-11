@@ -35,16 +35,21 @@ export function Working({
   steps,
   clauses,
   alsoSymbols = [],
+  symbols,
 }: {
   title: string;
   steps: TraceStepOut[];
   clauses?: string[];
   /** steps kept even when their clause is not listed (a typed value, whose clause is "input") */
   alsoSymbols?: string[];
+  /** only these steps, by symbol, when one clause is shared by several cards (the Section Stage) */
+  symbols?: string[];
 }) {
-  const shown = clauses
-    ? steps.filter((step) => clauses.includes(step.clause) || alsoSymbols.includes(step.symbol))
-    : steps;
+  const shown = symbols
+    ? steps.filter((step) => symbols.includes(step.symbol))
+    : clauses
+      ? steps.filter((step) => clauses.includes(step.clause) || alsoSymbols.includes(step.symbol))
+      : steps;
   return (
     <Collapsible title={`Show working: ${title}`}>
       <ol className="working">

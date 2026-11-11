@@ -32,3 +32,20 @@ export function formatPercent(fraction: number, signed = false): string {
   if (!signed) return fraction < 0 ? `-${text}` : text;
   return `${fraction < 0 ? "-" : "+"}${text}`;
 }
+
+/** A fixed number of decimals with thousands spaces, for the Section Stage: 3.41, 218.0, 564.4. */
+export function formatFixed(value: number, digits: number): string {
+  return value
+    .toLocaleString("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits })
+    .replace(/,/g, " ");
+}
+
+/** A strain ratio ε/ε_y: two decimals below 10, one from 10 (3.41, 15.0). */
+export function formatRatio(ratio: number): string {
+  return formatFixed(ratio, ratio < 10 ? 2 : 1);
+}
+
+/** A fraction as a percentage with one decimal, never signed: 0.2213 reads "22.1 %". */
+export function formatPercentOne(fraction: number): string {
+  return `${formatFixed(Math.abs(fraction) * 100, 1)} %`;
+}

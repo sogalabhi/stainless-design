@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { formatKn, formatKnM, formatNumber, formatPercent, knM } from "./format";
+import {
+  formatFixed,
+  formatKn,
+  formatKnM,
+  formatNumber,
+  formatPercent,
+  formatPercentOne,
+  formatRatio,
+  knM,
+} from "./format";
 
 describe("formatNumber", () => {
   it("keeps significant figures for small values", () => {
@@ -27,5 +36,27 @@ describe("formatKn / formatPercent", () => {
     expect(formatPercent(0.2194, true)).toBe("+22 %");
     expect(formatPercent(0.43)).toBe("43 %");
     expect(formatPercent(-0.1, true)).toBe("-10 %");
+  });
+});
+
+describe("the Section Stage number formats", () => {
+  it("rounds as the stage shows it: 3.41, 218.0, 564.4, 50.30", () => {
+    expect(formatFixed(3.41109, 2)).toBe("3.41");
+    expect(formatFixed(218.002, 1)).toBe("218.0");
+    expect(formatFixed(564.4268, 1)).toBe("564.4");
+    expect(formatFixed(50.2993, 2)).toBe("50.30");
+    expect(formatFixed(0.483877, 3)).toBe("0.484");
+  });
+  it("puts thousands spaces in large values", () => {
+    expect(formatFixed(1234.56, 1)).toBe("1 234.6");
+  });
+  it("shows a strain ratio with two decimals below 10 and one from 10", () => {
+    expect(formatRatio(3.41109)).toBe("3.41");
+    expect(formatRatio(0.5278)).toBe("0.53");
+    expect(formatRatio(15)).toBe("15.0");
+  });
+  it("shows an engine fraction as an unsigned percentage", () => {
+    expect(formatPercentOne(0.22125)).toBe("22.1 %");
+    expect(formatPercentOne(-0.4)).toBe("40.0 %");
   });
 });

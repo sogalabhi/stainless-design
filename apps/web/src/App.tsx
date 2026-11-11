@@ -1,7 +1,7 @@
-import { BookOpen, Box, ChevronsDownUp, Layers, MoveVertical, Ruler, SlidersHorizontal, Spline } from "lucide-react";
+import { BookOpen, Box, ChevronsDownUp, Layers, MoveVertical, Presentation, Ruler, SlidersHorizontal, Spline } from "lucide-react";
 import { keepPreviousData, useQuery, type UseQueryResult } from "@tanstack/react-query";
-import { useState } from "react";
-import { api } from "./api/client";
+import { useMemo, useState } from "react";
+import { api, type ApiError } from "./api/client";
 import type { BendingAxisKey, GraphView, SectionType } from "./api/types";
 import { AreaNote, ModulusNote } from "./components/AreaNote";
 import { Dock, type FocusRequest } from "./components/Dock";
@@ -13,7 +13,13 @@ import { Segmented } from "./components/ui";
 import { useDarkMode, useDebounced } from "./lib/hooks";
 import { defaultMaterialForm, materialInput, missingMaterialItems } from "./lib/material";
 import { exampleState } from "./lib/example";
-import { bendingRequest, defaultBendingForm, missingBendingItems, type BendingFormState } from "./lib/bending";
+import {
+  bendingRequest,
+  defaultBendingForm,
+  missingBendingItems,
+  withBendingStress,
+  type BendingFormState,
+} from "./lib/bending";
 import { comparisonRequest } from "./lib/comparison";
 import { compressionRequest, missingCompressionItems } from "./lib/compression";
 import {
@@ -34,16 +40,18 @@ import {
   type TabStatus,
 } from "./lib/inputs";
 import type { PlateRoleKey } from "./lib/sectionTemplates";
+import { bendingView, compressionView, defaultCase, tensionView, type StageCase } from "./lib/stage";
 import { defaultTensionForm, missingTensionItems } from "./lib/tension";
 import { BendingPage, NOT_APPLICABLE_ERROR, NOT_BUILT_YET_ERROR } from "./pages/BendingPage";
 import { CompressionPage } from "./pages/CompressionPage";
 import { DeformationPage } from "./pages/DeformationPage";
 import { HelpPage } from "./pages/HelpPage";
 import { MaterialPage } from "./pages/MaterialPage";
+import { StagePage, caseNotice, type StageCaseInput } from "./pages/StagePage";
 import { VisualisePage } from "./pages/VisualisePage";
 import { TensionPage } from "./pages/TensionPage";
 
-type Tab = "material" | "deformation" | "tension" | "compression" | "bending" | "explore" | "help";
+type Tab = "stage" | "material" | "deformation" | "tension" | "compression" | "bending" | "explore" | "help";
 
 /** One word for what a tab holds: waiting for inputs, done, not applicable, or something wrong. */
 function statusOf(
@@ -58,7 +66,9 @@ function statusOf(
 }
 
 export function App() {
-  const [tab, setTab] = useState<Tab>("material");
+  const [tab, setTab] = useState<Tab>("stage");
+  // the load case on the stage; null until the user picks one (then the first case that is done)
+  const [stageChoice, setStageChoice] = useState<StageCase | null>(null);
   const [view, setView] = useState<GraphView>("schematic");
   const [materialForm, setMaterialForm] = useState(defaultMaterialForm);
   const [sectionType, setSectionType] = useState<SectionType | null>(null);
@@ -219,16 +229,6 @@ export function App() {
   const properties = propertiesFresh ? (propertiesQuery.data ?? null) : null;
   const propertiesMissing = missingPropertyItems(deformationForm);
 
-  const comparisonRequestBody =
-    material === null ? null : comparisonRequest(material, debouncedDeformation);
-  const comparisonQuery = useQuery({
-    queryKey: ["comparison", comparisonRequestBody],
-    queryFn: ({ signal }) => api.sectionComparison(comparisonRequestBody!, signal),
-    enabled: tab === "explore" && comparisonRequestBody !== null,
-    placeholderData: keepPreviousData,
-    retry: false,
-  });
-
   const materialMissing = missingMaterialItems(materialForm);
   const tensionMissing = missingTensionItems(tensionForm);
   const deformationMissing = missingDeformationItems(deformationForm);
@@ -305,6 +305,96 @@ export function App() {
           ? "done"
           : "waiting";
 
+  // The three load cases of the Section Stage: the clause tabs' own statuses.
+  const loadStatus: Record<StageCase, TabStatus> = {
+    tension: statusOf(
+      tensionWaiting,
+      tensionQuery,
+      tensionForm.hasHoles || scope.state === "beyond",
+    ),
+    compression: statusOf(compressionWaiting, compressionQuery, scope.state === "beyond"),
+    bending: bendingStatus,
+  };
+  const stageCase = stageChoice ?? defaultCase(loadStatus);
+
+  // The section sweep of Explore (thicker and thinner), also asked for while the Stage shows compression:
+  // its thickness what-if reads the engine's points.
+  const comparisonRequestBody =
+    material === null ? null : comparisonRequest(material, debouncedDeformation);
+  const comparisonQuery = useQuery({
+    queryKey: ["comparison", comparisonRequestBody],
+    queryFn: ({ signal }) => api.sectionComparison(comparisonRequestBody!, signal),
+    enabled:
+      comparisonRequestBody !== null &&
+      (tab === "explore" || (tab === "stage" && stageCase === "compression")),
+    placeholderData: keepPreviousData,
+    retry: false,
+  });
+
+  // The B.5 base curve of the section in bending (its own k_σ), asked for only while the Stage shows bending.
+  const bendingDeformationBody =
+    material === null
+      ? null
+      : deformationRequest(material, withBendingStress(debouncedDeformation, debouncedBending));
+  const bendingDeformationQuery = useQuery({
+    queryKey: ["deformation", bendingDeformationBody],
+    queryFn: ({ signal }) => api.deformationCapacity(bendingDeformationBody!, signal),
+    enabled: bendingDeformationBody !== null && tab === "stage" && stageCase === "bending",
+    placeholderData: keepPreviousData,
+    retry: false,
+  });
+
+  const tensionStage = useMemo(
+    () => (tensionQuery.data ? tensionView(tensionQuery.data) : null),
+    [tensionQuery.data],
+  );
+  const compressionStage = useMemo(
+    () => (compressionQuery.data ? compressionView(compressionQuery.data) : null),
+    [compressionQuery.data],
+  );
+  const bendingStage = useMemo(
+    () => (bendingQuery.data ? bendingView(bendingQuery.data) : null),
+    [bendingQuery.data],
+  );
+  // What each load case hands the Section Stage: its status, the engine's answer arranged for the screen,
+  // and the message when the engine refused. A drawing and its engine numbers go together only while the
+  // dimensions typed are those the answer was asked for.
+  const dimsFresh =
+    currentDeformationBody !== null &&
+    JSON.stringify(currentDeformationBody) === JSON.stringify(deformationRequestBody);
+  const stageInput = (
+    key: StageCase,
+    waiting: MissingItem[],
+    query: UseQueryResult<unknown, ApiError>,
+    view: StageCaseInput["view"],
+    baseFigure: StageCaseInput["baseFigure"],
+  ): StageCaseInput => ({
+    status: loadStatus[key],
+    waiting,
+    view: waiting.length === 0 && !materialProblem && !query.isError ? view : null,
+    notice: caseNotice(key, query, scope.state === "beyond" && key !== "bending" ? scope : { state: "unchecked", reason: "" }),
+    calculating: query.isFetching,
+    fresh: dimsFresh && !query.isPlaceholderData,
+    baseFigure,
+  });
+  const stageCases: Record<StageCase, StageCaseInput> = {
+    tension: stageInput("tension", tensionWaiting, tensionQuery, tensionStage, null),
+    compression: stageInput(
+      "compression",
+      compressionWaiting,
+      compressionQuery,
+      scope.state === "beyond" ? null : compressionStage,
+      deformationQuery.data?.figure ?? null,
+    ),
+    bending: stageInput(
+      "bending",
+      bendingWaiting,
+      bendingQuery,
+      bendingStage,
+      bendingDeformationQuery.data?.figure ?? null,
+    ),
+  };
+
   // The modulus rows that get a Use button, and the engine's value to compare a typed one with.
   const modulusAxis: BendingAxisKey | null = sectionType === CIRCULAR ? "major" : bendingForm.axis;
   const geometryModulus = (which: "el" | "pl"): number | null => {
@@ -331,16 +421,14 @@ export function App() {
       deformationQuery.data?.strain_limit.allowed === false,
     ),
     // Holes: B.6.1(2) sends the section to EN 1993-1-3 or EN 1993-1-1, outside Annex B.
-    tension: statusOf(
-      tensionWaiting,
-      tensionQuery,
-      tensionForm.hasHoles || scope.state === "beyond",
-    ),
-    compression: statusOf(compressionWaiting, compressionQuery, scope.state === "beyond"),
-    bending: bendingStatus,
+    tension: loadStatus.tension,
+    compression: loadStatus.compression,
+    bending: loadStatus.bending,
+    stage: loadStatus[stageCase],
     explore: exploreReady && !comparisonQuery.data ? "done" : statusOf(exploreWaiting, comparisonQuery, typedStress),
   };
   const tabs: { key: Exclude<Tab, "help">; label: string; icon: typeof Layers }[] = [
+    { key: "stage", label: "Stage", icon: Presentation },
     { key: "material", label: "Material (B.4)", icon: Layers },
     { key: "deformation", label: "Deformation (B.5)", icon: Ruler },
     { key: "tension", label: "Tension (B.6.1)", icon: MoveVertical },
@@ -448,6 +536,21 @@ export function App() {
           <main>
             {tab === "help" ? (
               <HelpPage />
+            ) : tab === "stage" ? (
+              <StagePage
+                cases={stageCases}
+                selected={stageCase}
+                onSelect={setStageChoice}
+                materialProblem={materialProblem}
+                onGo={goTo}
+                onOpenMaterial={() => setTab("material")}
+                form={deformationForm}
+                axis={bendingForm.axis}
+                direction={bendingForm.direction}
+                values={materialQuery.data?.values ?? null}
+                sweep={comparisonQuery}
+                dark={dark}
+              />
             ) : tab === "material" ? (
               <MaterialPage missing={materialMissing} onGo={goTo} query={materialQuery} dark={dark} />
             ) : tab === "deformation" ? (

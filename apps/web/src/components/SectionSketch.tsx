@@ -118,7 +118,14 @@ type Ctx = {
   /** the typed value to print after the symbol (to scale only) */
   typed: SketchDims;
   layers: SketchLayers;
+  /** the Section Stage: the plate to light (a plate role, or the whole tube) */
+  lit?: PlateRoleKey | "tube" | null;
+  /** the Section Stage: drawn turned a quarter, so the outline and the lit plate only, no labels */
+  turned?: boolean;
 };
+
+/** A rectangle [x0, y0, x1, y1] in drawing units, y down. */
+type Rect = [number, number, number, number];
 
 /** One dimension line with its label, linked to its field. */
 function Dim({
@@ -140,7 +147,7 @@ function Dim({
   ctx: Ctx;
   label?: ReactNode;
 }) {
-  if (!ctx.layers.dimensions) return null;
+  if (!ctx.layers.dimensions || ctx.turned) return null;
   const p1: Pt = [a[0] + off[0], a[1] + off[1]];
   const p2: Pt = [b[0] + off[0], b[1] + off[1]];
   const dx = p2[0] - p1[0];
@@ -213,7 +220,7 @@ function Dim({
 
 /** A leader to a corner radius or weld leg, labelled r or s. */
 function Leader({ id, from, to, ctx }: { id: DimKey; from: Pt; to: Pt; ctx: Ctx }) {
-  if (!ctx.layers.dimensions) return null;
+  if (!ctx.layers.dimensions || ctx.turned) return null;
   const typed = ctx.typed[id];
   return (
     <g
@@ -249,7 +256,7 @@ function Band({
   anchor: "start" | "middle" | "end";
   ctx: Ctx;
 }) {
-  if (!ctx.layers.flat) return null;
+  if (!ctx.layers.flat || ctx.turned) return null;
   const [x0, y0, x1, y1] = rect;
   return (
     <g className="sk-band" data-band={symbol}>
@@ -262,7 +269,19 @@ function Band({
   );
 }
 
-type Drawn = { outline: ReactNode; extras: ReactNode; axes: ReactNode };
+type Drawn = { outline: ReactNode; extras: ReactNode; axes: ReactNode; lit: ReactNode };
+
+/** The plate the Stage lights, as solid rectangles (or, for a tube, the ring again). */
+function LitPlate({ rects, ctx }: { rects: Rect[]; ctx: Ctx }) {
+  if (!ctx.lit) return null;
+  return (
+    <g className="sk-lit" data-lit={ctx.lit} aria-hidden="true">
+      {rects.map(([x0, y0, x1, y1], i) => (
+        <rect key={i} x={Math.min(x0, x1)} y={Math.min(y0, y1)} width={Math.abs(x1 - x0)} height={Math.abs(y1 - y0)} />
+      ))}
+    </g>
+  );
+}
 
 function Axes({ w, h, y = true, z = true }: { w: number; h: number; y?: boolean; z?: boolean }) {
   return (
@@ -323,6 +342,10 @@ function drawShape(
         </>
       ),
       axes: <Axes w={2 * ro} h={2 * ro} />,
+      lit:
+        ctx.lit === "tube" ? (
+          <path fillRule="evenodd" d={pathData(drawn.paths)} className="sk-lit-ring" aria-hidden="true" />
+        ) : null,
     };
   }
 
@@ -354,6 +377,22 @@ function drawShape(
         </>
       ),
       axes: <Axes w={B} h={H} />,
+      lit: (
+        <LitPlate
+          ctx={ctx}
+          rects={
+            ctx.lit === "web"
+              ? [
+                  [x1 - T, yT + T, x1, yB - T],
+                  [x0, yT + T, x0 + T, yB - T],
+                ]
+              : [
+                  [x0 + T, yT, x1 - T, yT + T],
+                  [x0 + T, yB - T, x1 - T, yB],
+                ]
+          }
+        />
+      ),
     };
   }
 
@@ -387,6 +426,7 @@ function drawShape(
         </>
       ),
       axes: null,
+      lit: <LitPlate ctx={ctx} rects={[[x0, yT, x0 + T, yB]]} />,
     };
   }
 
@@ -478,11 +518,37 @@ function drawShape(
         </>
       ),
       axes: <Axes w={B} h={H} y={false} />,
+      lit: (
+        <LitPlate
+          ctx={ctx}
+          rects={
+            ctx.lit === "stem"
+              ? [[wL, yT + TF, wR, yB]]
+              : [
+                  [x0, yT, wL - K, yT + TF],
+                  [wR + K, yT, x1, yT + TF],
+                ]
+          }
+        />
+      ),
     };
   }
 
+  const flangeRects: Rect[] =
+    shape === CHANNEL
+      ? [
+          [wR + K, yT, x1, yT + TF],
+          [wR + K, yB - TF, x1, yB],
+        ]
+      : [
+          [x0, yT, wL - K, yT + TF],
+          [wR + K, yT, x1, yT + TF],
+          [x0, yB - TF, wL - K, yB],
+          [wR + K, yB - TF, x1, yB],
+        ];
   return {
     outline,
+    lit: <LitPlate ctx={ctx} rects={ctx.lit === "web" ? [[wL, yT + TF, wR, yB - TF]] : flangeRects} />,
     extras: (
       <>
         {flangeBand}
@@ -706,6 +772,66 @@ export function SectionSketch({
           : SCHEMATIC_CAPTION}
       </figcaption>
     </figure>
+  );
+}
+
+/**
+ * The section of the Section Stage: the same outline, dimension lines and flat-width bands as the
+ * sketch, to scale (`scale` px per mm), centred on the origin of the group it returns, with the plate
+ * that sets the strain limit lit (`lit`: a plate role, or "tube"). A section turned a quarter (bending
+ * about the minor axis, so the depth runs up the page) draws the outline and the lit plate and puts its
+ * two overall sizes on dimension lines of its own, since the sketch's labels are for the upright shape.
+ * The flat widths printed are the engine's (`cValues`); a what-if gives none, and the bands name the
+ * widths without a number.
+ */
+export function StageSectionDrawing({
+  shape,
+  fabrication,
+  dims,
+  turned,
+  scale,
+  cValues,
+  lit,
+  withValues = true,
+}: {
+  shape: SectionType;
+  fabrication: Fabrication | null;
+  dims: SketchDims;
+  turned: boolean;
+  scale: number;
+  cValues: Partial<Record<PlateRoleKey, number>> | null;
+  lit: PlateRoleKey | "tube" | null;
+  /** print the typed dimension next to each symbol (off in the what-if, where thicknesses changed) */
+  withValues?: boolean;
+}) {
+  const ctx: Ctx = {
+    highlight: null,
+    toScale: withValues,
+    typed: dims,
+    // the flat widths c are drawn only where the engine gave them (tension has none)
+    layers: { ...DEFAULT_LAYERS, axes: false, flat: cValues !== null && Object.keys(cValues).length > 0 },
+    lit,
+    turned,
+  };
+  const drawn = drawShape(shape, fabrication, dims, scale, ctx, cValues ?? {});
+  const H = (dims.h ?? 0) * scale;
+  const B = (dims.b ?? 0) * scale;
+  // turned: the drawn height is b and the drawn width is h
+  const overall = turned ? (
+    <>
+      <Dim id="h" a={[-H / 2, B / 2]} b={[H / 2, B / 2]} off={[0, 24]} side="below" ctx={{ ...ctx, turned: false }} />
+      <Dim id="b" a={[-H / 2, -B / 2]} b={[-H / 2, B / 2]} off={[-26, 0]} side="left" ctx={{ ...ctx, turned: false }} />
+    </>
+  ) : null;
+  return (
+    <g className="stage-section">
+      <g transform={turned ? "rotate(90)" : undefined} className="sk-section">
+        {drawn.outline}
+        {drawn.lit}
+      </g>
+      {drawn.extras}
+      {overall}
+    </g>
   );
 }
 

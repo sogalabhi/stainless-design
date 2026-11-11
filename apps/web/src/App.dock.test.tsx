@@ -138,8 +138,12 @@ describe("one section-type picker", () => {
     expect(within(dock()).getByLabelText(/^k_?σ, flange outstand \(outstand\)/)).toBeInTheDocument();
     expect(within(dock()).queryByLabelText(/^Flat width/)).not.toBeInTheDocument();
 
-    await user.selectOptions(within(dock()).getByLabelText(/^Slenderness from/), "plates");
+    await user.click(within(dock()).getByRole("button", { name: /^Section/ }));
+    await user.selectOptions(within(dock()).getByLabelText(/^Geometry/), "custom");
     expect(within(dock()).getByLabelText(/^Flat width/)).toBeInTheDocument();
+    expect(within(dock()).queryByLabelText(/^Overall height h/)).not.toBeInTheDocument();
+    await user.click(within(dock()).getByRole("button", { name: /^Deformation capacity/ }));
+    expect(within(dock()).getByLabelText(/^Slenderness from/)).toHaveValue("plates");
     expect(within(dock()).queryByLabelText(/^k_?σ, web/)).not.toBeInTheDocument();
   });
 

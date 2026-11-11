@@ -58,6 +58,12 @@ export function sectionBounds(section: Solid[]): [number, number, number, number
 
 export type ExtrudeOptions = {
   displacement?: Displacement;
+  /**
+   * Where the point (x, y) at s along the member goes, in 3D: the member bent, shortened or lengthened
+   * as a whole (the Section Stage). It replaces the plain placement, so `length` is unused; give it the
+   * undeformed placement too to draw the unloaded member.
+   */
+  warp?: (x: number, y: number, s: number) => [number, number, number];
   /** stations along the member, ends included (2 when nothing is displaced) */
   stations?: number;
   /** the longest straight piece of the outline; default 1/24 of the larger side of the section */
@@ -65,14 +71,18 @@ export type ExtrudeOptions = {
 };
 
 export function memberGeometry(section: Solid[], length: number, options: ExtrudeOptions = {}): BufferGeometry {
-  const { displacement } = options;
-  const stations = displacement ? Math.max(2, Math.round(options.stations ?? 48)) : 2;
+  const { displacement, warp } = options;
+  const stations = displacement || warp ? Math.max(2, Math.round(options.stations ?? 48)) : 2;
   const [minX, minY, maxX, maxY] = sectionBounds(section);
   const maxSegment = options.maxSegment ?? (displacement ? Math.max(maxX - minX, maxY - minY) / 24 : 0);
 
   const positions: number[] = [];
   const indices: number[] = [];
   const point = (x: number, y: number, s: number) => {
+    if (warp) {
+      positions.push(...warp(x, y, s));
+      return positions.length / 3 - 1;
+    }
     const [dx, dy] = displacement ? displacement(x, y, s) : [0, 0];
     positions.push(x + dx, y + dy, (s - 0.5) * length);
     return positions.length / 3 - 1;
@@ -129,5 +139,49 @@ export function memberGeometry(section: Solid[], length: number, options: Extrud
   geometry.setIndex(indices);
   geometry.computeVertexNormals();
   geometry.computeBoundingBox();
+  return geometry;
+}
+
+/**
+ * One flat face of the section as a mesh, placed by `place` (the section plane point to 3D) and, when
+ * `color` is given, coloured per vertex. Edges longer than `maxSegment` are cut first, so a colour that
+ * changes down the depth has vertices to change at. Facing +z.
+ */
+export function capGeometry(
+  section: Solid[],
+  place: (x: number, y: number) => [number, number, number],
+  color?: (x: number, y: number) => [number, number, number],
+  maxSegment = 0,
+): BufferGeometry {
+  const positions: number[] = [];
+  const colours: number[] = [];
+  const indices: number[] = [];
+  for (const solid of section) {
+    const outer = oriented(resampled(solid.outer, maxSegment), true);
+    const holes = (solid.holes ?? []).map((hole) => oriented(resampled(hole, maxSegment), false));
+    const all = [outer, ...holes].flat();
+    const faces = ShapeUtils.triangulateShape(
+      outer.map(([x, y]) => new Vector2(x, y)),
+      holes.map((hole) => hole.map(([x, y]) => new Vector2(x, y))),
+    );
+    const base = positions.length / 3;
+    for (const [x, y] of all) {
+      positions.push(...place(x, y));
+      if (color) colours.push(...color(x, y));
+    }
+    for (const [i, j, k] of faces) {
+      const [ax, ay] = all[i];
+      const [bx, by] = all[j];
+      const [cx, cy] = all[k];
+      const ccw = (bx - ax) * (cy - ay) - (by - ay) * (cx - ax) > 0;
+      if (ccw) indices.push(base + i, base + j, base + k);
+      else indices.push(base + i, base + k, base + j);
+    }
+  }
+  const geometry = new BufferGeometry();
+  geometry.setAttribute("position", new Float32BufferAttribute(positions, 3));
+  if (color) geometry.setAttribute("color", new Float32BufferAttribute(colours, 3));
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
   return geometry;
 }

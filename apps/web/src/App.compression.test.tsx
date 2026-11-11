@@ -43,12 +43,12 @@ async function fillIn(user: ReturnType<typeof userEvent.setup>, plateWidth: numb
   await user.selectOptions(within(dock()).getByLabelText(/^Section type/), "I-section");
   await user.type(within(dock()).getByLabelText(/^Area A/), "1000");
   await user.type(within(dock()).getByLabelText(/^γM0/), "1.1");
-  await user.click(group(/^Deformation capacity/));
-  // this test is about the manual route; the section-template route has its own test file
-  await user.selectOptions(within(dock()).getByLabelText(/^Slenderness from/), "plates");
+  // this test is about the custom plates; the section-template route has its own test file
+  await user.selectOptions(within(dock()).getByLabelText(/^Geometry/), "custom");
   await user.type(within(dock()).getByLabelText(/^Flat width/), String(plateWidth));
   await user.type(within(dock()).getByLabelText(/^Thickness t/), "5");
   await user.type(within(dock()).getByLabelText(/^kσ/), "4");
+  await user.click(group(/^Deformation capacity/));
   await user.type(within(dock()).getByLabelText(/^Poisson/), "0.3");
   await user.type(within(dock()).getByLabelText(/^Ω/), "15");
   await user.click(tab(/Compression/));
