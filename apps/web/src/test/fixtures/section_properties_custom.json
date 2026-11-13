@@ -1,0 +1,225 @@
+{
+  "shape": null,
+  "label": "computed from your dimensions: geometry, not a rule of EN 1993-1-4",
+  "method": "Each link is a rectangle of its length and thickness (the thin-walled line model, overlaps at the joints are not removed); Green's theorem gives A, the centroid and the second moments. The plastic neutral axis cuts the area in two equal halves.",
+  "origin": "your node coordinates: x to the right (the y direction), y up (the z direction)",
+  "width": 100.0,
+  "height": 200.0,
+  "area": 3140.0,
+  "centroid": {
+    "y": 50.0,
+    "z": 95.0
+  },
+  "fibres": {
+    "top": 100.0,
+    "bottom": 100.0,
+    "left": 50.0,
+    "right": 50.0
+  },
+  "i_y": 21496166.666666664,
+  "i_z": 1670086.666666666,
+  "i_yz": 0.0,
+  "w_el_y": {
+    "value": 214961.66666666663,
+    "smaller_side": "equal",
+    "sides": {
+      "top": 214961.66666666663,
+      "bottom": 214961.66666666663
+    }
+  },
+  "w_el_z": {
+    "value": 33401.73333333332,
+    "smaller_side": "equal",
+    "sides": {
+      "left": 33401.73333333332,
+      "right": 33401.73333333332
+    }
+  },
+  "plastic_axis_y": 94.99999999999977,
+  "plastic_axis_z": 50.0,
+  "w_pl_y": 244150.0,
+  "w_pl_z": 51710.0,
+  "shear_centre": null,
+  "principal": {
+    "angle_deg": -0.0,
+    "i_u": 21496166.666666664,
+    "i_v": 1670086.6666666642
+  },
+  "rows": [
+    {
+      "key": "A",
+      "symbol": "A",
+      "name": "Cross-sectional area",
+      "value": 3140.0,
+      "unit": "mm²",
+      "group": "Area and centroid",
+      "note": "sum of length × thickness of the links; overlaps at the joints are not removed"
+    },
+    {
+      "key": "y_c",
+      "symbol": "y_c",
+      "name": "Centroid, horizontal",
+      "value": 50.0,
+      "unit": "mm",
+      "group": "Area and centroid",
+      "note": "from your node coordinates: x to the right (the y direction), y up (the z direction)"
+    },
+    {
+      "key": "z_c",
+      "symbol": "z_c",
+      "name": "Centroid, vertical",
+      "value": 95.0,
+      "unit": "mm",
+      "group": "Area and centroid",
+      "note": "from your node coordinates: x to the right (the y direction), y up (the z direction)"
+    },
+    {
+      "key": "e_top",
+      "symbol": "e_top",
+      "name": "Centroid to the top fibre",
+      "value": 100.0,
+      "unit": "mm",
+      "group": "Area and centroid",
+      "note": null
+    },
+    {
+      "key": "e_bottom",
+      "symbol": "e_bottom",
+      "name": "Centroid to the bottom fibre",
+      "value": 100.0,
+      "unit": "mm",
+      "group": "Area and centroid",
+      "note": null
+    },
+    {
+      "key": "e_left",
+      "symbol": "e_left",
+      "name": "Centroid to the left fibre",
+      "value": 50.0,
+      "unit": "mm",
+      "group": "Area and centroid",
+      "note": null
+    },
+    {
+      "key": "e_right",
+      "symbol": "e_right",
+      "name": "Centroid to the right fibre",
+      "value": 50.0,
+      "unit": "mm",
+      "group": "Area and centroid",
+      "note": null
+    },
+    {
+      "key": "I_y",
+      "symbol": "I_y",
+      "name": "Second moment about y-y",
+      "value": 21496200.0,
+      "unit": "mm⁴",
+      "group": "Second moment of area (about the centroid)",
+      "note": null
+    },
+    {
+      "key": "I_z",
+      "symbol": "I_z",
+      "name": "Second moment about z-z",
+      "value": 1670090.0,
+      "unit": "mm⁴",
+      "group": "Second moment of area (about the centroid)",
+      "note": null
+    },
+    {
+      "key": "I_yz",
+      "symbol": "I_yz",
+      "name": "Product of inertia",
+      "value": 0.0,
+      "unit": "mm⁴",
+      "group": "Second moment of area (about the centroid)",
+      "note": null
+    },
+    {
+      "key": "W_el_y",
+      "symbol": "W_el,y",
+      "name": "Elastic modulus about y-y",
+      "value": 214962.0,
+      "unit": "mm³",
+      "group": "Elastic section modulus",
+      "note": null
+    },
+    {
+      "key": "W_el_z",
+      "symbol": "W_el,z",
+      "name": "Elastic modulus about z-z",
+      "value": 33401.7,
+      "unit": "mm³",
+      "group": "Elastic section modulus",
+      "note": null
+    },
+    {
+      "key": "z_pl_y",
+      "symbol": "z_pl,y",
+      "name": "Plastic neutral axis for y-y",
+      "value": 95.0,
+      "unit": "mm",
+      "group": "Plastic section modulus",
+      "note": "y of the equal-area horizontal line, in your coordinates"
+    },
+    {
+      "key": "W_pl_y",
+      "symbol": "W_pl,y",
+      "name": "Plastic modulus about y-y",
+      "value": 244150.0,
+      "unit": "mm³",
+      "group": "Plastic section modulus",
+      "note": null
+    },
+    {
+      "key": "y_pl_z",
+      "symbol": "y_pl,z",
+      "name": "Plastic neutral axis for z-z",
+      "value": 50.0,
+      "unit": "mm",
+      "group": "Plastic section modulus",
+      "note": "x of the equal-area vertical line, in your coordinates"
+    },
+    {
+      "key": "W_pl_z",
+      "symbol": "W_pl,z",
+      "name": "Plastic modulus about z-z",
+      "value": 51710.0,
+      "unit": "mm³",
+      "group": "Plastic section modulus",
+      "note": null
+    },
+    {
+      "key": "theta_u",
+      "symbol": "θ_u",
+      "name": "Major axis u from the y axis",
+      "value": 0.0,
+      "unit": "°",
+      "group": "Principal axes",
+      "note": "counter-clockwise, z up"
+    },
+    {
+      "key": "I_u",
+      "symbol": "I_u",
+      "name": "Second moment about the major axis u",
+      "value": 21496200.0,
+      "unit": "mm⁴",
+      "group": "Principal axes",
+      "note": null
+    },
+    {
+      "key": "I_v",
+      "symbol": "I_v",
+      "name": "Second moment about the minor axis v",
+      "value": 1670090.0,
+      "unit": "mm⁴",
+      "group": "Principal axes",
+      "note": null
+    }
+  ],
+  "notes": [
+    "Reference values. The area A is the area of every calculation; W_el and W_pl enter a calculation only when you click Use, which copies the value into its input field.",
+    "No torsion constant or warping constant: Annex B does not use them."
+  ]
+}

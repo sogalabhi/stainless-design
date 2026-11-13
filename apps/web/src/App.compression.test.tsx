@@ -41,7 +41,6 @@ async function fillIn(user: ReturnType<typeof userEvent.setup>, plateWidth: numb
   await user.type(within(dock()).getByLabelText(/^E \[/), "200000");
   await user.click(group(/^Section/));
   await user.selectOptions(within(dock()).getByLabelText(/^Section type/), "I-section");
-  await user.type(within(dock()).getByLabelText(/^Area A/), "1000");
   await user.type(within(dock()).getByLabelText(/^γM0/), "1.1");
   // this test is about the custom plates; the section-template route has its own test file
   await user.selectOptions(within(dock()).getByLabelText(/^Geometry/), "custom");
@@ -69,7 +68,9 @@ describe("the Compression tab", () => {
     await user.click(tab(/Compression/));
     const results = screen.getByRole("region", { name: "Compression results" });
     const waiting = within(results).getByRole("status");
-    for (const label of [/fy/, /the section type/, /Ω/, /ν/, /the area A/, /γM0/]) {
+    // the area A is not asked for: it comes from the geometry, so the section's own gaps are listed instead
+    expect(waiting).not.toHaveTextContent(/the area A/);
+    for (const label of [/fy/, /the section type/, /Ω/, /ν/, /γM0/]) {
       expect(waiting).toHaveTextContent(label);
     }
     await user.click(within(results).getByRole("button", { name: "γM0" }));
@@ -101,7 +102,7 @@ describe("the Compression tab", () => {
     expect(await within(results).findByText(/Formula B\.16 applies/)).toBeInTheDocument();
     expect(within(results).getByText("224.2")).toBeInTheDocument();
     const body = compressionCalls().at(-1)?.body as unknown as Record<string, unknown>;
-    expect(body).toMatchObject({ area: 1000, gamma_m0: 1.1, omega: 15, poisson_ratio: 0.3 });
+    expect(body).toMatchObject({ area: 3140, gamma_m0: 1.1, omega: 15, poisson_ratio: 0.3 });
     expect(body.geometry).toMatchObject({ kind: "plates" });
     expect(body).not.toHaveProperty("has_holes");
     expect(tab(/Compression/)).toHaveTextContent("done");

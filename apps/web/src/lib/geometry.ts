@@ -1,4 +1,5 @@
 import type {
+  CustomPropertiesRequest,
   DeformationRequest,
   FamilyKey,
   GeometryInput,
@@ -130,8 +131,14 @@ export function withSectionType(form: DeformationFormState, type: SectionType): 
   return { ...form, shape: type, kind, family: circular ? "circular_hollow" : "flat_plates" };
 }
 
-/** Template or Custom, chosen in the Section group. */
+/**
+ * Template or Custom, chosen first in the Section group. A circular hollow section is a template
+ * (diameter and thickness), so choosing Custom after it clears the type: the user picks again.
+ */
 export function withCustom(form: DeformationFormState, custom: boolean): DeformationFormState {
+  if (custom && form.shape === CIRCULAR) {
+    return { ...form, custom, shape: null, kind: form.kind === "sigma_cr" ? "sigma_cr" : null, family: null };
+  }
   const next = { ...form, custom };
   return form.kind === null || form.kind === "sigma_cr" ? next : { ...next, kind: geometryKind(next) };
 }
@@ -303,4 +310,55 @@ export function propertiesRequest(form: DeformationFormState): SectionProperties
     else body[field.key as "h" | "b" | "t" | "d" | "r" | "s"] = value;
   }
   return body;
+}
+
+// --- the custom section: what its geometric properties need ------------------------------------
+
+const nodeUsed = (node: NodeRow) => node.x !== null || node.y !== null;
+const linkUsed = (link: LinkRow) => link.from !== null || link.to !== null || link.thickness !== null;
+const nodeComplete = (node: NodeRow) => node.id !== null && node.x !== null && node.y !== null;
+const linkComplete = (link: LinkRow) => link.from !== null && link.to !== null && link.thickness !== null;
+
+/**
+ * What the custom section's properties still need: every node that has a coordinate has a number, x and y;
+ * every link that has anything has its two nodes and a thickness; at least one link. k_σ and the link
+ * names are not needed here (B.5 asks for k_σ). Empty rows are ignored.
+ */
+export function missingCustomPropertyItems(form: DeformationFormState): MissingItem[] {
+  const sectionItem = (label: string, field: string): MissingItem => ({ label, group: "section", field });
+  const missing: MissingItem[] = [];
+  for (const node of form.nodes.filter(nodeUsed)) {
+    if (node.id === null) missing.push(sectionItem(`the number of the node at row ${node.uid}`, `node-${node.uid}-x`));
+    else if (node.x === null || node.y === null) {
+      missing.push(sectionItem(`x and y of node ${node.id}`, `node-${node.uid}-${node.x === null ? "x" : "y"}`));
+    }
+  }
+  const used = form.links.filter(linkUsed);
+  for (const link of used.filter((l) => !linkComplete(l))) {
+    const gaps = [
+      link.from === null ? "from node" : null,
+      link.to === null ? "to node" : null,
+      link.thickness === null ? "t" : null,
+    ].filter((gap) => gap !== null);
+    const field = link.from === null || link.to === null ? `plate-${link.uid}-width` : `plate-${link.uid}-thickness`;
+    missing.push(sectionItem(`${gaps.join(", ")} of ${link.label.trim() || `link ${link.uid}`}`, field));
+  }
+  if (used.length === 0) {
+    const first = form.links[0];
+    missing.push(sectionItem("at least one link (from node, to node, t)", first ? `plate-${first.uid}-width` : "custom"));
+  }
+  return missing;
+}
+
+/** The custom section's properties request, or null while something is missing. */
+export function customPropertiesRequest(form: DeformationFormState): CustomPropertiesRequest | null {
+  if (!form.custom || missingCustomPropertyItems(form).length > 0) return null;
+  return {
+    nodes: form.nodes
+      .filter(nodeComplete)
+      .map((node) => ({ id: node.id as number, x: node.x as number, y: node.y as number })),
+    links: form.links
+      .filter(linkComplete)
+      .map((link) => ({ from_node: link.from as number, to_node: link.to as number, thickness: link.thickness as number })),
+  };
 }

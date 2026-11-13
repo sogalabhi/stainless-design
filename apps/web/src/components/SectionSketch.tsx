@@ -651,7 +651,7 @@ function Overlays({
           <line x1={0} y1={-5} x2={0} y2={5} />
         </g>
       ) : null}
-      {layers.shear ? (
+      {layers.shear && shear ? (
         <rect
           className="sk-shear"
           data-layer="shear"

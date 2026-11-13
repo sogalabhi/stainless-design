@@ -140,6 +140,7 @@ describe("the Bending tab", () => {
     renderApp();
     await loadExample(user);
     await openGroup(user, /^Section/);
+    await user.selectOptions(label(/^Geometry/), "template"); // a tube is a template
     await user.selectOptions(label(/^Section type/), "circular hollow section");
     await openGroup(user, /^Bending/);
     expect(within(dock()).queryByLabelText(/^Axis of bending/)).not.toBeInTheDocument();

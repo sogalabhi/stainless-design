@@ -175,7 +175,7 @@
     "name": "Area A",
     "what": "The gross cross-sectional area of the member.",
     "why": "It turns stress into force in B.12, B.15 and B.16.",
-    "where": "The manufacturer's section table, or the Use button in the Section geometry window, which copies the area computed from your dimensions.",
+    "where": "You do not type it: it is the area computed from the section geometry (the template dimensions, or the nodes and links). Only a typed σ_cr,cs has no geometry, and then you give the area yourself.",
     "source": "Outside EN 1993-1-4: you provide it",
     "in_standard": false
   },

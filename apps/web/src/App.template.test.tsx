@@ -70,7 +70,6 @@ async function fillRolledI(user: User) {
   await typeInto(user, /^Web thickness/, "5.6");
   await typeInto(user, /^Flange thickness/, "8.5");
   await typeInto(user, /^Root radius r/, "12");
-  await typeInto(user, /^Area A/, "2848");
   await typeInto(user, /^γM0/, "1.1");
   await user.click(group(/^Deformation capacity/));
   await typeInto(user, /^k_?σ, web/, "4");
@@ -157,14 +156,14 @@ describe("the Section group", () => {
     const user = userEvent.setup();
     renderApp();
     await openSection(user);
-    expect(group(/^Section/)).toHaveTextContent("3 to enter"); // type, A, γM0
+    expect(group(/^Section/)).toHaveTextContent("2 to enter"); // type, γM0: A is computed
     await user.selectOptions(within(dock()).getByLabelText(/^Section type/), "I-section");
-    // type given; fabrication, h, b, t_w, t_f, A, γM0 empty
-    expect(group(/^Section/)).toHaveTextContent("7 to enter");
-    await user.selectOptions(within(dock()).getByLabelText(/^Fabrication/), "rolled");
-    expect(group(/^Section/)).toHaveTextContent("7 to enter"); // fabrication given, r is now asked for
-    await typeInto(user, /^Root radius r/, "12");
+    // type given; fabrication, h, b, t_w, t_f, γM0 empty (A is computed, so it is not asked)
     expect(group(/^Section/)).toHaveTextContent("6 to enter");
+    await user.selectOptions(within(dock()).getByLabelText(/^Fabrication/), "rolled");
+    expect(group(/^Section/)).toHaveTextContent("6 to enter"); // fabrication given, r is now asked for
+    await typeInto(user, /^Root radius r/, "12");
+    expect(group(/^Section/)).toHaveTextContent("5 to enter");
   });
 
   it("the sketch is drawn to scale, with the typed values, once the dimensions are complete", async () => {
@@ -339,23 +338,32 @@ describe("the Deformation group on the template route", () => {
     const user = userEvent.setup();
     renderApp();
     await openSection(user);
-    await user.selectOptions(within(dock()).getByLabelText(/^Section type/), "I-section");
+    // the geometry is chosen first, then the section type
+    const labels = [...dock().querySelectorAll("#dock-section .field label")].map((l) => l.textContent ?? "");
+    expect(labels.findIndex((l) => /^Geometry/.test(l))).toBeLessThan(labels.findIndex((l) => /^Section type/.test(l)));
     expect(within(dock()).getByLabelText(/^Geometry/)).toHaveValue("template");
     await user.selectOptions(within(dock()).getByLabelText(/^Geometry/), "custom");
-    expect(within(dock()).getByLabelText(/^Flat width/)).toBeInTheDocument();
+    await user.selectOptions(within(dock()).getByLabelText(/^Section type/), "I-section");
+    // a circular hollow section is a template, so it is not offered for a custom section
+    expect(within(dock()).queryByRole("option", { name: "Circular hollow section" })).not.toBeInTheDocument();
+    expect(within(dock()).getByRole("button", { name: /Nodes and links/ })).toBeInTheDocument();
+    expect(within(dock()).queryByLabelText(/^Flat width/)).not.toBeInTheDocument(); // the tables are in the window
     expect(within(dock()).queryByLabelText(/^Overall height h/)).not.toBeInTheDocument();
     expect(within(dock()).queryByLabelText(/^Fabrication/)).not.toBeInTheDocument();
     await user.click(group(/^Deformation capacity/));
     expect(within(dock()).getByLabelText(/^Slenderness from/)).toHaveValue("plates");
-    expect(within(dock()).getByText(/columns of the plates table in the Section group/)).toBeInTheDocument();
+    expect(within(dock()).getByText(/columns of the links table in the Section group/)).toBeInTheDocument();
     // a typed σ_cr,cs and back: Custom is remembered
     await user.selectOptions(within(dock()).getByLabelText(/^Slenderness from/), "sigma_cr");
     await user.selectOptions(within(dock()).getByLabelText(/^Slenderness from/), "plates");
     await user.click(group(/^Section/));
-    expect(within(dock()).getByLabelText(/^Flat width/)).toBeInTheDocument();
-    // a tube has no Custom
+    expect(within(dock()).getByRole("button", { name: /Nodes and links/ })).toBeInTheDocument();
+    // a tube is a template: choosing Custom after it clears the section type
+    await user.selectOptions(within(dock()).getByLabelText(/^Geometry/), "template");
     await user.selectOptions(within(dock()).getByLabelText(/^Section type/), "circular hollow section");
-    expect(within(dock()).queryByLabelText(/^Geometry/)).not.toBeInTheDocument();
+    expect(within(dock()).queryByRole("button", { name: /Nodes and links/ })).not.toBeInTheDocument();
+    await user.selectOptions(within(dock()).getByLabelText(/^Geometry/), "custom");
+    expect(within(dock()).getByLabelText(/^Section type/)).toHaveValue("");
   });
 });
 
@@ -426,7 +434,7 @@ describe("with everything typed for a rolled I-section", () => {
     const results = screen.getByRole("region", { name: "Compression results" });
     expect(await within(results).findByText(/Formula B\.16 applies/)).toBeInTheDocument();
     const body = calls("/compression").at(-1)?.body as unknown as Record<string, unknown>;
-    expect(body).toMatchObject({ area: 2848, gamma_m0: 1.1 });
+    expect(body).toMatchObject({ area: 2848.42, gamma_m0: 1.1 }) // A is the engine's, from the geometry;
     expect(body.geometry).toMatchObject({ kind: "template", shape: "I-section" });
   });
 

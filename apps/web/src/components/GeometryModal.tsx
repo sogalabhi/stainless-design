@@ -1,10 +1,11 @@
 import type { UseQueryResult } from "@tanstack/react-query";
-import { X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { Table2 } from "lucide-react";
+import { useRef, useState } from "react";
 import type { ApiError } from "../api/client";
 import type { BendingAxisKey, SectionPropertiesResponse, SectionType } from "../api/types";
 import { dimsOf, usesDimensions, type DeformationFormState } from "../lib/geometry";
 import type { MissingItem } from "../lib/inputs";
+import { templateNodesAndLinks } from "../lib/templateTables";
 import {
   LAYER_LABELS,
   LAYER_ORDER,
@@ -19,14 +20,11 @@ import {
   type DimKey,
   type PlateRoleKey,
 } from "../lib/sectionTemplates";
-import { helpPanelIsOpen } from "./FieldHelp";
 import { DimensionFields, FabricationField } from "./InputFields";
-import { GEOMETRY_LABEL, PropertiesTable } from "./PropertiesTable";
+import { Modal } from "./Modal";
+import { PropertiesSection } from "./PropertiesSection";
 import { SectionSketch } from "./SectionSketch";
-import { Waiting } from "./Waiting";
-import { CheckField, StatusBox } from "./ui";
-
-const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+import { CheckField } from "./ui";
 
 /**
  * The Section geometry window: the large to-scale drawing, the layers to show on it, the dimension
@@ -46,6 +44,7 @@ export function GeometryModal({
   currentValues,
   bendingAxis,
   onUse,
+  onEditAsTables,
   onClose,
 }: {
   sectionType: SectionType;
@@ -65,13 +64,14 @@ export function GeometryModal({
   /** the axis of bending chosen in the Bending group, so the moduli of that axis get a Use button */
   bendingAxis: BendingAxisKey | null;
   onUse: (key: string, value: number) => void;
+  /** turn this template into the nodes and links tables of a custom section, to edit there */
+  onEditAsTables: () => void;
   onClose: () => void;
 }) {
   const [layers, setLayers] = useState<SketchLayers>(loadLayers);
   const [focused, setFocused] = useState<DimKey | null>(null);
   const [hovered, setHovered] = useState<DimKey | null>(null);
   const dialog = useRef<HTMLDivElement>(null);
-  const closeButton = useRef<HTMLButtonElement>(null);
 
   const toggle = (key: LayerKey, on: boolean) =>
     setLayers((previous) => {
@@ -80,42 +80,7 @@ export function GeometryModal({
       return next;
     });
 
-  // Focus moves in on opening and back to the opener on closing; Esc closes; Tab stays inside.
-  useEffect(() => {
-    const opener = document.activeElement as HTMLElement | null;
-    closeButton.current?.focus();
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        if (helpPanelIsOpen()) return; // an open "?" panel takes the first Escape
-        event.stopPropagation();
-        onClose();
-        return;
-      }
-      if (event.key !== "Tab" || !dialog.current) return;
-      const items = [...dialog.current.querySelectorAll<HTMLElement>(FOCUSABLE)];
-      if (items.length === 0) return;
-      const first = items[0];
-      const last = items[items.length - 1];
-      const active = document.activeElement;
-      if (!dialog.current.contains(active)) {
-        event.preventDefault();
-        first.focus();
-      } else if (event.shiftKey && active === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && active === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-    document.addEventListener("keydown", onKey, true);
-    return () => {
-      document.removeEventListener("keydown", onKey, true);
-      opener?.focus?.();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
+  const canEditAsTables = form.kind === "template" && templateNodesAndLinks(sectionType, dimsOf(form), form.kSigma) !== null;
   const fields = usesDimensions(form) ? sectionFields(sectionType, form.fabrication) : [];
   const dims = dimsOf(form);
   const pick = (key: DimKey) =>
@@ -125,24 +90,9 @@ export function GeometryModal({
       ?.querySelector<HTMLElement>(`[data-field="${item.field}"] input, [data-field="${item.field}"] select`)
       ?.focus();
   const set = (patch: Partial<DeformationFormState>) => onFormChange({ ...form, ...patch });
-  const data = query.data;
 
   return (
-    <div className="modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
-      <div
-        className="modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="geometry-title"
-        ref={dialog}
-      >
-        <div className="modal-head">
-          <h2 id="geometry-title">Section geometry</h2>
-          <button type="button" className="icon-button" onClick={onClose} ref={closeButton}>
-            <X size={16} aria-hidden="true" /> Close
-          </button>
-        </div>
-        <div className="modal-body">
+    <Modal title="Section geometry" titleId="geometry-title" onClose={onClose} dialogRef={dialog}>
           <div className="modal-drawing">
             <SectionSketch
               shape={sectionType}
@@ -180,31 +130,29 @@ export function GeometryModal({
                 highlighted={hovered}
                 onFocusKey={setFocused}
               />
-            </section>
-            <section aria-label="Properties from geometry">
-              <h3>Properties (from geometry)</h3>
-              <p className="muted">
-                {GEOMETRY_LABEL}. Reference values only: nothing is used in a calculation until you click Use,
-                which copies the value into its input field.
-              </p>
-              <Waiting items={missing} onGo={go} />
-              {missing.length === 0 && query.isError ? (
-                <StatusBox kind="error">{query.error.message}</StatusBox>
-              ) : null}
-              {missing.length === 0 && !query.isError && !data ? <p className="muted">Calculating...</p> : null}
-              {missing.length === 0 && data && !query.isError ? (
-                <PropertiesTable
-                  data={data}
-                  stale={stale}
-                  currentValues={currentValues}
-                  bendingAxis={bendingAxis}
-                  onUse={onUse}
-                />
+              {canEditAsTables ? (
+                <div className="edit-as-tables">
+                  <button type="button" className="icon-button" onClick={onEditAsTables}>
+                    <Table2 size={14} aria-hidden="true" /> Edit as nodes and links
+                  </button>
+                  <p className="muted">
+                    Copies this section into the two tables of a custom section (paste to and from Excel), as centre
+                    lines, so you can change a thickness, move a node or add a plate. Fillets, welds and corner radii
+                    are dropped, so b̄ and A differ slightly from the template&apos;s.
+                  </p>
+                </div>
               ) : null}
             </section>
+            <PropertiesSection
+              query={query}
+              stale={stale}
+              missing={missing}
+              onGo={go}
+              currentValues={currentValues}
+              bendingAxis={bendingAxis}
+              onUse={onUse}
+            />
           </div>
-        </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

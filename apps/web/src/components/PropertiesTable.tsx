@@ -8,13 +8,8 @@ export const GEOMETRY_LABEL = "computed from your dimensions: geometry, not a ru
 /** An input field a property can be copied into: its field name and how a screen reader hears it. */
 export type UseTarget = { field: string; fieldName: string };
 
-/** The rows that always have an input field to copy into: only the area. */
-export const USABLE: Record<string, UseTarget> = {
-  A: { field: "area", fieldName: "Area A" },
-};
-
 /**
- * The moduli of the axis of bending can be copied into the Bending group: y-y for the major axis,
+ * The area A is not copied anywhere: it feeds the calculations by itself. The moduli of the axis of bending can be copied into the Bending group: y-y for the major axis,
  * z-z for the minor axis (a circular hollow section uses y-y). Only the rows of the chosen axis get a button.
  */
 const MODULI: Record<string, { axis: BendingAxisKey; target: UseTarget }> = {
@@ -27,8 +22,7 @@ const MODULI: Record<string, { axis: BendingAxisKey; target: UseTarget }> = {
 /** Where a row's Use button copies to, or undefined when the row has no input field (for this axis). */
 export function useTarget(key: string, bendingAxis: BendingAxisKey | null): UseTarget | undefined {
   const modulus = MODULI[key];
-  if (modulus) return modulus.axis === bendingAxis ? modulus.target : undefined;
-  return USABLE[key];
+  return modulus && modulus.axis === bendingAxis ? modulus.target : undefined;
 }
 
 /** An engine value as shown: six significant figures at most, thousands grouped with a space. */

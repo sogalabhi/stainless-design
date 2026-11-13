@@ -19,6 +19,7 @@ import grades from "./fixtures/grades.json";
 import inputHelp from "./fixtures/input_help.json";
 import material from "./fixtures/material.json";
 import propertiesAngle from "./fixtures/section_properties_angle.json";
+import propertiesCustom from "./fixtures/section_properties_custom.json";
 import propertiesError from "./fixtures/section_properties_error.json";
 import properties from "./fixtures/section_properties.json";
 import symbols from "./fixtures/symbols.json";
@@ -59,6 +60,7 @@ export function installMockApi() {
       return json((symbols as { topics: string[] }[]).filter((s) => !topic || s.topics.includes(topic)));
     }
     // recorded section properties: a rolled I-section, or an angle; a 100 mm flange cannot exist
+    if (path.endsWith("/section-properties/custom")) return json(propertiesCustom);
     if (path.endsWith("/section-properties")) {
       if (body?.t_f === 100) return json(propertiesError, 422);
       return json(body?.shape === "angle" ? propertiesAngle : properties);

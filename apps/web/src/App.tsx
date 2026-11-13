@@ -2,11 +2,18 @@ import { BookOpen, Box, ChevronsDownUp, Layers, MoveVertical, Presentation, Rule
 import { keepPreviousData, useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { api, type ApiError } from "./api/client";
-import type { BendingAxisKey, GraphView, SectionType } from "./api/types";
-import { AreaNote, ModulusNote } from "./components/AreaNote";
+import type {
+  BendingAxisKey,
+  CustomPropertiesRequest,
+  GraphView,
+  SectionPropertiesRequest,
+  SectionType,
+} from "./api/types";
+import { ModulusNote } from "./components/AreaNote";
 import { Dock, type FocusRequest } from "./components/Dock";
 import { InputHelpProvider } from "./components/FieldHelp";
 import { ChartLinkProvider } from "./lib/chartLinks";
+import { CustomSectionModal } from "./components/CustomSectionModal";
 import { GeometryModal } from "./components/GeometryModal";
 import { StatusIcon } from "./components/Waiting";
 import { Segmented } from "./components/ui";
@@ -25,7 +32,12 @@ import { compressionRequest, missingCompressionItems } from "./lib/compression";
 import {
   CIRCULAR,
   defaultDeformationForm,
+  customPropertiesRequest,
   deformationRequest,
+  dimsOf,
+  platesFromLinks,
+  withCustom,
+  missingCustomPropertyItems,
   missingDeformationItems,
   missingPropertyItems,
   propertiesRequest,
@@ -40,8 +52,10 @@ import {
   type TabStatus,
 } from "./lib/inputs";
 import type { PlateRoleKey } from "./lib/sectionTemplates";
+import { templateNodesAndLinks } from "./lib/templateTables";
 import { bendingView, compressionView, defaultCase, tensionView, type StageCase } from "./lib/stage";
 import { defaultTensionForm, missingTensionItems } from "./lib/tension";
+import { formatProperty } from "./components/PropertiesTable";
 import { BendingPage, NOT_APPLICABLE_ERROR, NOT_BUILT_YET_ERROR } from "./pages/BendingPage";
 import { CompressionPage } from "./pages/CompressionPage";
 import { DeformationPage } from "./pages/DeformationPage";
@@ -71,26 +85,26 @@ export function App() {
   const [stageChoice, setStageChoice] = useState<StageCase | null>(null);
   const [view, setView] = useState<GraphView>("schematic");
   const [materialForm, setMaterialForm] = useState(defaultMaterialForm);
-  const [sectionType, setSectionType] = useState<SectionType | null>(null);
-  const [tensionForm, setTensionForm] = useState(defaultTensionForm);
+  // what the user typed in the Section group; the area is not typed (it comes from the geometry), so
+  // `tensionForm` below is this with the area filled in
+  const [tensionTyped, setTensionForm] = useState(defaultTensionForm);
   const [deformationForm, setDeformationForm] = useState(defaultDeformationForm);
   const [bendingForm, setBendingForm] = useState(defaultBendingForm);
   const [openGroup, setOpenGroup] = useState<GroupKey | null>("material");
   const [focusRequest, setFocusRequest] = useState<FocusRequest | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [geometryOpen, setGeometryOpen] = useState(false);
-  // the area that the Use button last copied into the A field (null once the field is edited)
-  const [areaFromGeometry, setAreaFromGeometry] = useState<number | null>(null);
   // the same for W_el and W_pl in the Bending group (null once the field is edited)
   const [moduliFromGeometry, setModuliFromGeometry] = useState<{ wEl: number | null; wPl: number | null }>({
     wEl: null,
     wPl: null,
   });
   const dark = useDarkMode();
+  // the section type lives in the form (choosing Custom after a tube clears it there)
+  const sectionType: SectionType | null = deformationForm.shape;
 
   // One section-type picker: it also chooses the B.5 route (tube or plates).
   const chooseSectionType = (type: SectionType) => {
-    setSectionType(type);
     setDeformationForm((form) => withSectionType(form, type));
   };
   const [exampleLoaded, setExampleLoaded] = useState(false);
@@ -101,29 +115,20 @@ export function App() {
     if (!grades.data?.length) return;
     const example = exampleState(grades.data);
     setMaterialForm(example.materialForm);
-    setSectionType(example.sectionType);
     setTensionForm(example.tensionForm);
     setDeformationForm(example.deformationForm);
     setBendingForm(example.bendingForm);
-    setAreaFromGeometry(null);
     setModuliFromGeometry({ wEl: null, wPl: null });
     setExampleLoaded(true);
   };
   const clearAll = () => {
     setMaterialForm(defaultMaterialForm);
-    setSectionType(null);
     setTensionForm(defaultTensionForm);
     setDeformationForm(defaultDeformationForm);
     setBendingForm(defaultBendingForm);
-    setAreaFromGeometry(null);
     setModuliFromGeometry({ wEl: null, wPl: null });
     setGeometryOpen(false);
     setExampleLoaded(false);
-  };
-  // Typing in the A field ends "copied from geometry"; only the Use button sets it.
-  const changeTension = (form: typeof tensionForm) => {
-    if (form.area !== tensionForm.area) setAreaFromGeometry(null);
-    setTensionForm(form);
   };
   // Typing in W_el or W_pl ends "copied from geometry" too.
   const changeBending = (form: BendingFormState) => {
@@ -134,16 +139,24 @@ export function App() {
     setBendingForm(form);
   };
   const useProperty = (key: string, value: number) => {
-    if (key === "A") {
-      setTensionForm((form) => ({ ...form, area: value }));
-      setAreaFromGeometry(value);
-    } else if (key.startsWith("W_el_")) {
+    if (key.startsWith("W_el_")) {
       setBendingForm((form) => ({ ...form, wEl: value }));
       setModuliFromGeometry((copied) => ({ ...copied, wEl: value }));
     } else if (key.startsWith("W_pl_")) {
       setBendingForm((form) => ({ ...form, wPl: value }));
       setModuliFromGeometry((copied) => ({ ...copied, wPl: value }));
     }
+  };
+  // The template's centre lines as the nodes and links of a custom section: the window switches to the tables.
+  const editAsTables = () => {
+    const tables = templateNodesAndLinks(deformationForm.shape, dimsOf(deformationForm), deformationForm.kSigma);
+    if (!tables) return;
+    setDeformationForm(
+      withCustom(
+        { ...deformationForm, ...tables, plates: platesFromLinks(tables.nodes, tables.links) },
+        true,
+      ),
+    );
   };
   const goTo = (item: MissingItem) => {
     setOpenGroup(item.group);
@@ -152,8 +165,48 @@ export function App() {
   };
 
   const material = materialInput(useDebounced(materialForm, 250));
-  const debouncedTension = useDebounced(tensionForm, 250);
   const debouncedDeformation = useDebounced(deformationForm, 250);
+
+  // The section properties (reference values from the geometry). Their own query: nothing waits for it,
+  // except the area A, which is not typed: it is the area the engine computed from the geometry.
+  const typedStress = deformationForm.kind === "sigma_cr";
+  const customRoute = deformationForm.custom && !typedStress; // the nodes and links tables, not a template
+  const propertiesOf = (form: typeof deformationForm) =>
+    customRoute ? customPropertiesRequest(form) : propertiesRequest(form);
+  const propertiesBody = propertiesOf(debouncedDeformation);
+  const propertiesQuery = useQuery({
+    queryKey: ["section-properties", customRoute, propertiesBody],
+    queryFn: ({ signal }) =>
+      customRoute
+        ? api.customSectionProperties(propertiesBody as CustomPropertiesRequest, signal)
+        : api.sectionProperties(propertiesBody as SectionPropertiesRequest, signal),
+    enabled: propertiesBody !== null,
+    placeholderData: keepPreviousData,
+    retry: false,
+  });
+  // Drawn and compared only when asked for exactly the geometry now typed.
+  const propertiesFresh =
+    propertiesQuery.data !== undefined &&
+    !propertiesQuery.isPlaceholderData &&
+    JSON.stringify(propertiesOf(deformationForm)) === JSON.stringify(propertiesBody);
+  const properties = propertiesFresh ? (propertiesQuery.data ?? null) : null;
+  const propertiesMissing = customRoute
+    ? missingCustomPropertyItems(deformationForm)
+    : missingPropertyItems(deformationForm);
+
+  // A typed σ_cr,cs has no geometry, so there the area is still typed. Otherwise it comes from the
+  // geometry (six significant figures, as the table shows it) and the fields never hold a typed one.
+  const areaFromGeometry =
+    typedStress || propertiesBody === null || propertiesQuery.isError
+      ? null
+      : (propertiesQuery.data?.rows.find((row) => row.key === "A")?.value ?? null);
+  const tensionForm = { ...tensionTyped, area: typedStress ? tensionTyped.area : areaFromGeometry };
+  // Where the area is derived, a missing area means a missing geometry: say which part.
+  const areaFromItems = (items: MissingItem[]) =>
+    typedStress || propertiesMissing.length === 0
+      ? items
+      : items.flatMap((item) => (item.field === "area" ? propertiesMissing : [item]));
+  const debouncedTension = useDebounced(tensionForm, 250);
   const debouncedBending = useDebounced(bendingForm, 250);
 
   const materialQuery = useQuery({
@@ -212,27 +265,10 @@ export function App() {
         )
       : null;
 
-  // The section properties (reference values from the dimensions). Their own query: nothing waits for it.
-  const propertiesBody = propertiesRequest(debouncedDeformation);
-  const propertiesQuery = useQuery({
-    queryKey: ["section-properties", propertiesBody],
-    queryFn: ({ signal }) => api.sectionProperties(propertiesBody!, signal),
-    enabled: propertiesBody !== null,
-    placeholderData: keepPreviousData,
-    retry: false,
-  });
-  // Drawn and compared only when asked for exactly the dimensions now typed.
-  const propertiesFresh =
-    propertiesQuery.data !== undefined &&
-    !propertiesQuery.isPlaceholderData &&
-    JSON.stringify(propertiesRequest(deformationForm)) === JSON.stringify(propertiesBody);
-  const properties = propertiesFresh ? (propertiesQuery.data ?? null) : null;
-  const propertiesMissing = missingPropertyItems(deformationForm);
-
   const materialMissing = missingMaterialItems(materialForm);
-  const tensionMissing = missingTensionItems(tensionForm);
+  const tensionMissing = areaFromItems(missingTensionItems(tensionForm));
   const deformationMissing = missingDeformationItems(deformationForm);
-  const bendingMissing = missingBendingItems(sectionType, deformationForm, bendingForm, tensionForm);
+  const bendingMissing = areaFromItems(missingBendingItems(sectionType, deformationForm, bendingForm, tensionForm));
   const allMissing = uniqueItems([
     ...materialMissing,
     ...tensionMissing,
@@ -240,7 +276,6 @@ export function App() {
     ...bendingMissing,
   ]);
   const materialProblem = materialMissing.length === 0 && materialQuery.isError;
-  const typedStress = deformationForm.kind === "sigma_cr";
 
   const tensionWaiting = uniqueItems([...materialMissing, ...tensionMissing]);
   const deformationWaiting = uniqueItems([...materialMissing, ...deformationMissing]);
@@ -264,7 +299,7 @@ export function App() {
 
   // B.6.2 has no inputs of its own: the B.5 inputs plus A and γM0 from the Section group. It asks the
   // engine only when the section is within the B.5 limit, since beyond it there is no ε_csm.
-  const compressionMissing = missingCompressionItems(deformationForm, tensionForm);
+  const compressionMissing = areaFromItems(missingCompressionItems(deformationForm, tensionForm));
   const compressionWaiting = uniqueItems([...materialMissing, ...compressionMissing]);
   const compressionRequestBody =
     material === null
@@ -490,7 +525,7 @@ export function App() {
               sectionType={sectionType}
               onSectionType={chooseSectionType}
               tensionForm={tensionForm}
-              onTensionChange={changeTension}
+              onTensionChange={setTensionForm}
               deformationForm={deformationForm}
               onDeformationChange={setDeformationForm}
               bendingForm={bendingForm}
@@ -514,13 +549,7 @@ export function App() {
                 />
               }
               onOpenGeometry={() => setGeometryOpen(true)}
-              areaNote={
-                <AreaNote
-                  typed={tensionForm.area}
-                  copiedValue={areaFromGeometry}
-                  geometryArea={properties?.area ?? null}
-                />
-              }
+              area={areaFromGeometry === null ? null : `${formatProperty(areaFromGeometry)}`}
               missing={allMissing}
               openGroup={openGroup}
               onOpenGroup={setOpenGroup}
@@ -605,7 +634,21 @@ export function App() {
             )}
           </main>
         </div>
-        {geometryOpen && sectionType !== null && usesDimensions(deformationForm) ? (
+        {geometryOpen && customRoute ? (
+          <CustomSectionModal
+            form={deformationForm}
+            onFormChange={setDeformationForm}
+            query={propertiesQuery}
+            properties={properties}
+            stale={!propertiesFresh}
+            missing={propertiesMissing}
+            currentValues={{ wEl: bendingForm.wEl, wPl: bendingForm.wPl }}
+            bendingAxis={modulusAxis}
+            onUse={useProperty}
+            onClose={() => setGeometryOpen(false)}
+          />
+        ) : null}
+        {geometryOpen && !customRoute && sectionType !== null && usesDimensions(deformationForm) ? (
           <GeometryModal
             sectionType={sectionType}
             form={deformationForm}
@@ -615,9 +658,10 @@ export function App() {
             properties={properties}
             stale={!propertiesFresh}
             missing={propertiesMissing}
-            currentValues={{ area: tensionForm.area, wEl: bendingForm.wEl, wPl: bendingForm.wPl }}
+            currentValues={{ wEl: bendingForm.wEl, wPl: bendingForm.wPl }}
             bendingAxis={modulusAxis}
             onUse={useProperty}
+            onEditAsTables={editAsTables}
             onClose={() => setGeometryOpen(false)}
           />
         ) : null}

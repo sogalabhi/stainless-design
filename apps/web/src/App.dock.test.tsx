@@ -36,7 +36,7 @@ describe("the input dock", () => {
     renderApp();
     const group = (name: RegExp) => within(dock()).getByRole("button", { name });
     expect(group(/^Material/)).toHaveTextContent("4 to enter");
-    expect(group(/^Section/)).toHaveTextContent("3 to enter");
+    expect(group(/^Section/)).toHaveTextContent("2 to enter"); // the type and γM0: the area is computed
     expect(group(/^Deformation capacity/)).toHaveTextContent("2 to enter");
     expect(within(dock()).getByLabelText(/^f_?y/)).toHaveValue(null);
   });
@@ -83,11 +83,12 @@ describe("the result tabs", () => {
     renderApp();
     await user.click(tab(/Tension/));
     const results = screen.getByRole("region", { name: "Tension results" });
-    expect(within(results).getByRole("status")).toHaveTextContent(/Waiting for:.*fy.*the area A.*γM0/);
+    expect(within(results).getByRole("status")).toHaveTextContent(/Waiting for:.*fy.*the section type.*γM0/);
+    expect(results).not.toHaveTextContent(/the area A/); // it is computed from the geometry, not typed
 
-    await user.click(within(results).getByRole("button", { name: "the area A" }));
+    await user.click(within(results).getByRole("button", { name: "the section type" }));
     expect(within(dock()).getByRole("button", { name: /^Section/ })).toHaveAttribute("aria-expanded", "true");
-    expect(within(dock()).getByLabelText(/^Area A/)).toHaveFocus();
+    expect(within(dock()).getByLabelText(/^Section type/)).toHaveFocus();
   });
 
   it("send nothing to the API while an input is missing", async () => {

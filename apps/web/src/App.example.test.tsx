@@ -67,7 +67,8 @@ describe("Load example", () => {
     // Section
     await openGroup(user, /^Section/);
     expect(within(dock()).getByLabelText(/^Section type/)).toHaveValue("I-section");
-    expect(within(dock()).getByLabelText(/^Area A/)).toHaveValue(4680);
+    // A is computed from the geometry, not typed: it is shown, not an input
+    await waitFor(() => expect(within(dock()).getByLabelText(/^Area A/)).toHaveTextContent("3 140"));
     expect(within(dock()).getByLabelText(/^γM0/)).toHaveValue(1.1);
     expect(within(dock()).getByLabelText(/^Section has holes/)).not.toBeChecked();
     // the custom route: the unsymmetric I-section as five plates in the table, not the template
@@ -131,7 +132,7 @@ describe("Load example", () => {
     expect(within(dock()).getByLabelText(/^f_?u/)).toHaveValue(null);
     expect(within(dock()).getByLabelText(/^E/)).toHaveValue(null);
     expect(group(/^Material/)).toHaveTextContent("4 to enter");
-    expect(group(/^Section/)).toHaveTextContent("3 to enter");
+    expect(group(/^Section/)).toHaveTextContent("2 to enter");
     expect(group(/^Deformation capacity/)).toHaveTextContent("2 to enter");
     expect(group(/^Bending/)).toHaveTextContent("3 to enter");
     await waitFor(() => expect(tab(/Tension/)).toHaveTextContent("waiting for inputs"));

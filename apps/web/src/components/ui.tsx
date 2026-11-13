@@ -115,6 +115,44 @@ export function NumberField({
   );
 }
 
+/**
+ * A value the tool works out, shown where an input would be: not typed, so it has no input, no
+ * placeholder and no "required". `children` is the value; empty says it is still waiting.
+ */
+export function ReadOnlyField({
+  label,
+  unit,
+  fieldKey,
+  hint,
+  children,
+}: {
+  label: string;
+  unit?: string;
+  fieldKey?: string;
+  hint?: string;
+  children?: ReactNode;
+}) {
+  const id = useId();
+  const help = useFieldHelp(fieldKey, label);
+  const waiting = children === null || children === undefined || children === false;
+  return (
+    <div className="field field-derived" data-field={fieldKey}>
+      <div className="field-label-row">
+        <span id={id}>
+          {renderSymbols(label)}
+          {unit ? <span className="unit"> [{unit}]</span> : null}
+        </span>
+        {help.button}
+      </div>
+      <output aria-labelledby={id} className={`derived-value${waiting ? " derived-waiting" : ""}`}>
+        {waiting ? "fills in once the geometry is complete" : children}
+      </output>
+      {help.panel}
+      {hint ? <div className="field-hint">{hint}</div> : null}
+    </div>
+  );
+}
+
 export function SelectField<T extends string>({
   label,
   value,

@@ -30,8 +30,8 @@ export type DockProps = {
   wPlNote?: ReactNode;
   /** Opens the section geometry window (the big drawing, the layers and the properties). */
   onOpenGeometry: () => void;
-  /** Under the area field: where its value came from, and whether it matches the geometry. */
-  areaNote: ReactNode;
+  /** The area A from the geometry, shown where the field was; null while the geometry is incomplete. */
+  area: ReactNode;
   /** Every required input still empty, over all groups (the dock counts them per group). */
   missing: MissingItem[];
   openGroup: GroupKey | null;
@@ -86,7 +86,7 @@ export function Dock(props: DockProps) {
         form={props.deformationForm}
         onFormChange={props.onDeformationChange}
         onOpenGeometry={props.onOpenGeometry}
-        areaNote={props.areaNote}
+        area={props.area}
       />
     ),
     deformation: (

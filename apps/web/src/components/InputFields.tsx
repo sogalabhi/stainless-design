@@ -9,10 +9,6 @@ import {
   usesDimensions,
   withCustom,
   type DeformationFormState,
-  platesFromLinks,
-  type LinkRow,
-  type NodeRow,
-  type PlateRow,
 } from "../lib/geometry";
 import {
   needsFabrication,
@@ -34,8 +30,8 @@ import {
 import type { TensionFormState } from "../lib/tension";
 import { renderSymbols } from "./Symbols";
 import { SectionThumbnail } from "./SectionSketch";
-import { DataTable, type DataColumn } from "./DataTable";
-import { CheckField, NumberField, SelectField } from "./ui";
+import { NodeLinkPreview } from "./CustomSection";
+import { CheckField, NumberField, ReadOnlyField, SelectField } from "./ui";
 
 const FAMILIES: { value: StainlessFamily; label: string }[] = [
   { value: "austenitic", label: "Austenitic" },
@@ -208,10 +204,20 @@ export function FabricationField({
   );
 }
 
+/** What the geometry button in the dock says about the custom section. */
+function customSummary(form: DeformationFormState): string {
+  const nodes = form.nodes.filter((node) => node.x !== null || node.y !== null).length;
+  const links = form.links.filter((l) => l.from !== null || l.to !== null || l.thickness !== null).length;
+  return nodes === 0 && links === 0
+    ? "Enter or paste the nodes and the links; the geometric properties follow"
+    : `${nodes} node${nodes === 1 ? "" : "s"}, ${links} link${links === 1 ? "" : "s"}. Tables, drawing and properties`;
+}
+
 /**
- * The Section group: the section type, how it is made, a "Section geometry" button with a small
- * thumbnail (the big drawing, layers and properties are in the window it opens), the dimensions,
- * then the area, γM0 and holes. The dimension fields are the same state as the window's.
+ * The Section group, in the order the choices depend on each other: how the geometry is given
+ * (a template of standard dimensions or a custom set of nodes and links), the section type, how it
+ * is made, then a button that opens the geometry window (the template's drawing and dimensions, or
+ * the custom section's two tables), γM0 and holes. The area A is not typed: it comes from the geometry.
  */
 export function SectionInputs({
   sectionType,
@@ -221,7 +227,7 @@ export function SectionInputs({
   form,
   onFormChange,
   onOpenGeometry,
-  areaNote,
+  area,
 }: {
   sectionType: SectionType | null;
   onSectionType: (type: SectionType) => void;
@@ -230,24 +236,18 @@ export function SectionInputs({
   form: DeformationFormState;
   onFormChange: (form: DeformationFormState) => void;
   onOpenGeometry: () => void;
-  /** what to say under the area field: where its value came from, and whether it matches the geometry */
-  areaNote: ReactNode;
+  /** the area A from the geometry, null while the dimensions are incomplete */
+  area: ReactNode;
 }) {
   const set = (patch: Partial<DeformationFormState>) => onFormChange({ ...form, ...patch });
   const showDimensions = sectionType !== null && usesDimensions(form);
   const fields = showDimensions ? sectionFields(sectionType, form.fabrication) : [];
   const dims = dimsOf(form);
+  const typedStress = form.kind === "sigma_cr";
+  const types = form.custom ? SECTION_TYPES.filter((t) => t.value !== CIRCULAR) : SECTION_TYPES;
   return (
     <div>
-      <SelectField
-        label="Section type"
-        value={sectionType}
-        options={SECTION_TYPES}
-        placeholder="choose the section type"
-        fieldKey="sectionType"
-        onChange={onSectionType}
-      />
-      {sectionType !== null && sectionType !== CIRCULAR && form.kind !== "sigma_cr" ? (
+      {!typedStress ? (
         <SelectField
           label="Geometry"
           value={form.custom ? "custom" : "template"}
@@ -259,7 +259,20 @@ export function SectionInputs({
           onChange={(choice) => onFormChange(withCustom(form, choice === "custom"))}
         />
       ) : null}
-      {sectionType !== null && form.kind === "template" && needsFabrication(sectionType) ? (
+      <SelectField
+        label="Section type"
+        value={sectionType}
+        options={types}
+        placeholder="choose the section type"
+        fieldKey="sectionType"
+        onChange={onSectionType}
+      />
+      {form.custom && !typedStress ? (
+        <p className="muted">
+          {renderSymbols("For a custom section the type only picks α and the axes of bending (Table B.2); the geometry is the tables.")}
+        </p>
+      ) : null}
+      {sectionType !== null && !form.custom && form.kind === "template" && needsFabrication(sectionType) ? (
         <FabricationField value={form.fabrication} onChange={(fabrication) => set({ fabrication })} />
       ) : null}
       {sectionType !== null && showDimensions ? (
@@ -273,8 +286,20 @@ export function SectionInputs({
           </span>
         </button>
       ) : null}
-      {form.kind === "plates" ? <PlatesEditor form={form} onChange={onFormChange} /> : null}
-      {sectionType !== null && form.kind === "sigma_cr" ? (
+      {form.custom && !typedStress ? (
+        <button type="button" className="geometry-button" aria-haspopup="dialog" onClick={onOpenGeometry}>
+          <span className="geometry-button-thumb" aria-hidden="true">
+            <NodeLinkPreview nodes={form.nodes} links={form.links} plates={form.plates} maxHeight={64} />
+          </span>
+          <span className="geometry-button-text">
+            <span className="geometry-button-title">
+              <Ruler size={16} aria-hidden="true" /> Nodes and links
+            </span>
+            <span className="muted">{customSummary(form)}</span>
+          </span>
+        </button>
+      ) : null}
+      {sectionType !== null && typedStress ? (
         <p className="muted">{renderSymbols("A typed σ_cr,cs needs no section dimensions.")}</p>
       ) : null}
       <DimensionFields
@@ -282,15 +307,20 @@ export function SectionInputs({
         dims={dims}
         onChange={(key, value) => set({ [key]: value } as Partial<DeformationFormState>)}
       />
-      <NumberField
-        label="Area A"
-        unit="mm²"
-        value={tension.area}
-        step={100}
-        fieldKey="area"
-        onChange={(area) => onTensionChange({ ...tension, area })}
-        note={areaNote}
-      />
+      {typedStress ? (
+        <NumberField
+          label="Area A"
+          unit="mm²"
+          value={tension.area}
+          step={100}
+          fieldKey="area"
+          onChange={(value) => onTensionChange({ ...tension, area: value })}
+        />
+      ) : (
+        <ReadOnlyField label="Area A" unit="mm²" fieldKey="area" hint="From the section geometry: nothing to enter.">
+          {area}
+        </ReadOnlyField>
+      )}
       <NumberField
         label="γM0"
         value={tension.gammaM0}
@@ -401,221 +431,6 @@ export function DeformationInputs({
       ) : null}
       <NumberField label="Ω" value={form.omega} step={1} fieldKey="omega" onChange={(omega) => set({ omega })} />
     </>
-  );
-}
-
-const NODE_LIMIT = 40;
-const LINK_LIMIT = 40;
-
-const NODE_COLUMNS: DataColumn<NodeRow>[] = [
-  {
-    key: "id",
-    label: "Node",
-    kind: "number",
-    get: (row) => row.id,
-    set: (row, value) => ({ ...row, id: value as number | null }),
-  },
-  {
-    key: "x",
-    label: "x",
-    unit: "mm",
-    kind: "number",
-    get: (row) => row.x,
-    set: (row, value) => ({ ...row, x: value as number | null }),
-    fieldKey: (row) => `node-${row.uid}-x`,
-  },
-  {
-    key: "y",
-    label: "y",
-    unit: "mm",
-    kind: "number",
-    get: (row) => row.y,
-    set: (row, value) => ({ ...row, y: value as number | null }),
-    fieldKey: (row) => `node-${row.uid}-y`,
-  },
-];
-
-const LINK_COLUMNS: DataColumn<LinkRow>[] = [
-  {
-    key: "label",
-    label: "Name",
-    kind: "text",
-    get: (row) => row.label,
-    set: (row, value) => ({ ...row, label: String(value ?? "") }),
-  },
-  {
-    key: "from",
-    label: "From node",
-    short: "From",
-    kind: "number",
-    get: (row) => row.from,
-    set: (row, value) => ({ ...row, from: value as number | null }),
-    fieldKey: (row) => `plate-${row.uid}-width`,
-  },
-  {
-    key: "to",
-    label: "To node",
-    short: "To",
-    kind: "number",
-    get: (row) => row.to,
-    set: (row, value) => ({ ...row, to: value as number | null }),
-  },
-  {
-    key: "thickness",
-    label: "Thickness t",
-    short: "t",
-    unit: "mm",
-    kind: "number",
-    get: (row) => row.thickness,
-    set: (row, value) => ({ ...row, thickness: value as number | null }),
-    fieldKey: (row) => `plate-${row.uid}-thickness`,
-    helpKey: "plate-1-thickness",
-  },
-  {
-    key: "kSigma",
-    label: "k_σ",
-    kind: "number",
-    get: (row) => row.kSigma,
-    set: (row, value) => ({ ...row, kSigma: value as number | null }),
-    fieldKey: (row) => `plate-${row.uid}-kSigma`,
-    helpKey: "plate-1-kSigma",
-  },
-];
-
-/** A new node gets the next free number; x and y start empty. */
-export function newNodeRow(rows: NodeRow[]): NodeRow {
-  const uid = Math.max(0, ...rows.map((row) => row.uid)) + 1;
-  const id = Math.max(0, ...rows.map((row) => row.id ?? 0)) + 1;
-  return { uid, id, x: null, y: null };
-}
-
-export function newLinkRow(rows: LinkRow[]): LinkRow {
-  const uid = Math.max(0, ...rows.map((row) => row.uid)) + 1;
-  return { uid, label: `link ${uid}`, from: null, to: null, thickness: null, kSigma: null };
-}
-
-/**
- * The custom section is two tables, as in a finite-strip or FE model: the nodes (x, y) and the links
- * between them (from node, to node, thickness, k_σ). The flat width b̄ of each link is the distance
- * between its nodes, so the geometry is drawn, not listed.
- */
-function PlatesEditor({
-  form,
-  onChange,
-}: {
-  form: DeformationFormState;
-  onChange: (form: DeformationFormState) => void;
-}) {
-  const update = (nodes: NodeRow[], links: LinkRow[]) =>
-    onChange({ ...form, nodes, links, plates: platesFromLinks(nodes, links) });
-  const area = form.plates.reduce<number | null>(
-    (sum, p) => (sum === null || p.width === null || p.thickness === null ? null : sum + p.width * p.thickness),
-    0,
-  );
-  return (
-    <div className="node-editor">
-      <DataTable
-        caption="Nodes: the corner and end points of the section (x, y)"
-        columns={NODE_COLUMNS}
-        rows={form.nodes}
-        onChange={(nodes) => update(nodes, form.links)}
-        rowKey={(row) => row.uid}
-        rowName={(row) => `node ${row.id ?? row.uid}`}
-        newRow={newNodeRow}
-        isEmpty={(row) => row.x === null && row.y === null}
-        minRows={2}
-        maxRows={NODE_LIMIT}
-      />
-      <DataTable
-        caption="Links: the flat plates between two nodes"
-        columns={LINK_COLUMNS}
-        rows={form.links}
-        onChange={(links) => update(form.nodes, links)}
-        rowKey={(row) => row.uid}
-        rowName={(row) => row.label || `link ${row.uid}`}
-        newRow={newLinkRow}
-        isEmpty={(row) =>
-          row.from === null &&
-          row.to === null &&
-          row.thickness === null &&
-          row.kSigma === null &&
-          (row.label.trim() === "" || row.label === `link ${row.uid}`)
-        }
-        minRows={1}
-        maxRows={LINK_LIMIT}
-      />
-      <NodeLinkPreview nodes={form.nodes} links={form.links} plates={form.plates} />
-      {area !== null && form.plates.length > 0 ? (
-        <p className="muted">
-          {renderSymbols(`Σ b̄·t = ${Math.round(area * 10) / 10} mm² from the links; the link lengths are the flat widths b̄.`)}
-        </p>
-      ) : null}
-    </div>
-  );
-}
-
-/** The section the tables describe: each link a line as thick as the plate (to scale), nodes numbered. */
-function NodeLinkPreview({ nodes, links, plates }: { nodes: NodeRow[]; links: LinkRow[]; plates: PlateRow[] }) {
-  const pts = nodes.filter((n) => n.id !== null && n.x !== null && n.y !== null) as {
-    id: number;
-    x: number;
-    y: number;
-  }[];
-  if (pts.length < 2) return null;
-  const xs = pts.map((n) => n.x);
-  const ys = pts.map((n) => n.y);
-  const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
-  const span = Math.max(x1 - x0, y1 - y0, 1);
-  const pad = span * 0.14;
-  const W = x1 - x0 + 2 * pad;
-  const H = y1 - y0 + 2 * pad;
-  const at = (id: number | null) => pts.find((n) => n.id === id);
-  const fy = (y: number) => y1 - y + pad; // y points up on the page
-  const fx = (x: number) => x - x0 + pad;
-  return (
-    <svg
-      className="node-preview"
-      role="img"
-      aria-label="Section drawn from the nodes and links"
-      viewBox={`0 0 ${W} ${H}`}
-      style={{ width: "100%", maxHeight: 240 }}
-    >
-      {links.map((link) => {
-        const a = at(link.from);
-        const b = at(link.to);
-        if (!a || !b) return null;
-        const plate = plates.find((p) => p.id === link.uid);
-        const t = Math.max(link.thickness ?? span * 0.012, span * 0.008);
-        return (
-          <line
-            key={link.uid}
-            x1={fx(a.x)}
-            y1={fy(a.y)}
-            x2={fx(b.x)}
-            y2={fy(b.y)}
-            stroke="currentColor"
-            strokeOpacity={0.75}
-            strokeWidth={t}
-            strokeLinecap="butt"
-          >
-            <title>{`${plate?.label ?? "link"}: b̄ = ${plate?.width ?? "?"} mm`}</title>
-          </line>
-        );
-      })}
-      {pts.map((n) => (
-        <g key={n.id}>
-          <circle cx={fx(n.x)} cy={fy(n.y)} r={span * 0.012} fill="var(--accent, #c0392b)" />
-          <text
-            x={fx(n.x) + span * 0.025}
-            y={fy(n.y) - span * 0.025}
-            fontSize={span * 0.05}
-            fill="currentColor"
-          >
-            {n.id}
-          </text>
-        </g>
-      ))}
-    </svg>
   );
 }
 

@@ -2696,3 +2696,29 @@ ol.plain li {
 .stage-beyond p {
   margin: 4px 0;
 }
+
+/* A value the tool works out, where an input would be */
+.derived-value {
+  display: block;
+  padding: 0.4rem 0.6rem;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  font-variant-numeric: tabular-nums;
+}
+.derived-waiting {
+  color: var(--muted);
+  font-style: italic;
+}
+.geometry-button-thumb {
+  flex: none;
+  display: block;
+  width: 64px;
+  height: 64px;
+  overflow: hidden;
+  color: var(--text);
+}
+.geometry-button-thumb svg {
+  width: 100%;
+  height: 100%;
+}

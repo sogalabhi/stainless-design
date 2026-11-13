@@ -339,64 +339,27 @@ describe("the properties table", () => {
     expect(within(modal).getAllByText(/thin-walled approximation/).length).toBeGreaterThan(0);
   });
 
-  it("has a Use button for A only until an axis of bending is chosen", async () => {
+  it("has no Use button for A: the area is computed, so with no axis of bending chosen there is none", async () => {
     const user = userEvent.setup();
     renderApp();
     await typeRolledI(user);
     await user.click(opener());
     await within(dialog()).findByText("Area and centroid");
-    const buttons = within(dialog()).getAllByRole("button", { name: /^Use / });
-    expect(buttons).toHaveLength(1);
-    expect(buttons[0]).toHaveAccessibleName(/Use A in the Area A field/);
+    expect(within(dialog()).queryAllByRole("button", { name: /^Use / })).toHaveLength(0);
   });
 
-  it("copies nothing until Use is clicked", async () => {
+  it("shows the area in the dock by itself, not as an input, and sends it to the calculations", async () => {
     const user = userEvent.setup();
     renderApp();
     await typeRolledI(user);
-    await user.click(opener());
-    await within(dialog()).findByText("Area and centroid");
-    expect(within(dock()).getByLabelText(/^Area A/)).toHaveValue(null);
+    const area = await waitFor(() => {
+      const field = within(dock()).getByLabelText(/^Area A/);
+      expect(field).toHaveTextContent("2 848.42");
+      return field;
+    });
+    expect(area.tagName).toBe("OUTPUT"); // nothing to type in
     expect(within(dock()).queryByText(/copied from geometry/)).not.toBeInTheDocument();
-    expect(calls("/tension")).toHaveLength(0);
-    expect(calls("/compression")).toHaveLength(0);
-  });
-
-  it("Use copies A into the dock field and says 'copied from geometry'", async () => {
-    const user = userEvent.setup();
-    renderApp();
-    await typeRolledI(user);
-    await user.click(opener());
-    await within(dialog()).findByText("Area and centroid");
-    await user.click(within(dialog()).getByRole("button", { name: /Use A in the Area A field/ }));
-    expect(within(dock()).getByLabelText(/^Area A/)).toHaveValue(2848.42);
-    expect(within(dock()).getByText("copied from geometry")).toBeInTheDocument();
-    // editing the field takes the label away
-    await user.type(within(dock()).getByLabelText(/^Area A/), "1");
-    expect(within(dock()).queryByText("copied from geometry")).not.toBeInTheDocument();
-  });
-
-  it("shows no mismatch note when the typed A is within 0.5 % of the geometry value", async () => {
-    const user = userEvent.setup();
-    renderApp();
-    await typeRolledI(user);
-    await user.type(within(dock()).getByLabelText(/^Area A/), "2848");
-    await user.click(opener());
-    await within(dialog()).findByText("Area and centroid");
-    expect(within(dock()).queryByText(/differs from the geometry value/)).not.toBeInTheDocument();
-  });
-
-  it("shows a note with the geometry value when the typed A differs by more than 0.5 %", async () => {
-    const user = userEvent.setup();
-    renderApp();
-    await typeRolledI(user);
-    await user.type(within(dock()).getByLabelText(/^Area A/), "2870"); // +0.76 %
-    const note = await within(dock()).findByText(/differs from the geometry value/);
-    expect(note).toHaveTextContent("2 848.42 mm²");
-    expect(note).toHaveTextContent("0.8 %");
-    expect(note).toHaveTextContent("The calculation uses the value in this field");
-    // the note does not change the field
-    expect(within(dock()).getByLabelText(/^Area A/)).toHaveValue(2870);
+    expect(calls("/tension")).toHaveLength(0); // no γM0 yet: nothing is asked
   });
 
   it("is waiting for the outer corner radius of an RHS, and B.5 does not wait for it", async () => {
