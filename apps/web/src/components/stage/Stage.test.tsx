@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { BendingResponse } from "../../api/types";
 import { bendingView } from "../../lib/stage";
@@ -6,6 +6,8 @@ import { stageSection } from "../../lib/stageSection";
 import { defaultDeformationForm } from "../../lib/geometry";
 import bending from "../../test/fixtures/bending_template.json";
 import { StageSectionDrawing } from "../SectionSketch";
+import { stageLayout } from "../../lib/stageLayout";
+import { StageDrawing } from "./StageDrawing";
 import Stage3D, { STAGE_WEBGL_MISSING } from "./Stage3D";
 
 const dims = { h: 150, b: 100, tw: null, tf: null, t: 5, d: null, r: null, s: null, cStem: null, rO: 8 };
@@ -79,5 +81,36 @@ describe("the 3D cut without WebGL", () => {
     expect(await screen.findByRole("status")).toHaveTextContent(STAGE_WEBGL_MISSING);
     quiet.mockRestore();
     vi.unstubAllGlobals();
+  });
+});
+
+describe("the 2D stage on hover", () => {
+  const view = bendingView(bending as unknown as BendingResponse);
+  const frame = view.frames.frames[view.frames.frames.length - 1];
+  const section = stageSection(
+    { ...defaultDeformationForm, kind: "template", shape: "I-section", fabrication: "rolled", h: 200, b: 100, tw: 5.6, tf: 8.5, r: 12 },
+    "bending",
+    "major",
+  )!;
+  const draw = () =>
+    render(<StageDrawing view={view} frame={frame} section={section} cValues={null} lit={null} fy={210} whatIf={null} limitRatio={15} stressTop={256.5} />);
+
+  it("shows the fibre under the pointer with its strain and stress, and takes them away on leaving", () => {
+    const { container } = draw();
+    const L = stageLayout(section, 15, 256.5, 210);
+    const svg = container.querySelector("svg") as SVGSVGElement;
+    expect(container.querySelector(".st-probe")).toBeNull();
+    // jsdom has no layout: make the box one SVG unit per pixel
+    svg.getBoundingClientRect = () => ({ top: 0, left: 0, width: L.viewW, height: L.viewH, right: L.viewW, bottom: L.viewH, x: 0, y: 0, toJSON: () => ({}) });
+    fireEvent.mouseMove(svg, { clientX: L.ex, clientY: L.mid - L.halfDepth / 2 });
+    const card = container.querySelector(".st-probe") as SVGGElement;
+    expect(card).toHaveTextContent("z = +50.0 mm from the axis");
+    expect(card).toHaveTextContent(/ε = [\d.]+ εy, compression/);
+    expect(card).toHaveTextContent(/σ = [\d. ]+ N\/mm² = [\d.]+ fy/);
+    fireEvent.mouseMove(svg, { clientX: L.ex, clientY: L.bot + 40 });
+    expect(container.querySelector(".st-probe")).toBeNull(); // below the section
+    fireEvent.mouseMove(svg, { clientX: L.ex, clientY: L.mid });
+    fireEvent.mouseLeave(svg);
+    expect(container.querySelector(".st-probe")).toBeNull();
   });
 });

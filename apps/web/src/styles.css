@@ -2722,3 +2722,27 @@ ol.plain li {
   width: 100%;
   height: 100%;
 }
+
+/* The Stage: the fibre under the pointer */
+.st-probe-line {
+  stroke: var(--text);
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+  opacity: 0.6;
+  fill: none;
+}
+.st-probe-dot {
+  fill: var(--surface);
+  stroke: var(--text);
+  stroke-width: 2;
+}
+.st-probe-card {
+  fill: var(--surface);
+  stroke: var(--border);
+  stroke-width: 1;
+}
+.stage-svg text.st-probe-text {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-size: 12px;
+  fill: var(--text);
+}

@@ -1,4 +1,4 @@
-import { hardenedPolygon, splitProfile, type ProfilePart } from "./stage";
+import { hardenedPolygon, profileAt, splitProfile, type ProfilePart } from "./stage";
 import type { StageSection } from "./stageSection";
 
 /**
@@ -152,4 +152,43 @@ export function strainTicks(ratioMax: number): number[] {
   const out: number[] = [];
   for (let v = -ratioMax; v <= ratioMax; v += 5) out.push(v);
   return out;
+}
+
+/** What lies under the pointer on the depth axis: the fibre and the engine's strain and stress there. */
+export type StageProbe = {
+  /** the y of the fibre on the drawing */
+  y: number;
+  /** the normalised depth, +1 at the compression edge and -1 at the tension edge */
+  depth: number;
+  /** the distance from the neutral axis in mm, + toward the compression edge; null with no section drawn */
+  z: number | null;
+  /** ε / ε_y and σ [N/mm²] at that fibre, read along the engine's profiles; + compression */
+  strainRatio: number;
+  stress: number;
+  /** σ / f_y */
+  stressOverYield: number;
+};
+
+/**
+ * The fibre at drawing height `y`, or null outside the section. The values are interpolated on the
+ * engine's own polylines (the same reading the stress arrows use), nothing is calculated here.
+ */
+export function probeAt(
+  layout: StageLayout,
+  frame: { depth: number[]; strain_profile: number[]; stress_profile: number[] },
+  fy: number,
+  sectionHeight: number | null,
+  y: number,
+): StageProbe | null {
+  if (!(layout.halfDepth > 0) || y < layout.top || y > layout.bot) return null;
+  const depth = (layout.mid - y) / layout.halfDepth;
+  const stress = profileAt(frame.depth, frame.stress_profile, depth);
+  return {
+    y,
+    depth,
+    z: sectionHeight !== null && sectionHeight > 0 ? depth * (sectionHeight / 2) : null,
+    strainRatio: profileAt(frame.depth, frame.strain_profile, depth),
+    stress,
+    stressOverYield: fy > 0 ? stress / fy : 0,
+  };
 }

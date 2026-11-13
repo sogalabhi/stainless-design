@@ -1,9 +1,11 @@
+import { useState, type MouseEvent } from "react";
 import type { StageFrameOut } from "../../api/types";
 import { formatFixed, formatPercentOne, formatRatio } from "../../lib/format";
 import { profileAt, type StageView } from "../../lib/stage";
 import {
   depthY,
   frameShapes,
+  probeAt,
   stageLayout,
   strainTicks,
   stressTicks,
@@ -45,6 +47,7 @@ export function StageDrawing({
   limitRatio: number;
   stressTop: number;
 }) {
+  const [pointerY, setPointerY] = useState<number | null>(null);
   const L = stageLayout(section, limitRatio, stressTop, fy);
   const shapes = frameShapes(L, frame.depth, frame.strain_profile, frame.stress_profile, fy);
   const sign = view.uniform ? (view.press ? 1 : -1) : 1;
@@ -74,6 +77,22 @@ export function StageDrawing({
     );
   });
 
+  // The fibre under the pointer: a guide across the panels, and its values read from the engine's profiles.
+  const probe = pointerY === null ? null : probeAt(L, frame, fy, section ? section.height : null, pointerY);
+  const track = (event: MouseEvent<SVGSVGElement>) => {
+    const svg = event.currentTarget;
+    const matrix = svg.getScreenCTM?.();
+    if (matrix) {
+      const point = svg.createSVGPoint();
+      point.x = event.clientX;
+      point.y = event.clientY;
+      setPointerY(point.matrixTransform(matrix.inverse()).y);
+      return;
+    }
+    const box = svg.getBoundingClientRect();
+    if (box.height > 0) setPointerY(((event.clientY - box.top) / box.height) * L.viewH);
+  };
+
   const stressText = formatFixed(Math.abs(frame.stress), 1);
   const strainText = formatRatio(frame.ratio);
   const heading = view.uniform
@@ -88,6 +107,8 @@ export function StageDrawing({
     <svg
       viewBox={`0 0 ${L.viewW} ${L.viewH}`}
       className="stage-svg"
+      onMouseMove={track}
+      onMouseLeave={() => setPointerY(null)}
       role="img"
       aria-label={`The section with its strain and stress at ${formatRatio(frame.ratio)} times the yield strain: strain ${strainText} times the yield strain, stress ${stressText} N/mm²`}
     >
@@ -257,6 +278,40 @@ export function StageDrawing({
             );
           })()
         : null}
+      {probe ? <StageProbeCard L={L} probe={probe} /> : null}
     </svg>
+  );
+}
+
+/** The guide, the two dots on the diagrams, and a small card with the fibre's values. */
+function StageProbeCard({ L, probe }: { L: ReturnType<typeof stageLayout>; probe: NonNullable<ReturnType<typeof probeAt>> }) {
+  const above = probe.depth > 0;
+  const strainX = L.ex + probe.strainRatio * L.eu;
+  const stressX = L.sx + probe.stress * L.su;
+  const side = probe.strainRatio === 0 ? "at the neutral axis" : probe.strainRatio > 0 ? "compression" : "tension";
+  const lines = [
+    probe.z === null
+      ? `fibre ${formatFixed(probe.depth, 2)} of the half depth`
+      : `z = ${probe.z > 0 ? "+" : ""}${formatFixed(probe.z, 1)} mm from the axis`,
+    `ε = ${formatRatio(Math.abs(probe.strainRatio))} ε_y, ${side}`,
+    `σ = ${formatFixed(Math.abs(probe.stress), 1)} N/mm² = ${formatFixed(Math.abs(probe.stressOverYield), 2)} f_y`,
+  ];
+  const width = 218;
+  const height = 18 * lines.length + 10;
+  // the card sits in the gap between the strain and the stress diagrams, clear of the pointer's guide line
+  const x = (L.ex + L.sx) / 2 - width / 2;
+  const y = Math.min(Math.max(probe.y + (above ? 10 : -height - 10), 4), L.viewH - height - 4);
+  return (
+    <g className="st-probe" aria-hidden="true" pointerEvents="none">
+      <path className="st-probe-line" d={`M${L.cx} ${probe.y}H${L.gx}`} />
+      <circle className="st-probe-dot" cx={strainX} cy={probe.y} r={4} />
+      <circle className="st-probe-dot" cx={stressX} cy={probe.y} r={4} />
+      <rect className="st-probe-card" x={x} y={y} width={width} height={height} rx={6} />
+      {lines.map((line, i) => (
+        <text key={line} x={x + 10} y={y + 20 + i * 18} className="st-probe-text">
+          {svgSymbols(line)}
+        </text>
+      ))}
+    </g>
   );
 }

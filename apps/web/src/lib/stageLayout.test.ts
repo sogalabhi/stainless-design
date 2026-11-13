@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import bendingTemplate from "../test/fixtures/bending_template.json";
 import type { BendingResponse } from "../api/types";
 import { bendingView } from "./stage";
-import { depthY, frameShapes, stageLayout, strainTicks, stressTicks } from "./stageLayout";
+import { depthY, frameShapes, probeAt, stageLayout, strainTicks, stressTicks } from "./stageLayout";
 import type { StageSection } from "./stageSection";
 
 const bending = bendingView(bendingTemplate as unknown as BendingResponse);
@@ -52,5 +52,28 @@ describe("the layout of the 2D stage", () => {
     expect(frameShapes(L, zero.depth, zero.strain_profile, zero.stress_profile, 210).strain).toEqual([]);
     const y = frames.find((f) => f.marks.includes("first_yield"))!;
     expect(frameShapes(L, y.depth, y.strain_profile, y.stress_profile, 210).hardened).toEqual([]);
+  });
+});
+
+
+describe("probeAt", () => {
+  const layout = stageLayout(null, 5, 300, 210);
+  const frame = { depth: [-1, 0, 1], strain_profile: [-2, 0, 2], stress_profile: [-210, 0, 210] };
+
+  it("reads the engine's profiles at the fibre under the pointer, and the multiples of the yield", () => {
+    const quarter = probeAt(layout, frame, 210, 200, layout.mid - layout.halfDepth / 2)!;
+    expect(quarter.depth).toBeCloseTo(0.5);
+    expect(quarter.strainRatio).toBeCloseTo(1);
+    expect(quarter.stress).toBeCloseTo(105);
+    expect(quarter.stressOverYield).toBeCloseTo(0.5);
+    expect(quarter.z).toBeCloseTo(50); // half of the 100 mm half depth
+  });
+
+  it("is negative on the tension side, has no z without a section, and is null outside the depth", () => {
+    const below = probeAt(layout, frame, 210, null, layout.mid + layout.halfDepth)!;
+    expect(below.strainRatio).toBeCloseTo(-2);
+    expect(below.z).toBeNull();
+    expect(probeAt(layout, frame, 210, null, layout.top - 5)).toBeNull();
+    expect(probeAt(layout, frame, 210, null, layout.bot + 5)).toBeNull();
   });
 });
