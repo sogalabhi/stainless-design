@@ -21,6 +21,8 @@ export type AxisInfo = Column & {
   schematic: boolean;
   /** Other quantities this axis can place, at x = factor * value (factor from the server). */
   also: { quantity: string; factor: number; label: string }[];
+  /** The value tag adds how many of this the value is: 1.25 ε_y, 1.04 f_y (factor from the server). */
+  ratio?: { label: string; factor: number } | null;
 };
 
 export type ReadoutTable = {
@@ -99,6 +101,19 @@ export function withUnit(value: number, unit: string): string {
   return unit ? `${formatNumber(value)} ${unit}` : formatNumber(value);
 }
 
+/** A value with its unit and, where the axis declares one, how many of its reference it is. */
+export function withRatio(value: number, info: AxisInfo | null, fallbackUnit = ""): string {
+  const base = withUnit(value, info?.unit ?? fallbackUnit);
+  const ratio = info?.ratio;
+  if (!ratio || !(ratio.factor > 0)) return base;
+  return `${base} = ${formatNumber(value / ratio.factor)} ${plainLabel(ratio.label)}`;
+}
+
+/** The server's labels carry HTML subscripts for Plotly; a tag is plain text. */
+function plainLabel(label: string): string {
+  return label.replace(/<sub>(.*?)<\/sub>/g, "_$1").replace(/<[^>]+>/g, "");
+}
+
 /** A column heading with its unit: "M_csm,c,Rd [kN m]", or the label alone. */
 export function heading(column: Column): string {
   return column.unit ? `${column.label} [${column.unit}]` : column.label;
@@ -143,7 +158,7 @@ export function hoverTags(
     : {
         left: xa._offset + xa.d2p(primary.x),
         top: ya._offset + ya._length,
-        text: withUnit(primary.x, xInfo?.unit ?? ""),
+        text: withRatio(primary.x, xInfo),
       };
   // vertical reference lines have no meaningful y
   const candidates = points.filter((point) => metaOf(point)?.value !== "x");
@@ -156,12 +171,13 @@ export function hoverTags(
         if (Math.abs(pixel(point) - cursorY) < Math.abs(pixel(chosen) - cursorY)) chosen = point;
       }
     }
-    const unit = metaOf(chosen)?.y.unit ?? axisOf(readout, chosen.yaxis, "y")?.unit ?? "";
+    const yInfo = axisOf(readout, chosen.yaxis, "y");
+    const unit = metaOf(chosen)?.y.unit ?? yInfo?.unit ?? "";
     y = {
       top: pixel(chosen),
       left: chosen.xaxis._offset,
       width: chosen.xaxis._length,
-      text: withUnit(chosen.y, unit),
+      text: withRatio(chosen.y, yInfo, unit),
     };
   }
   return { x, y };

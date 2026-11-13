@@ -103,6 +103,19 @@ describe("hoverTags", () => {
     expect(tags?.y?.text).toBe("210 kN m");
   });
 
+  it("adds how many ε_y and f_y the hovered strain and stress are, when the axes declare a reference", () => {
+    const ratio = {
+      ...READOUT,
+      axes: {
+        x: { ...READOUT.axes.x, label: "ε", unit: "", ratio: { label: "ε<sub>y</sub>", factor: 0.0012 } },
+        y: { ...READOUT.axes.y, label: "σ", unit: "N/mm²", ratio: { label: "f<sub>y</sub>", factor: 200 } },
+      },
+    };
+    const tags = hoverTags({ points: [point(0.0015, 250, 0, meta("Curve", { y: { label: "σ", unit: "N/mm²" } }))] }, ratio, null);
+    expect(tags?.x?.text).toBe("0.0015 = 1.25 ε_y");
+    expect(tags?.y?.text).toBe("250 N/mm² = 1.25 f_y");
+  });
+
   it("returns nothing without points or axis functions (as in tests that mock Plotly)", () => {
     expect(hoverTags({ points: [] }, READOUT, null)).toBeNull();
     const bare = { x: 1, y: 1, curveNumber: 0 } as unknown as PlotlyPoint;

@@ -142,3 +142,44 @@ def test_cap_lines_hover_on_the_base_and_capacity_charts() -> None:
         cap = _named(FIGURES[name], "Strain cap")
         assert len(set(cap["y"])) == 1
         assert "set by" in cap["hovertemplate"]
+
+
+def test_stress_strain_hover_says_how_many_f_y_and_eps_y_each_value_is() -> None:
+    figure = FIGURES["material true_scale"]
+    curve = _named(figure, "CSM bilinear (B.4)")
+    axes = figure["readout"]["axes"]
+    fy, eps_y = axes["y"]["ratio"]["factor"], axes["x"]["ratio"]["factor"]
+    assert axes["y"]["ratio"]["label"] == "f<sub>y</sub>"
+    assert "customdata[3]" in curve["hovertemplate"] and "f<sub>y</sub>" in curve["hovertemplate"]
+    for strain, stress, strain_ratio, stress_ratio in curve["customdata"]:
+        assert strain_ratio == pytest.approx(strain / eps_y)
+        assert stress_ratio == pytest.approx(stress / fy)
+    # true scale: the strain multiple is on the value tag; schematic: on every hover
+    assert "ε<sub>y</sub>" not in curve["hovertemplate"]
+    schematic = _named(FIGURES["material schematic"], "CSM bilinear (B.4)")
+    assert "customdata[2]" in schematic["hovertemplate"]
+    assert FIGURES["material schematic"]["readout"]["axes"]["x"]["ratio"] is None
+
+
+def test_the_marked_points_say_their_multiples_of_eps_y_and_f_y() -> None:
+    figure = FIGURES["material true_scale"]
+    (c1,) = [
+        t for t in figure["data"] if "C<sub>1</sub>ε<sub>u</sub> =" in t.get("hovertemplate", "")
+    ]
+    assert re.search(r"\d ε<sub>y</sub>", c1["hovertemplate"])
+    assert re.search(r"\d f<sub>y</sub>", c1["hovertemplate"])
+    compression = FIGURES["compression point true_scale"]
+    (mark,) = [t for t in compression["data"] if "Compression limit" in str(t.get("name"))]
+    assert "ε<sub>y</sub>" in mark["hovertemplate"] and "f<sub>y</sub>" in mark["hovertemplate"]
+
+
+def test_the_bending_hover_gives_the_moment_as_a_multiple_of_m_el_and_m_pl() -> None:
+    moment = FIGURES["bending moment"]
+    (branch,) = [t for t in moment["data"] if "Formula B.20" in str(t.get("name"))]
+    el = _named(moment, "Elastic moment")["y"][0]
+    pl = _named(moment, "Plastic moment")["y"][0]
+    for y, (to_el, to_pl) in zip(branch["y"], branch["customdata"], strict=True):
+        assert to_el == pytest.approx(y / el) and to_pl == pytest.approx(y / pl)
+    assert "M<sub>pl</sub>" in branch["hovertemplate"]
+    (yours,) = [t for t in moment["data"] if t.get("name") == "Your section"]
+    assert "M<sub>el</sub>" in yours["hovertemplate"] and "M<sub>pl</sub>" in yours["hovertemplate"]
