@@ -195,9 +195,7 @@ def bending(request: s.BendingRequest) -> s.BendingResponse:
     )
 
 
-@router.post(
-    "/section-properties", response_model=s.SectionPropertiesResponse, responses=ERRORS
-)
+@router.post("/section-properties", response_model=s.SectionPropertiesResponse, responses=ERRORS)
 def section_properties(request: s.SectionPropertiesRequest) -> s.SectionPropertiesResponse:
     """A, centroid, I, W_el, W_pl, plastic axes and shear centre from the template dimensions.
 
@@ -205,6 +203,17 @@ def section_properties(request: s.SectionPropertiesRequest) -> s.SectionProperti
     user copies one into an input field.
     """
     result = services.run_section_properties(mappers.section_geometry_form(request))
+    return mappers.section_properties_out(result)
+
+
+@router.post(
+    "/section-properties/custom", response_model=s.SectionPropertiesResponse, responses=ERRORS
+)
+def custom_section_properties(request: s.CustomPropertiesRequest) -> s.SectionPropertiesResponse:
+    """A, centroid, I, W_el, W_pl, plastic axes and principal axes of a section typed as nodes
+    and links. Each link is a rectangle of its length and thickness (the thin-walled line model)."""
+    nodes, links = mappers.custom_nodes_and_links(request)
+    result = services.run_custom_properties(nodes, links)
     return mappers.section_properties_out(result)
 
 

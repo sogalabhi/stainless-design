@@ -41,6 +41,7 @@ Point = tuple[float, float]  # (y, z) in mm
 Loop = list[Point]
 
 ORIGIN = "the lower left corner of the bounding box, y to the right and z up"
+CUSTOM_ORIGIN = "your node coordinates: x to the right (the y direction), y up (the z direction)"
 LABEL = "computed from your dimensions: geometry, not a rule of EN 1993-1-4"
 SHEAR_CENTRE_LABEL = "thin-walled approximation"
 
@@ -326,7 +327,7 @@ class PrincipalAxes:
 
 @dataclass(frozen=True, slots=True)
 class SectionProperties:
-    shape: SectionType
+    shape: SectionType | None
     width: float  # bounding box along y [mm]
     height: float  # bounding box along z [mm]
     area: float
@@ -347,10 +348,12 @@ class SectionProperties:
     plastic_axis_z: float  # y of the equal-area line parallel to z, for bending about z-z [mm]
     w_pl_y: float
     w_pl_z: float
-    shear_centre_y: float  # thin-walled approximation [mm]
-    shear_centre_z: float
+    shear_centre_y: float | None  # thin-walled approximation [mm]; None for a custom section
+    shear_centre_z: float | None
     shear_centre_note: str
-    principal: PrincipalAxes | None  # angles only
+    principal: PrincipalAxes | None  # angles and custom sections
+    origin: str = ORIGIN
+    from_box: bool = True  # the plastic axes are measured from the bounding box (templates)
 
     @property
     def w_el_y(self) -> float:
@@ -402,12 +405,15 @@ def _shear_centre(template: Template, y_c: float, z_c: float) -> tuple[float, fl
     )
 
 
-def section_properties(template: Template) -> SectionProperties:
-    """A, centroid, I, W_el, W_pl, plastic axes and shear centre of a template. Raises
-    InvalidSectionError for dimensions that cannot make the shape or a missing radius."""
-    template.validate()
-    _need(template)
-    loops = outline(template)
+def _properties_of(
+    loops: list[Loop],
+    shape: SectionType | None,
+    shear: tuple[float | None, float | None, str],
+    principal_axes: bool,
+    origin: str = ORIGIN,
+    from_box: bool = True,
+) -> SectionProperties:
+    """Everything that follows from the loops of the section."""
     whole = _moments(loops)
     area = whole.area
     y_c, z_c = whole.sy / area, whole.sz / area
@@ -422,17 +428,16 @@ def section_properties(template: Template) -> SectionProperties:
 
     plastic_axis_y, w_pl_y = _plastic_axis(loops, area, (0.0, 1.0))
     plastic_axis_z, w_pl_z = _plastic_axis(loops, area, (1.0, 0.0))
-    shear_y, shear_z, note = _shear_centre(template, y_c, z_c)
 
     principal = None
-    if isinstance(template, Angle):
+    if principal_axes:
         mean = (i_y + i_z) / 2
         radius = math.hypot((i_y - i_z) / 2, i_yz)
         angle = 0.5 * math.degrees(math.atan2(-2 * i_yz, i_y - i_z))
         principal = PrincipalAxes(angle, mean + radius, mean - radius)
 
     return SectionProperties(
-        shape=_shape_of(template),
+        shape=shape,
         width=max(ys) - min(ys),
         height=max(zs) - min(zs),
         area=area,
@@ -453,10 +458,106 @@ def section_properties(template: Template) -> SectionProperties:
         plastic_axis_z=plastic_axis_z,
         w_pl_y=w_pl_y,
         w_pl_z=w_pl_z,
-        shear_centre_y=shear_y,
-        shear_centre_z=shear_z,
-        shear_centre_note=note,
+        shear_centre_y=shear[0],
+        shear_centre_z=shear[1],
+        shear_centre_note=shear[2],
         principal=principal,
+        origin=origin,
+        from_box=from_box,
+    )
+
+
+def section_properties(template: Template) -> SectionProperties:
+    """A, centroid, I, W_el, W_pl, plastic axes and shear centre of a template. Raises
+    InvalidSectionError for dimensions that cannot make the shape or a missing radius."""
+    template.validate()
+    _need(template)
+    loops = outline(template)
+    whole = _moments(loops)
+    y_c, z_c = whole.sy / whole.area, whole.sz / whole.area
+    return _properties_of(
+        loops,
+        _shape_of(template),
+        _shear_centre(template, y_c, z_c),
+        principal_axes=isinstance(template, Angle),
+    )
+
+
+# --- a custom section: nodes and links ---------------------------------------------------------
+
+
+@dataclass(frozen=True, slots=True)
+class CustomNode:
+    id: int
+    x: float  # mm, to the right
+    y: float  # mm, up
+
+
+@dataclass(frozen=True, slots=True)
+class CustomLink:
+    from_node: int
+    to_node: int
+    thickness: float  # mm
+
+
+def _link_rectangle(a: CustomNode, b: CustomNode, thickness: float) -> Loop:
+    """The plate between two nodes as a rectangle: its length, its thickness, counter-clockwise."""
+    length = math.hypot(b.x - a.x, b.y - a.y)
+    ux, uy = (b.x - a.x) / length, (b.y - a.y) / length
+    hx, hy = -uy * thickness / 2, ux * thickness / 2  # half the thickness along the normal
+    return [
+        (a.x - hx, a.y - hy),
+        (b.x - hx, b.y - hy),
+        (b.x + hx, b.y + hy),
+        (a.x + hx, a.y + hy),
+    ]
+
+
+def custom_loops(nodes: list[CustomNode], links: list[CustomLink]) -> list[Loop]:
+    """One rectangle per link. Raises InvalidSectionError for a link that cannot be drawn."""
+    if not links:
+        raise InvalidSectionError("The custom section needs at least one link.")
+    by_id: dict[int, CustomNode] = {}
+    for node in nodes:
+        if node.id in by_id:
+            raise InvalidSectionError(f"Node {node.id} is given more than once.")
+        by_id[node.id] = node
+    loops: list[Loop] = []
+    for number, link in enumerate(links, start=1):
+        if link.from_node not in by_id or link.to_node not in by_id:
+            missing = link.from_node if link.from_node not in by_id else link.to_node
+            raise InvalidSectionError(
+                f"Link {number} uses node {missing}, which is not in the nodes table."
+            )
+        a, b = by_id[link.from_node], by_id[link.to_node]
+        if math.hypot(b.x - a.x, b.y - a.y) <= 0:
+            raise InvalidSectionError(f"Link {number} joins two nodes at the same point.")
+        if link.thickness <= 0:
+            raise InvalidSectionError(f"The thickness of link {number} must be above zero.")
+        loops.append(_link_rectangle(a, b, link.thickness))
+    return loops
+
+
+CUSTOM_SHEAR_NOTE = "not computed: a general thin-walled section needs a warping analysis"
+
+
+def custom_section_properties(
+    nodes: list[CustomNode], links: list[CustomLink], shape: SectionType | None = None
+) -> SectionProperties:
+    """A, centroid, I, W_el, W_pl, plastic axes and principal axes of a section drawn as links.
+
+    Each link is a rectangle of its length and thickness; where links meet, the overlap is not
+    removed, so A is the sum of length x thickness (the thin-walled line model). Coordinates are the
+    user's own. No shear centre.
+    """
+    loops = custom_loops(nodes, links)
+    return _properties_of(
+        loops,
+        shape,
+        (None, None, CUSTOM_SHEAR_NOTE),
+        principal_axes=True,
+        origin=CUSTOM_ORIGIN,
+        from_box=False,
     )
 
 

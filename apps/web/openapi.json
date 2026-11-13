@@ -382,6 +382,45 @@
         }
       }
     },
+    "/api/v1/section-properties/custom": {
+      "post": {
+        "summary": "Custom Section Properties",
+        "description": "A, centroid, I, W_el, W_pl, plastic axes and principal axes of a section typed as nodes\nand links. Each link is a rectangle of its length and thickness (the thin-walled line model).",
+        "operationId": "custom_section_properties_api_v1_section_properties_custom_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CustomPropertiesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SectionPropertiesResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/section-comparison": {
       "post": {
         "summary": "Section Comparison",
@@ -1054,6 +1093,83 @@
           "point_figure"
         ],
         "title": "CompressionResponse"
+      },
+      "CustomLinkIn": {
+        "properties": {
+          "from_node": {
+            "type": "integer",
+            "title": "From Node",
+            "description": "Node id at one end of the plate"
+          },
+          "to_node": {
+            "type": "integer",
+            "title": "To Node",
+            "description": "Node id at the other end"
+          },
+          "thickness": {
+            "type": "number",
+            "title": "Thickness",
+            "description": "Plate thickness t [mm]"
+          }
+        },
+        "type": "object",
+        "required": [
+          "from_node",
+          "to_node",
+          "thickness"
+        ],
+        "title": "CustomLinkIn"
+      },
+      "CustomNodeIn": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id",
+            "description": "The number the links refer to"
+          },
+          "x": {
+            "type": "number",
+            "title": "X",
+            "description": "mm, to the right"
+          },
+          "y": {
+            "type": "number",
+            "title": "Y",
+            "description": "mm, upwards"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "x",
+          "y"
+        ],
+        "title": "CustomNodeIn"
+      },
+      "CustomPropertiesRequest": {
+        "properties": {
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/CustomNodeIn"
+            },
+            "type": "array",
+            "title": "Nodes"
+          },
+          "links": {
+            "items": {
+              "$ref": "#/components/schemas/CustomLinkIn"
+            },
+            "type": "array",
+            "title": "Links"
+          }
+        },
+        "type": "object",
+        "required": [
+          "nodes",
+          "links"
+        ],
+        "title": "CustomPropertiesRequest",
+        "description": "A custom section: the nodes (x, y) and the flat plates between them."
       },
       "DeformationRequest": {
         "properties": {
@@ -2257,7 +2373,15 @@
       "SectionPropertiesResponse": {
         "properties": {
           "shape": {
-            "$ref": "#/components/schemas/SectionType"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SectionType"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "None for a custom section"
           },
           "label": {
             "type": "string",
@@ -2334,7 +2458,15 @@
             "title": "W Pl Z"
           },
           "shear_centre": {
-            "$ref": "#/components/schemas/ShearCentreOut"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ShearCentreOut"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "None for a custom section"
           },
           "principal": {
             "anyOf": [
@@ -2345,7 +2477,7 @@
                 "type": "null"
               }
             ],
-            "description": "Angles only"
+            "description": "Angles and custom sections"
           },
           "rows": {
             "items": {
@@ -2364,7 +2496,6 @@
         },
         "type": "object",
         "required": [
-          "shape",
           "label",
           "method",
           "origin",
@@ -2382,7 +2513,6 @@
           "plastic_axis_z",
           "w_pl_y",
           "w_pl_z",
-          "shear_centre",
           "rows",
           "notes"
         ],

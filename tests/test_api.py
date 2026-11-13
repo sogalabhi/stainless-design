@@ -186,6 +186,7 @@ def test_openapi_spec_documents_every_endpoint() -> None:
         f"{V1}/deformation-capacity",
         f"{V1}/section-comparison",
         f"{V1}/section-properties",
+        f"{V1}/section-properties/custom",
         f"{V1}/symbols",
         f"{V1}/input-help",
     }

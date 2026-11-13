@@ -340,6 +340,21 @@ def reference_out(reference: services.ReferenceSection) -> s.ReferenceSectionOut
 # --- section properties ----------------------------------------------------------------
 
 
+def custom_nodes_and_links(
+    request: s.CustomPropertiesRequest,
+) -> tuple[list[props.CustomNode], list[props.CustomLink]]:
+    """The tables of a custom section as the engine reads them."""
+    return (
+        [props.CustomNode(id=n.id, x=n.x, y=n.y) for n in request.nodes],
+        [
+            props.CustomLink(
+                from_node=link.from_node, to_node=link.to_node, thickness=link.thickness
+            )
+            for link in request.links
+        ],
+    )
+
+
 def section_geometry_form(request: s.SectionPropertiesRequest) -> services.GeometryForm:
     """The dimensions of a properties request as the template geometry the engine reads."""
     return services.GeometryForm(
@@ -386,8 +401,13 @@ def property_rows(p: props.SectionProperties) -> list[s.PropertyRowOut]:
         rows.append(row)
 
     area = "Area and centroid"
-    from_origin = f"from {props.ORIGIN}"
-    add(area, "A", "A", "Cross-sectional area", p.area, "mm²", "gross, with the fillets and welds")
+    from_origin = f"from {p.origin}"
+    area_note = (
+        "gross, with the fillets and welds"
+        if p.from_box
+        else "sum of length × thickness of the links; overlaps at the joints are not removed"
+    )
+    add(area, "A", "A", "Cross-sectional area", p.area, "mm²", area_note)
     add(area, "y_c", "y_c", "Centroid, horizontal", p.y_c, "mm", from_origin)
     add(area, "z_c", "z_c", "Centroid, vertical", p.z_c, "mm", from_origin)
     add(area, "e_top", "e_top", "Centroid to the top fibre", p.e_top, "mm")
@@ -417,20 +437,29 @@ def property_rows(p: props.SectionProperties) -> list[s.PropertyRowOut]:
                 add(elastic, key, f"W_el,{axis}", f"{name}, {side} fibre", value, "mm³")
 
     plastic = "Plastic section modulus"
-    add(plastic, "z_pl_y", "z_pl,y", "Plastic neutral axis for y-y", p.plastic_axis_y, "mm",
-        "height of the equal-area line above the lowest point")  # fmt: skip
+    note_y = (
+        "height of the equal-area line above the lowest point"
+        if p.from_box
+        else "y of the equal-area horizontal line, in your coordinates"
+    )
+    note_z = (
+        "distance of the equal-area line from the leftmost point"
+        if p.from_box
+        else "x of the equal-area vertical line, in your coordinates"
+    )
+    add(plastic, "z_pl_y", "z_pl,y", "Plastic neutral axis for y-y", p.plastic_axis_y, "mm", note_y)
     add(plastic, "W_pl_y", "W_pl,y", "Plastic modulus about y-y", p.w_pl_y, "mm³")
-    add(plastic, "y_pl_z", "y_pl,z", "Plastic neutral axis for z-z", p.plastic_axis_z, "mm",
-        "distance of the equal-area line from the leftmost point")  # fmt: skip
+    add(plastic, "y_pl_z", "y_pl,z", "Plastic neutral axis for z-z", p.plastic_axis_z, "mm", note_z)
     add(plastic, "W_pl_z", "W_pl,z", "Plastic modulus about z-z", p.w_pl_z, "mm³")
 
-    shear = f"Shear centre ({props.SHEAR_CENTRE_LABEL})"
-    shear_note = f"{props.SHEAR_CENTRE_LABEL}: {p.shear_centre_note}"
-    add(shear, "y_s", "y_s", "Shear centre, horizontal", p.shear_centre_y, "mm", shear_note)
-    add(shear, "z_s", "z_s", "Shear centre, vertical", p.shear_centre_z, "mm", shear_note)
+    if p.shear_centre_y is not None and p.shear_centre_z is not None:
+        shear = f"Shear centre ({props.SHEAR_CENTRE_LABEL})"
+        shear_note = f"{props.SHEAR_CENTRE_LABEL}: {p.shear_centre_note}"
+        add(shear, "y_s", "y_s", "Shear centre, horizontal", p.shear_centre_y, "mm", shear_note)
+        add(shear, "z_s", "z_s", "Shear centre, vertical", p.shear_centre_z, "mm", shear_note)
 
     if p.principal is not None:
-        axes = "Principal axes (angle)"
+        axes = "Principal axes (angle)" if p.from_box else "Principal axes"
         angle = p.principal.angle_deg
         add(axes, "theta_u", "θ_u", "Major axis u from the y axis", angle, "°",
             "counter-clockwise, z up")  # fmt: skip
@@ -455,15 +484,18 @@ def section_properties_out(p: props.SectionProperties) -> s.SectionPropertiesRes
             "The outline is a polygon (fillets and corner radii are arcs of many segments, welds "
             "are triangles of leg s); Green's theorem gives A, the centroid and the second "
             "moments. The plastic neutral axis cuts the area in two equal halves."
+            if p.from_box
+            else "Each link is a rectangle of its length and thickness (the thin-walled line "
+            "model, overlaps at the joints are not removed); Green's theorem gives A, the "
+            "centroid and the second moments. The plastic neutral axis cuts the area in two "
+            "equal halves."
         ),
-        origin=props.ORIGIN,
+        origin=p.origin,
         width=p.width,
         height=p.height,
         area=p.area,
         centroid=s.PointOut(y=p.y_c, z=p.z_c),
-        fibres=s.FibreDistancesOut(
-            top=p.e_top, bottom=p.e_bottom, left=p.e_left, right=p.e_right
-        ),
+        fibres=s.FibreDistancesOut(top=p.e_top, bottom=p.e_bottom, left=p.e_left, right=p.e_right),
         i_y=p.i_y,
         i_z=p.i_z,
         i_yz=p.i_yz,
@@ -473,7 +505,9 @@ def section_properties_out(p: props.SectionProperties) -> s.SectionPropertiesRes
         plastic_axis_z=p.plastic_axis_z,
         w_pl_y=p.w_pl_y,
         w_pl_z=p.w_pl_z,
-        shear_centre=s.ShearCentreOut(
+        shear_centre=None
+        if p.shear_centre_y is None or p.shear_centre_z is None
+        else s.ShearCentreOut(
             point=s.PointOut(y=p.shear_centre_y, z=p.shear_centre_z),
             label=props.SHEAR_CENTRE_LABEL,
             note=p.shear_centre_note,
@@ -485,8 +519,8 @@ def section_properties_out(p: props.SectionProperties) -> s.SectionPropertiesRes
         ),
         rows=property_rows(p),
         notes=[
-            "Reference values: nothing enters a calculation unless you click Use, which copies "
-            "the value into its input field.",
+            "Reference values. The area A is the area of every calculation; W_el and W_pl enter "
+            "a calculation only when you click Use, which copies the value into its input field.",
             "No torsion constant or warping constant: Annex B does not use them.",
         ],
     )

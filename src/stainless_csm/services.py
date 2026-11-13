@@ -37,7 +37,13 @@ from stainless_csm.csm.tension import CSMTension, TensionInput, TensionResult
 from stainless_csm.data.repository import GradeRepository, csm_coefficients_for
 from stainless_csm.material_models.csm_bilinear import CSMBilinearModel
 from stainless_csm.materials.material import Material
-from stainless_csm.sections.properties import SectionProperties, section_properties
+from stainless_csm.sections.properties import (
+    CustomLink,
+    CustomNode,
+    SectionProperties,
+    custom_section_properties,
+    section_properties,
+)
 from stainless_csm.sections.templates import (
     CHS,
     RHS,
@@ -334,6 +340,11 @@ def run_section_properties(geometry: GeometryForm) -> SectionProperties:
     copies a value into an input. Raises InvalidSectionError for a gap or an impossible shape.
     """
     return section_properties(build_template(geometry, for_plates=False))
+
+
+def run_custom_properties(nodes: list[CustomNode], links: list[CustomLink]) -> SectionProperties:
+    """The same properties for a section typed as nodes and links (the Custom route)."""
+    return custom_section_properties(nodes, links)
 
 
 # --- B.6.2: compression ----------------------------------------------------------------------

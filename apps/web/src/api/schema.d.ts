@@ -225,6 +225,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/section-properties/custom": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Custom Section Properties
+         * @description A, centroid, I, W_el, W_pl, plastic axes and principal axes of a section typed as nodes
+         *     and links. Each link is a rectangle of its length and thickness (the thin-walled line model).
+         */
+        post: operations["custom_section_properties_api_v1_section_properties_custom_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/section-comparison": {
         parameters: {
             query?: never;
@@ -586,6 +607,52 @@ export interface components {
             point_figure: {
                 [key: string]: unknown;
             };
+        };
+        /** CustomLinkIn */
+        CustomLinkIn: {
+            /**
+             * From Node
+             * @description Node id at one end of the plate
+             */
+            from_node: number;
+            /**
+             * To Node
+             * @description Node id at the other end
+             */
+            to_node: number;
+            /**
+             * Thickness
+             * @description Plate thickness t [mm]
+             */
+            thickness: number;
+        };
+        /** CustomNodeIn */
+        CustomNodeIn: {
+            /**
+             * Id
+             * @description The number the links refer to
+             */
+            id: number;
+            /**
+             * X
+             * @description mm, to the right
+             */
+            x: number;
+            /**
+             * Y
+             * @description mm, upwards
+             */
+            y: number;
+        };
+        /**
+         * CustomPropertiesRequest
+         * @description A custom section: the nodes (x, y) and the flat plates between them.
+         */
+        CustomPropertiesRequest: {
+            /** Nodes */
+            nodes: components["schemas"]["CustomNodeIn"][];
+            /** Links */
+            links: components["schemas"]["CustomLinkIn"][];
         };
         /** DeformationRequest */
         DeformationRequest: {
@@ -1099,7 +1166,8 @@ export interface components {
         };
         /** SectionPropertiesResponse */
         SectionPropertiesResponse: {
-            shape: components["schemas"]["SectionType"];
+            /** @description None for a custom section */
+            shape?: components["schemas"]["SectionType"] | null;
             /**
              * Label
              * @description Where these numbers come from: geometry, not the standard
@@ -1158,8 +1226,9 @@ export interface components {
             w_pl_y: number;
             /** W Pl Z */
             w_pl_z: number;
-            shear_centre: components["schemas"]["ShearCentreOut"];
-            /** @description Angles only */
+            /** @description None for a custom section */
+            shear_centre?: components["schemas"]["ShearCentreOut"] | null;
+            /** @description Angles and custom sections */
             principal?: components["schemas"]["PrincipalAxesOut"] | null;
             /** Rows */
             rows: components["schemas"]["PropertyRowOut"][];
@@ -1767,6 +1836,39 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["SectionPropertiesRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SectionPropertiesResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    custom_section_properties_api_v1_section_properties_custom_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CustomPropertiesRequest"];
             };
         };
         responses: {

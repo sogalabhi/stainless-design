@@ -607,6 +607,25 @@ class SectionPropertiesRequest(BaseModel):
     )
 
 
+class CustomNodeIn(BaseModel):
+    id: int = Field(description="The number the links refer to")
+    x: float = Field(description="mm, to the right")
+    y: float = Field(description="mm, upwards")
+
+
+class CustomLinkIn(BaseModel):
+    from_node: int = Field(description="Node id at one end of the plate")
+    to_node: int = Field(description="Node id at the other end")
+    thickness: float = Field(description="Plate thickness t [mm]")
+
+
+class CustomPropertiesRequest(BaseModel):
+    """A custom section: the nodes (x, y) and the flat plates between them."""
+
+    nodes: list[CustomNodeIn]
+    links: list[CustomLinkIn]
+
+
 class PointOut(BaseModel):
     y: float = Field(description="mm, from the origin to the right")
     z: float = Field(description="mm, from the origin upwards")
@@ -654,7 +673,7 @@ class PropertyRowOut(BaseModel):
 
 
 class SectionPropertiesResponse(BaseModel):
-    shape: SectionType
+    shape: SectionType | None = Field(default=None, description="None for a custom section")
     label: str = Field(description="Where these numbers come from: geometry, not the standard")
     method: str
     origin: str = Field(description="Where the coordinates start")
@@ -676,7 +695,11 @@ class SectionPropertiesResponse(BaseModel):
     )
     w_pl_y: float = Field(description="[mm3]")
     w_pl_z: float
-    shear_centre: ShearCentreOut
-    principal: PrincipalAxesOut | None = Field(default=None, description="Angles only")
+    shear_centre: ShearCentreOut | None = Field(
+        default=None, description="None for a custom section"
+    )
+    principal: PrincipalAxesOut | None = Field(
+        default=None, description="Angles and custom sections"
+    )
     rows: list[PropertyRowOut]
     notes: list[str]

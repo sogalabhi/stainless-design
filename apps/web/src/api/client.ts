@@ -14,6 +14,7 @@ import type {
   MaterialModelRequest,
   MaterialModelResponse,
   SectionPropertiesRequest,
+  CustomPropertiesRequest,
   SectionPropertiesResponse,
   TensionRequest,
   TensionResponse,
@@ -102,6 +103,8 @@ export const api = {
     post<BendingResponse>("/api/v1/bending", body, signal),
   sectionProperties: (body: SectionPropertiesRequest, signal?: AbortSignal) =>
     post<SectionPropertiesResponse>("/api/v1/section-properties", body, signal),
+  customSectionProperties: (body: CustomPropertiesRequest, signal?: AbortSignal) =>
+    post<SectionPropertiesResponse>("/api/v1/section-properties/custom", body, signal),
   sectionComparison: (body: ComparisonRequest, signal?: AbortSignal) =>
     post<ComparisonResponse>("/api/v1/section-comparison", body, signal),
 };

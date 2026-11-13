@@ -42,6 +42,7 @@ export type ComparisonPointOut = S["ComparisonPointOut"];
 export type ReferenceSectionOut = S["ReferenceSectionOut"];
 
 export type SectionPropertiesRequest = S["SectionPropertiesRequest"];
+export type CustomPropertiesRequest = S["CustomPropertiesRequest"];
 export type SectionPropertiesResponse = S["SectionPropertiesResponse"];
 export type PropertyRowOut = S["PropertyRowOut"];
 

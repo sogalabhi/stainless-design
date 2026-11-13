@@ -308,9 +308,7 @@ def test_channel_by_rectangles_and_its_shear_centre() -> None:
     y_c = (web[0] * web[1] + 2 * flange[0] * flange[1]) / area
     i_y = web[2] + 2 * (flange[2] + flange[0] * (100 - 5.75) ** 2)
     i_z = (
-        web[3]
-        + web[0] * (web[1] - y_c) ** 2
-        + 2 * (flange[3] + flange[0] * (flange[1] - y_c) ** 2)
+        web[3] + web[0] * (web[1] - y_c) ** 2 + 2 * (flange[3] + flange[0] * (flange[1] - y_c) ** 2)
     )
     p = section_properties(Channel(200, 75, 8.5, 11.5, ROLLED, r=0))
     assert p.area == pytest.approx(area, rel=1e-12)
@@ -442,3 +440,76 @@ def test_r_o_does_not_change_b5() -> None:
     with_radius, without = run(10), run(None)
     assert with_radius.slenderness.slenderness == without.slenderness.slenderness
     assert [p.c for p in with_radius.template_plates] == [88.0, 38.0]
+
+
+# --- a custom section: nodes and links (the thin-walled line model) ------------------------------
+# A single link 100 long and 10 thick, horizontal, is a 100 x 10 rectangle:
+#   A = 1000, I_y = 100*10^3/12 = 8333.33, I_z = 10*100^3/12 = 833333.3
+#   W_el,y = I_y / 5 = 1666.67, W_pl,y = 100*10^2/4 = 2500
+# Three links make an I-section line model (flanges 100 x 10, web 180 x 6, centre lines 190 apart):
+#   A = 2*1000 + 1080 = 3080
+
+
+def test_custom_single_link_is_the_rectangle() -> None:
+    from stainless_csm.sections.properties import CustomLink, CustomNode, custom_section_properties
+
+    p = custom_section_properties(
+        [CustomNode(1, 0, 0), CustomNode(2, 100, 0)], [CustomLink(1, 2, 10)]
+    )
+    assert rel(p.area, 1000, 1e-12)
+    assert rel(p.i_y, 8333.3333333, 1e-9) and rel(p.i_z, 833333.3333333, 1e-9)
+    assert rel(p.w_el_y_top, 1666.6666667, 1e-9)
+    assert rel(p.w_pl_y, 2500, 1e-6)
+    assert (p.y_c, p.z_c) == pytest.approx((50, 0))
+    assert p.shear_centre_y is None and p.principal is not None
+
+
+def test_custom_i_section_line_model() -> None:
+    from stainless_csm.sections.properties import CustomLink, CustomNode, custom_section_properties
+
+    nodes = [
+        CustomNode(1, 0, 0), CustomNode(2, 100, 0), CustomNode(3, 50, 0),
+        CustomNode(4, 50, 190), CustomNode(5, 0, 190), CustomNode(6, 100, 190),
+    ]  # fmt: skip
+    links = [CustomLink(1, 2, 10), CustomLink(3, 4, 6), CustomLink(5, 6, 10)]
+    p = custom_section_properties(nodes, links)
+    assert rel(p.area, 1000 + 190 * 6 + 1000, 1e-12)
+    assert (p.y_c, p.z_c) == pytest.approx((50, 95))
+    # flanges: 2 * (100*10^3/12 + 1000*95^2); web: 6*190^3/12
+    expected_iy = 2 * (100 * 10**3 / 12 + 1000 * 95**2) + 6 * 190**3 / 12
+    assert rel(p.i_y, expected_iy, 1e-9)
+    assert abs(p.i_yz) < 1e-6 * p.i_y  # symmetric about both axes
+
+
+def test_custom_rejects_bad_links() -> None:
+    from stainless_csm.sections.properties import CustomLink, CustomNode, custom_section_properties
+
+    nodes = [CustomNode(1, 0, 0), CustomNode(2, 100, 0)]
+    with pytest.raises(InvalidSectionError, match="node 9"):
+        custom_section_properties(nodes, [CustomLink(1, 9, 10)])
+    with pytest.raises(InvalidSectionError, match="thickness"):
+        custom_section_properties(nodes, [CustomLink(1, 2, 0)])
+    with pytest.raises(InvalidSectionError, match="same point"):
+        custom_section_properties([CustomNode(1, 0, 0), CustomNode(2, 0, 0)], [CustomLink(1, 2, 5)])
+    with pytest.raises(InvalidSectionError, match="at least one link"):
+        custom_section_properties(nodes, [])
+
+
+def test_custom_properties_endpoint() -> None:
+    from fastapi.testclient import TestClient
+
+    from stainless_csm.api.main import create_app
+
+    client = TestClient(create_app())
+    body = {
+        "nodes": [{"id": 1, "x": 0, "y": 0}, {"id": 2, "x": 100, "y": 0}],
+        "links": [{"from_node": 1, "to_node": 2, "thickness": 10}],
+    }
+    api = client.post("/api/v1/section-properties/custom", json=body)
+    assert api.status_code == 200, api.text
+    data = api.json()
+    assert data["shape"] is None and data["shear_centre"] is None
+    assert data["area"] == pytest.approx(1000)
+    assert {row["key"] for row in data["rows"]} >= {"A", "I_y", "I_yz", "W_pl_y", "theta_u"}
+    bad = client.post("/api/v1/section-properties/custom", json={**body, "links": []})
+    assert bad.status_code == 422 or bad.status_code == 400
