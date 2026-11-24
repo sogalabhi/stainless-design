@@ -95,7 +95,7 @@ describe("the card of a fibre on the 3D face", () => {
   it("has nothing off the section, and no force lines without the engine's grid", () => {
     expect(fibreLines(view.frames, last, 100, false, 120, 210)).toBeNull();
     const bare = fibreLines({ fibre_depth: [], fibre_width: [] }, { ...last, fibre_force: null }, 100, false, 50, 210)!;
-    expect(bare).toHaveLength(3);
+    expect(bare).toHaveLength(4); // where, strain, stress, and the multiple of the flat-yield stress
   });
 });
 

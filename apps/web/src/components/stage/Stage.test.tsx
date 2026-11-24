@@ -362,4 +362,27 @@ describe("the 2D stage for a section not symmetric about the axis", () => {
     expect(dirs.slice(0, 2).every((d) => d === -1)).toBe(true);
     expect(dirs.slice(-2).every((d) => d === 1)).toBe(true);
   });
+
+  it("gives the hovered stress as a multiple of f_y, of f_u and of the flat-yield stress", () => {
+    const f = bendingView(bendingForces as unknown as BendingResponse);
+    const last = f.frames.frames[f.frames.frames.length - 1];
+    const sec = stageSection(
+      { ...defaultDeformationForm, kind: "template", shape: "I-section", fabrication: "rolled", h: 200, b: 100, tw: 5.6, tf: 8.5, r: 12 },
+      "bending",
+      "major",
+    )!;
+    const top = Math.abs(last.stress);
+    const { container } = render(
+      <StageDrawing view={f} frame={last} section={sec} cValues={null} lit={null} fy={f.frames.yield_stress} whatIf={null} limitRatio={last.ratio} stressTop={top} />,
+    );
+    const L = stageLayout(sec, last.ratio, top, f.frames.yield_stress);
+    const svg = container.querySelector("svg") as SVGSVGElement;
+    svg.getBoundingClientRect = () => ({ top: 0, left: 0, width: L.viewW, height: L.viewH, right: L.viewW, bottom: L.viewH, x: 0, y: 0, toJSON: () => ({}) });
+    fireEvent.mouseMove(svg, { clientX: L.ex, clientY: L.mid - L.halfDepth * 0.9 });
+    const card = container.querySelector(".st-probe") as SVGGElement;
+    expect(f.frames.ultimate_stress).toBeGreaterThan(f.frames.yield_stress);
+    expect(card).toHaveTextContent(/σ = [\d. ]+ N\/mm² = [\d.]+ f_?y = [\d.]+ f_?u/);
+    // past yield the strain hardening puts it above the flat-yield stress
+    expect(card).toHaveTextContent(/= 1\.\d\d × the flat-yield stress at this strain/);
+  });
 });
