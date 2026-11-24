@@ -25,8 +25,9 @@ pre-filled.
 
 ## Unsymmetric sections
 
-- The true neutral axis of an unequal-flange section. The stage draws it at mid-height and the curvature
-  uses the half depth as drawn.
+- The Stage now finds the neutral axis of a custom section from equilibrium (∫σ dA = 0). What is left is
+  the clause: B.6.3.3 gives the resistance of such a section, and the tool still takes W_el and W_pl as
+  typed values for the B.19 and B.20 formulas.
 - W_el and W_pl for each fibre, so that hogging uses the right value (today you type one value).
 - The strain and stress through the depth of an unsymmetric section, which assumes a centred depth today.
 
@@ -34,9 +35,6 @@ pre-filled.
 
 - The elastic and plastic stress blocks as separate labelled pictures: elastic at first yield, fully
   plastic at M_pl, and the semi-plastic state between.
-- The forces of the stress block for a custom section and for an unsymmetric one (built for templates
-  symmetric about the bending axis; see `plan.md` section 4i). Needs the request to carry the nodes and
-  links, and the neutral axis from the equilibrium ∫σ dA = 0.
 - Depth of the plastic zone and of the elastic core, and the shape factor M_pl / M_el (Gere 10.3, as a
   textbook reference).
 - Strain and stress on a vertical slice at any position across the section (web slice beside flange

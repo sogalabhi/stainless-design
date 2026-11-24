@@ -915,9 +915,17 @@ and `fibre_width` to the frames, through `with_resultants` and `with_axial_force
 - Website: the Forces switch on the Stage (2D drawing and 3D cut), the readout and parts table
   (`ForcesPanel`), the force column and hover cards of the drawing, and in the 3D cut the choice of two
   forces, parts pulled apart, or the field of arrows. Help: "The forces in the stress block".
-- Not built: a custom section (the request carries no nodes and links) and an unsymmetric section (the
-  neutral axis is not at mid-depth); both show no forces. The 3D cut was checked as scene data in tests, not
-  yet looked at in a browser.
+- Custom and unsymmetric sections (built 2026-11-24, after the above): the request carries the nodes and
+  links (`custom_section`) and the direction (`hogging`); `csm/equilibrium.py` finds the neutral axis of
+  each frame from ∫σ dA = 0 (Gere eq. 10-3 with N = 0) with the extreme compression fibre at the slider's
+  ε/ε_y, on `WidthProfile` of `sections/properties.py`, which gives the moments of any strip exactly and
+  fast. The frames carry `neutral_depth`; the depth scale stays -1 to +1 over the whole section, so the
+  axis is no longer at 0. A section outline is now used for the frames of a template too (the result is the
+  old one for a symmetric section). Hogging is computed with the section turned over, then drawn mirrored as
+  before. If the extreme tension fibre passes the end of the B.4 curve the frames fall back to mid-depth
+  and a note says why. Not built: the clause (B.6.3.3) for the resistance of such a section, and
+  unsymmetric templates (channel minor axis, T-section major axis, angles), which `check_scope` still
+  refuses. The 3D cut was checked as scene data in tests, not yet looked at in a browser.
 
 **Values for the tests** (computed 2026-11-17 with the engine's own outline by the method above; the
 implementer repeats each by hand before using it).

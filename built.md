@@ -48,4 +48,10 @@ Strength Method) unless noted.
     its stress, the width of the section there and the force that reaches it from the nearer edge; hovering
     an arrow gives its parts. The 3D cut shows the two forces, or the stress volume pulled apart into its
     parts. Textbook (Gere eqs. 10-3, 10-4, 10-8), integrated exactly by the engine, never used for a
-    resistance. Available for a section template symmetric about the bending axis.
+    resistance.
+17. **Neutral axis of a section that is not symmetric.** For a custom section (nodes and links), the Stage
+    finds the neutral axis from equilibrium (∫σ dA = 0) at every step of the slider instead of assuming
+    mid-depth. The strain and stress diagrams, the yield fibres, the forces, the 3D cut and the curvature
+    follow it: the extreme tension fibre has its own strain and stress, the axis moves as the section
+    yields, and hogging turns the section over. Textbook (Gere), never used for a resistance. If the
+    tension fibre would pass the end of the B.4 curve, the Stage falls back to mid-depth and says so.
