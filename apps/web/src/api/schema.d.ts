@@ -733,6 +733,34 @@ export interface components {
             right: number;
         };
         /**
+         * ForcePartOut
+         * @description One part of the stress block: the elastic core, the yielded zone or the hardening.
+         */
+        ForcePartOut: {
+            /** Name */
+            name: string;
+            /**
+             * Side
+             * @enum {string}
+             */
+            side: "compression" | "tension";
+            /**
+             * Force
+             * @description Force of the part [N], a magnitude
+             */
+            force: number;
+            /**
+             * Distance
+             * @description Distance of that force from the neutral axis [mm]
+             */
+            distance: number;
+            /**
+             * Moment
+             * @description Moment of the part about the neutral axis [N mm]
+             */
+            moment: number;
+        };
+        /**
          * FrameMarkKey
          * @description What a frame of the Section Stage slider is, where it is more than one step.
          * @enum {string}
@@ -1111,6 +1139,50 @@ export interface components {
             point: components["schemas"]["ComparisonPointOut"];
         };
         /**
+         * ResultantsOut
+         * @description The forces of a frame's stress block over the section outline. Textbook (Gere eqs. 10-3,
+         *     10-4), a picture and a readout: never the resistance.
+         */
+        ResultantsOut: {
+            /**
+             * Force Compression
+             * @description F_c [N]
+             */
+            force_compression: number;
+            /**
+             * Force Tension
+             * @description F_t [N], a magnitude
+             */
+            force_tension: number;
+            /**
+             * Distance Compression
+             * @description z_c from the neutral axis [mm]
+             */
+            distance_compression: number;
+            /**
+             * Distance Tension
+             * @description z_t from the neutral axis [mm]
+             */
+            distance_tension: number;
+            /**
+             * Lever Arm
+             * @description z_c + z_t [mm]
+             */
+            lever_arm: number;
+            /**
+             * Moment
+             * @description Moment of the drawn stress block [N mm]
+             */
+            moment: number;
+            /**
+             * Balance
+             * @description |F_c - F_t| / max(F_c, F_t); about zero
+             */
+            balance: number;
+            /** Parts */
+            parts: components["schemas"]["ForcePartOut"][];
+        };
+        /**
          * SectionPropertiesRequest
          * @description The typed template dimensions in mm. Which ones are needed depends on `shape`.
          */
@@ -1337,6 +1409,18 @@ export interface components {
             resistance: number | null;
             /** Marks */
             marks: components["schemas"]["FrameMarkKey"][];
+            /** @description Bending only: the forces of the stress block; null without a section outline */
+            resultants?: components["schemas"]["ResultantsOut"] | null;
+            /**
+             * Fibre Force
+             * @description Bending with an outline: the force from the nearer edge to each fibre of fibre_depth [N], a magnitude (the integral of sigma dA over that part of the section)
+             */
+            fibre_force?: number[] | null;
+            /**
+             * Axial Force
+             * @description Tension and compression: the one resultant sigma A [N], compression positive
+             */
+            axial_force?: number | null;
         };
         /**
          * StageFramesOut
@@ -1361,6 +1445,21 @@ export interface components {
             frames: components["schemas"]["StageFrameOut"][];
             /** @description Where the frames come from (plan.md, section 4h) */
             source: components["schemas"]["SourceOut"];
+            /**
+             * Fibre Depth
+             * @description The fibres the hover reads: normalised depth, -1 tension to +1 compression
+             */
+            fibre_depth?: number[];
+            /**
+             * Fibre Width
+             * @description The section's width at each fibre of fibre_depth [mm]
+             */
+            fibre_width?: number[];
+            /**
+             * Resultants Working
+             * @description Working of the stress-block forces at the limit frame, each step cited
+             */
+            resultants_working?: components["schemas"]["TraceStepOut"][];
         };
         /**
          * StainlessFamily

@@ -5,10 +5,13 @@ import { bendingView } from "../../lib/stage";
 import { stageSection } from "../../lib/stageSection";
 import { defaultDeformationForm } from "../../lib/geometry";
 import bending from "../../test/fixtures/bending_template.json";
+import bendingForces from "../../test/fixtures/bending_forces.json";
 import { StageSectionDrawing } from "../SectionSketch";
 import { stageLayout } from "../../lib/stageLayout";
 import { StageDrawing } from "./StageDrawing";
-import Stage3D, { STAGE_WEBGL_MISSING } from "./Stage3D";
+import { ForcesPanel } from "./StageControls";
+import Stage3D, { STAGE_WEBGL_MISSING, buildContent } from "./Stage3D";
+import { stageBody } from "../../lib/stage3d";
 
 const dims = { h: 150, b: 100, tw: null, tf: null, t: 5, d: null, r: null, s: null, cStem: null, rO: 8 };
 const drawing = (props: Partial<Parameters<typeof StageSectionDrawing>[0]> = {}) =>
@@ -112,5 +115,143 @@ describe("the 2D stage on hover", () => {
     fireEvent.mouseMove(svg, { clientX: L.ex, clientY: L.mid });
     fireEvent.mouseLeave(svg);
     expect(container.querySelector(".st-probe")).toBeNull();
+  });
+});
+
+
+describe("the Forces choice", () => {
+  const view = bendingView(bendingForces as unknown as BendingResponse);
+  const last = view.frames.frames[view.frames.frames.length - 1];
+  const section = { shape: "I-section" as const, fabrication: "rolled" as const, dims: { h: 200, b: 100, tw: 5.6, tf: 8.5, t: null, d: null, r: 12, s: null, cStem: null, rO: null }, turned: false, width: 100, height: 200 };
+  const draw = (forces: boolean) =>
+    render(
+      <StageDrawing view={view} frame={last} section={section} cValues={null} lit={null} fy={view.frames.yield_stress} whatIf={null} limitRatio={last.ratio} stressTop={Math.abs(last.stress)} forces={forces} />,
+    );
+
+  it("draws no forces until it is asked for", () => {
+    const { container } = draw(false);
+    expect(container.querySelector(".st-forces")).toBeNull();
+  });
+
+  it("draws the two forces and the lever arm from the engine's numbers", () => {
+    const { container } = draw(true);
+    const column = container.querySelector(".st-forces")!;
+    const r = last.resultants!;
+    expect(column.textContent).toContain(`${(r.force_compression / 1000).toFixed(1)}`);
+    expect(column.textContent).toContain(`${r.lever_arm.toFixed(1)} mm`);
+    expect(column.querySelectorAll(".st-force-head")).toHaveLength(2);
+  });
+
+  it("reads the forces, the block's moment beside the code's, the parts and the working", () => {
+    render(<ForcesPanel view={view} frame={last} hogging={false} />);
+    const r = last.resultants!;
+    expect(screen.getByText("Moment of the drawn stress block")).toBeInTheDocument();
+    expect(screen.getByText(`+${(r.moment / 1e6).toFixed(2)}`, { exact: false })).toBeInTheDocument();
+    expect(screen.getAllByRole("row").length).toBeGreaterThan(2);
+    expect(screen.getByLabelText("Working of the forces at the strain limit").textContent).toContain("Gere");
+    expect(screen.getByText(/Why the block's moment is not/)).toBeInTheDocument();
+  });
+
+  it("says why there are no forces when the frames carry none", () => {
+    const noForces = view.frames.frames.map((f) => ({ ...f, resultants: null }));
+    render(<ForcesPanel view={{ ...view, frames: { ...view.frames, frames: noForces } }} frame={noForces[noForces.length - 1]} hogging={false} />);
+    expect(screen.getByText(/need the section's outline/)).toBeInTheDocument();
+  });
+
+  it("with Forces on, the hovered fibre also says the force out to it and the width there", () => {
+    const f = bendingView(bendingForces as unknown as BendingResponse);
+    const last = f.frames.frames[f.frames.frames.length - 1];
+    const sec = stageSection(
+      { ...defaultDeformationForm, kind: "template", shape: "I-section", fabrication: "rolled", h: 200, b: 100, tw: 5.6, tf: 8.5, r: 12 },
+      "bending",
+      "major",
+    )!;
+    const top = Math.abs(last.stress);
+    const { container } = render(
+      <StageDrawing view={f} frame={last} section={sec} cValues={null} lit={null} fy={f.frames.yield_stress} whatIf={null} limitRatio={last.ratio} stressTop={top} forces />,
+    );
+    const L = stageLayout(sec, last.ratio, top, f.frames.yield_stress, true);
+    const svg = container.querySelector("svg") as SVGSVGElement;
+    svg.getBoundingClientRect = () => ({ top: 0, left: 0, width: L.viewW, height: L.viewH, right: L.viewW, bottom: L.viewH, x: 0, y: 0, toJSON: () => ({}) });
+    fireEvent.mouseMove(svg, { clientX: L.ex, clientY: L.mid - L.halfDepth / 2 });
+    const card = container.querySelector(".st-probe") as SVGGElement;
+    expect(card).toHaveTextContent(/section width here = [\d.]+ mm/);
+    expect(card).toHaveTextContent(/force from the compression edge = [\d.]+ kN/);
+    expect(container.querySelector(".st-fibre-block")).not.toBeNull();
+    // and not without it
+    fireEvent.mouseLeave(svg);
+    expect(container.querySelector(".st-fibre-block")).toBeNull();
+  });
+
+  it("hovering a force names its parts, and the fibre's own card steps aside", () => {
+    const f = bendingView(bendingForces as unknown as BendingResponse);
+    const last = f.frames.frames[f.frames.frames.length - 1];
+    const sec = stageSection(
+      { ...defaultDeformationForm, kind: "template", shape: "I-section", fabrication: "rolled", h: 200, b: 100, tw: 5.6, tf: 8.5, r: 12 },
+      "bending",
+      "major",
+    )!;
+    const { container } = render(
+      <StageDrawing view={f} frame={last} section={sec} cValues={null} lit={null} fy={f.frames.yield_stress} whatIf={null} limitRatio={last.ratio} stressTop={Math.abs(last.stress)} forces />,
+    );
+    const hits = container.querySelectorAll(".st-force-hit");
+    expect(hits).toHaveLength(2);
+    fireEvent.mouseEnter(hits[0]);
+    const card = container.querySelector(".st-probe") as SVGGElement;
+    expect(card).toHaveTextContent(/F_?c = [\d.]+ kN/);
+    expect(card).toHaveTextContent(/acts [\d.]+ mm from the neutral axis/);
+    expect(card).toHaveTextContent(/yielded zone: [\d.]+ kN at/);
+    fireEvent.mouseLeave(hits[0]);
+    expect(container.querySelector(".st-probe")).toBeNull();
+  });
+});
+
+
+describe("the 3D cut with the Forces choice (the scene as data, no WebGL needed)", () => {
+  const view = bendingView(bendingForces as unknown as BendingResponse);
+  const frames = view.frames.frames;
+  const last = frames[frames.length - 1];
+  const sec = stageSection(
+    { ...defaultDeformationForm, kind: "template", shape: "I-section", fabrication: "rolled", h: 200, b: 100, tw: 5.6, tf: 8.5, r: 12 },
+    "bending",
+    "major",
+  )!;
+  const body = stageBody(sec);
+  const top = Math.abs(last.stress);
+  const forceTop = Math.max(...frames.map((f) => f.resultants?.force_compression ?? 0));
+  const build = (mode: "resultants" | "parts" | "field" | null) => buildContent(view, last, body, view.frames.yield_stress, top, mode, forceTop);
+  const ids = (labels: { id: string }[]) => labels.map((l) => l.id);
+
+  it("draws the field of arrows with its stress labels, and no forces, when the choice is off", () => {
+    const built = build(null);
+    expect(ids(built.labels)).toEqual(expect.arrayContaining(["top", "bottom"]));
+    expect(ids(built.labels)).not.toContain("Fc");
+    built.dispose();
+  });
+
+  it("draws the two resultants with their forces and the lever arm, in place of the field", () => {
+    const built = build("resultants");
+    const text = Object.fromEntries(built.labels.map((l) => [l.id, l.text]));
+    expect(text.Fc).toMatch(/^F_c = [\d. ]+ kN$/);
+    expect(text.Ft).toMatch(/^F_t = [\d. ]+ kN$/);
+    expect(text.lever).toBe(`lever arm ${last.resultants!.lever_arm.toFixed(1)} mm`);
+    expect(ids(built.labels)).not.toContain("top");
+    built.dispose();
+  });
+
+  it("pulls the volume apart into parts, each labelled with the engine's force", () => {
+    const built = build("parts");
+    const parts = built.labels.filter((l) => l.id.startsWith("part-"));
+    expect(parts).toHaveLength(6);
+    expect(parts.map((l) => l.text).join("|")).toMatch(/elastic core, compression: [\d. ]+ kN/);
+    expect(parts.map((l) => l.text).join("|")).toMatch(/hardening, tension: [\d. ]+ kN/);
+    built.dispose();
+  });
+
+  it("has only the core at first yield, and the one force of a uniform case", () => {
+    const yielded = frames.find((f) => f.marks.includes("first_yield"))!;
+    const built = buildContent(view, yielded, body, view.frames.yield_stress, top, "parts", forceTop);
+    expect(built.labels.filter((l) => l.id.startsWith("part-"))).toHaveLength(2);
+    built.dispose();
   });
 });

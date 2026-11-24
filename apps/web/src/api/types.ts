@@ -48,6 +48,8 @@ export type PropertyRowOut = S["PropertyRowOut"];
 
 export type StageFramesOut = S["StageFramesOut"];
 export type StageFrameOut = S["StageFrameOut"];
+export type ResultantsOut = S["ResultantsOut"];
+export type ForcePartOut = S["ForcePartOut"];
 export type LoadCaseKey = S["LoadCaseKey"];
 export type FrameMarkKey = S["FrameMarkKey"];
 export type ModelValuesOut = S["ModelValuesOut"];

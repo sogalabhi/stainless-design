@@ -1342,6 +1342,47 @@
         ],
         "title": "FibreDistancesOut"
       },
+      "ForcePartOut": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "side": {
+            "type": "string",
+            "enum": [
+              "compression",
+              "tension"
+            ],
+            "title": "Side"
+          },
+          "force": {
+            "type": "number",
+            "title": "Force",
+            "description": "Force of the part [N], a magnitude"
+          },
+          "distance": {
+            "type": "number",
+            "title": "Distance",
+            "description": "Distance of that force from the neutral axis [mm]"
+          },
+          "moment": {
+            "type": "number",
+            "title": "Moment",
+            "description": "Moment of the part about the neutral axis [N mm]"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "side",
+          "force",
+          "distance",
+          "moment"
+        ],
+        "title": "ForcePartOut",
+        "description": "One part of the stress block: the elastic core, the yielded zone or the hardening."
+      },
       "FrameMarkKey": {
         "type": "string",
         "enum": [
@@ -2238,6 +2279,65 @@
         ],
         "title": "ReferenceSectionOut"
       },
+      "ResultantsOut": {
+        "properties": {
+          "force_compression": {
+            "type": "number",
+            "title": "Force Compression",
+            "description": "F_c [N]"
+          },
+          "force_tension": {
+            "type": "number",
+            "title": "Force Tension",
+            "description": "F_t [N], a magnitude"
+          },
+          "distance_compression": {
+            "type": "number",
+            "title": "Distance Compression",
+            "description": "z_c from the neutral axis [mm]"
+          },
+          "distance_tension": {
+            "type": "number",
+            "title": "Distance Tension",
+            "description": "z_t from the neutral axis [mm]"
+          },
+          "lever_arm": {
+            "type": "number",
+            "title": "Lever Arm",
+            "description": "z_c + z_t [mm]"
+          },
+          "moment": {
+            "type": "number",
+            "title": "Moment",
+            "description": "Moment of the drawn stress block [N mm]"
+          },
+          "balance": {
+            "type": "number",
+            "title": "Balance",
+            "description": "|F_c - F_t| / max(F_c, F_t); about zero"
+          },
+          "parts": {
+            "items": {
+              "$ref": "#/components/schemas/ForcePartOut"
+            },
+            "type": "array",
+            "title": "Parts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "force_compression",
+          "force_tension",
+          "distance_compression",
+          "distance_tension",
+          "lever_arm",
+          "moment",
+          "balance",
+          "parts"
+        ],
+        "title": "ResultantsOut",
+        "description": "The forces of a frame's stress block over the section outline. Textbook (Gere eqs. 10-3,\n10-4), a picture and a readout: never the resistance."
+      },
       "SectionPropertiesRequest": {
         "properties": {
           "shape": {
@@ -2706,6 +2806,44 @@
             },
             "type": "array",
             "title": "Marks"
+          },
+          "resultants": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResultantsOut"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Bending only: the forces of the stress block; null without a section outline"
+          },
+          "fibre_force": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fibre Force",
+            "description": "Bending with an outline: the force from the nearer edge to each fibre of fibre_depth [N], a magnitude (the integral of sigma dA over that part of the section)"
+          },
+          "axial_force": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Axial Force",
+            "description": "Tension and compression: the one resultant sigma A [N], compression positive"
           }
         },
         "type": "object",
@@ -2749,6 +2887,30 @@
           "source": {
             "$ref": "#/components/schemas/SourceOut",
             "description": "Where the frames come from (plan.md, section 4h)"
+          },
+          "fibre_depth": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Fibre Depth",
+            "description": "The fibres the hover reads: normalised depth, -1 tension to +1 compression"
+          },
+          "fibre_width": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Fibre Width",
+            "description": "The section's width at each fibre of fibre_depth [mm]"
+          },
+          "resultants_working": {
+            "items": {
+              "$ref": "#/components/schemas/TraceStepOut"
+            },
+            "type": "array",
+            "title": "Resultants Working",
+            "description": "Working of the stress-block forces at the limit frame, each step cited"
           }
         },
         "type": "object",

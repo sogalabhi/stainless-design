@@ -2746,3 +2746,87 @@ ol.plain li {
   font-size: 12px;
   fill: var(--text);
 }
+
+/* --- the Forces choice of the Stage (plan.md 4i, textbook) ---------------------------------- */
+
+.stage-svg .st-force-line {
+  stroke: var(--text);
+  stroke-width: 3;
+  fill: none;
+}
+
+.stage-svg .st-force-head {
+  fill: var(--text);
+  stroke: none;
+}
+
+.forces-panel {
+  border-top: 1px solid var(--border);
+}
+
+.forces-panel .readout {
+  margin-top: 0;
+  border-top: 0;
+}
+
+.forces-parts {
+  width: calc(100% - 32px);
+  margin: 4px 16px 10px;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.forces-parts caption {
+  text-align: left;
+  color: var(--muted);
+  padding-bottom: 4px;
+}
+
+.forces-parts th,
+.forces-parts td {
+  text-align: left;
+  padding: 3px 8px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.forces-why,
+.forces-working {
+  margin: 4px 16px 10px;
+  font-size: 0.85rem;
+}
+
+.forces-working {
+  padding-left: 20px;
+}
+
+.stage-svg .st-fibre-block {
+  fill: var(--text);
+  fill-opacity: 0.14;
+  stroke: var(--text);
+  stroke-width: 1.2;
+  stroke-dasharray: 4 3;
+}
+
+.stage-svg .st-force-hit {
+  fill: transparent;
+  cursor: help;
+}
+
+.stage3d-forces {
+  top: 44px;
+}
+
+.stage3d-hover {
+  position: absolute;
+  z-index: 3;
+  pointer-events: none;
+  padding: 6px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: nowrap;
+}

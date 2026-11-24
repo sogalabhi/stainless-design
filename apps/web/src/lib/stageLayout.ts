@@ -24,6 +24,8 @@ export type StageLayout = {
   /** px per N/mm², and the stress at the panel's outer tick */
   su: number;
   stressMax: number;
+  /** x of the axis of the Forces column, drawn to the right of the stress panel when it is on */
+  fx: number;
   viewW: number;
   viewH: number;
 };
@@ -33,6 +35,7 @@ const SECTION_MAX_WIDTH = 600;
 const STRAIN_HALF = 100; // px from the strain axis to its outer tick
 const STRESS_HALF = 150;
 const TOP = 70;
+const FORCES_WIDTH = 195; // extra width on the right for the Forces column
 
 const ceilTo = (value: number, step: number) => Math.max(step, Math.ceil(value / step - 1e-9) * step);
 
@@ -43,6 +46,8 @@ export function stageLayout(
   /** the largest stress the slider reaches, and f_y */
   stressTop: number,
   fy: number,
+  /** the Forces column is on: the drawing is wider by its width */
+  withForces = false,
 ): StageLayout {
   let scale = 1;
   let depth = DEPTH;
@@ -73,7 +78,8 @@ export function stageLayout(
     ratioMax,
     su: STRESS_HALF / stressMax,
     stressMax,
-    viewW: gx + 115,
+    fx: gx + 150,
+    viewW: gx + 115 + (withForces ? FORCES_WIDTH : 0),
     viewH: TOP + DEPTH + 95,
   };
 }

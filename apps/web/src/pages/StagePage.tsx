@@ -8,7 +8,7 @@ import { renderSymbols } from "../components/Symbols";
 import { CaseSwitch } from "../components/stage/CaseSwitch";
 import { StageDrawing } from "../components/stage/StageDrawing";
 import { Headline, ResultBar } from "../components/stage/Headline";
-import { Legend, Readout, Scrubber } from "../components/stage/StageControls";
+import { ForcesPanel, Legend, Readout, Scrubber } from "../components/stage/StageControls";
 import { StepCards } from "../components/stage/StepCards";
 import { WhatIf } from "../components/stage/WhatIf";
 import { Collapsible, Segmented, StatusBox } from "../components/ui";
@@ -170,6 +170,8 @@ function Loaded({
   const [state, setState] = useState<{ key: string; index: number | null }>({ key: "", index: null });
   const [playing, setPlaying] = useState(false);
   const [mode, setMode] = useState<Mode>("drawing");
+  // the Forces choice is the user's click: off at the start (plan.md 4h, 4i)
+  const [forcesOn, setForcesOn] = useState(false);
   const index = state.key === key && state.index !== null ? Math.min(state.index, last) : last;
   const setIndex = (next: number) => setState({ key, index: next });
   const frame = frames[index];
@@ -222,6 +224,15 @@ function Loaded({
             </p>
           </div>
           <Segmented
+            label="Forces"
+            value={forcesOn && !picked ? "on" : "off"}
+            options={[
+              { value: "off", label: "Off" },
+              { value: "on", label: "On" },
+            ]}
+            onChange={(next) => setForcesOn(next === "on" && !picked)}
+          />
+          <Segmented
             label="View"
             value={mode}
             options={[
@@ -273,12 +284,13 @@ function Loaded({
                 whatIf={picked ? picked.factor : null}
                 limitRatio={limitRatio}
                 stressTop={stressTop}
+                forces={forcesOn && !picked}
               />
             </div>
           </>
         ) : (
           <Suspense fallback={<p className="muted stage-note">Loading the 3D view...</p>}>
-            <Stage3D view={shown} frame={drawnFrame} section={section} fy={fy} stressTop={stressTop} dark={dark} />
+            <Stage3D view={shown} frame={drawnFrame} section={section} fy={fy} stressTop={stressTop} dark={dark} forces={forcesOn && !picked} />
           </Suspense>
         )}
         <Scrubber
@@ -303,6 +315,7 @@ function Loaded({
         ) : (
           <Readout view={shown} frame={frame} hogging={hogging} halfDepth={section ? section.height / 2 : null} limit={frames[last].ratio} fy={fy} whatIf={picked !== null} />
         )}
+        {forcesOn && !picked && !beyond ? <ForcesPanel view={view} frame={frame} hogging={hogging} /> : null}
         <Legend view={view} withPlate={lit !== null} />
         <div className="stage-source">
           <span className="muted">Where the frames come from:</span>

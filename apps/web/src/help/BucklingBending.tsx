@@ -80,6 +80,38 @@ export function BucklingBending() {
         <MomentRotationDiagram />
       </section>
 
+      <section className="help-card" aria-labelledby="bb-forces">
+        <h2 id="bb-forces">The forces in the stress block</h2>
+        <p>
+          Turn on <strong>Forces</strong> on the Section Stage to see the stress block as two forces, the way
+          a mechanics-of-materials textbook draws it (Gere &amp; Timoshenko, Fig. 10-4). The compression side
+          adds up to one force <Sym text="F_c" /> and the tension side to one force <Sym text="F_t" />. In
+          pure bending they are equal, and each acts at the centroid of its part of the block, a distance{" "}
+          <Sym text="d_c" /> or <Sym text="d_t" /> from the neutral axis. The two forces times the lever arm{" "}
+          <Sym text="d_c + d_t" /> give the moment of the drawn block, <Sym text="M_block" />.
+        </p>
+        <ul className="plain">
+          <li>
+            The engine does the adding up, exactly, over the outline of your section (Gere eqs. 10-3 and 10-4).
+            The website only draws its numbers.
+          </li>
+          <li>
+            Hover a fibre to see the force that reaches it from the nearer edge and the width of the section
+            there, and hover an arrow to see the parts that make up that force: the elastic core, the yielded
+            zone held at <Sym text="f_y" />, and the hardening above it.
+          </li>
+          <li>
+            The 3D cut shows the same two forces standing at their heights, or the stress volume pulled apart
+            into those parts.
+          </li>
+          <li>
+            This is a picture and a readout. It is never the resistance: <Sym text="M_csm,c,Rd" /> stays the
+            value of Formulae B.19 and B.20, and the moment of the block differs from it a little, for the
+            three reasons listed under the readout.
+          </li>
+        </ul>
+      </section>
+
       <section className="help-card" aria-labelledby="bb-compare">
         <h2 id="bb-compare">Mild steel (IS 800) against this tool</h2>
         <div className="table-wrap compare">

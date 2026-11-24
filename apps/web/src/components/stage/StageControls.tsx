@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, type ReactElement } from "react";
 import type { StageFrameOut } from "../../api/types";
-import { formatFixed, formatPercentOne, formatRatio } from "../../lib/format";
+import { formatFixed, formatPercentOne, formatRatio, kn, knM } from "../../lib/format";
 import { playIndex, sliderMarks, type StageView } from "../../lib/stage";
 import { renderSymbols } from "../Symbols";
+import { SourceBadge } from "../Working";
 
 const DURATION = 4200;
 const REDUCED_STOPS = 6;
@@ -253,5 +254,130 @@ export function Legend({ view, withPlate }: { view: StageView; withPlate: boolea
         </li>
       ))}
     </ul>
+  );
+}
+
+/**
+ * The Forces choice: the resultants of the stress block as the engine integrated them (textbook,
+ * Gere eqs. 10-3 and 10-4). A picture and a readout, never the resistance: the block's moment is shown
+ * beside M_csm,c,Rd with the reasons they are not the same number.
+ */
+export function ForcesPanel({
+  view,
+  frame,
+  hogging,
+}: {
+  view: StageView;
+  frame: StageFrameOut;
+  hogging: boolean;
+}) {
+  const r = frame.resultants ?? null;
+  const sign = hogging ? "−" : "+";
+  const working = view.frames.resultants_working ?? [];
+  if (view.uniform) {
+    if (frame.axial_force == null) return null;
+    return (
+      <div className="forces-panel">
+        <div className="readout">
+          <div>
+            <span className="readout-k">{view.press ? "Compression force" : "Tension force"}</span>
+            <span className="readout-v">
+              {formatFixed(kn(Math.abs(frame.axial_force)), 1)} <small>kN</small>
+            </span>
+            <span className="readout-s">{renderSymbols("σ A: every fibre carries the same stress, so one force acts at the centroid. No integration is needed.")}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  if (!r) {
+    return (
+      <p className="stage-note muted">
+        The forces need the section's outline: with the plates typed one by one, or a typed σ_cr,cs, there is none, so no
+        forces are drawn. Use a section type with its dimensions, or the nodes and links.
+      </p>
+    );
+  }
+  return (
+    <div className="forces-panel">
+      <div className="readout">
+        <div>
+          <span className="readout-k">Compression force</span>
+          <span className="readout-v">
+            {formatFixed(kn(r.force_compression), 1)} <small>kN</small>
+          </span>
+          <span className="readout-s">{renderSymbols(`F_c at ${formatFixed(r.distance_compression, 1)} mm from the neutral axis`)}</span>
+        </div>
+        <div>
+          <span className="readout-k">Tension force</span>
+          <span className="readout-v">
+            {formatFixed(kn(r.force_tension), 1)} <small>kN</small>
+          </span>
+          <span className="readout-s">{renderSymbols(`F_t at ${formatFixed(r.distance_tension, 1)} mm from the neutral axis`)}</span>
+        </div>
+        <div>
+          <span className="readout-k">Lever arm</span>
+          <span className="readout-v">
+            {formatFixed(r.lever_arm, 1)} <small>mm</small>
+          </span>
+          <span className="readout-s">{renderSymbols("d_c + d_t, between the two forces")}</span>
+        </div>
+        <div>
+          <span className="readout-k">Moment of the drawn stress block</span>
+          <span className="readout-v">
+            {sign}
+            {formatFixed(knM(r.moment), 2)} <small>kN m</small>
+          </span>
+          <span className="readout-s">
+            {frame.resistance !== null
+              ? renderSymbols(`beside M_csm,c,Rd = ${sign}${formatFixed(knM(frame.resistance), 2)} kN m (B.19 or B.20, if the limit were here)`)
+              : "the integral of the stress times the distance"}
+          </span>
+        </div>
+      </div>
+      <table className="forces-parts">
+        <caption>{renderSymbols("The block in its parts: the elastic core, the part held at f_y, and the part above f_y that the B.4 hardening adds")}</caption>
+        <thead>
+          <tr>
+            <th scope="col">Part</th>
+            <th scope="col">Side</th>
+            <th scope="col">Force (kN)</th>
+            <th scope="col">From the axis (mm)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {r.parts.map((part) => (
+            <tr key={`${part.side}-${part.name}`}>
+              <td>{part.name}</td>
+              <td>{part.side}</td>
+              <td>{formatFixed(kn(part.force), 1)}</td>
+              <td>{formatFixed(part.distance, 1)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <details className="forces-why">
+        <summary>{renderSymbols("Why the block's moment is not M_csm,c,Rd")}</summary>
+        <ol>
+          <li>{renderSymbols("γ_M0 divides the code value; it does not divide the drawn block.")}</li>
+          <li>
+            {renderSymbols(
+              "Formula B.20 is a fitted formula. It equals the integral exactly for a rectangle without hardening; for other shapes and with hardening it lies within about 1 %, on either side.",
+            )}
+          </li>
+          <li>{renderSymbols("W_el and W_pl are typed for B.19 and B.20; the block is integrated over the drawn outline. A table value typed for W differs slightly from the geometry.")}</li>
+        </ol>
+      </details>
+      {working.length > 0 ? (
+        <ol className="forces-working" aria-label="Working of the forces at the strain limit">
+          {working.map((step) => (
+            <li key={step.symbol}>
+              <span className="chip">{step.clause}</span> {renderSymbols(step.description)}: {renderSymbols(step.line)}
+              <SourceBadge source={step.source} />
+            </li>
+          ))}
+        </ol>
+      ) : null}
+    </div>
   );
 }

@@ -1,6 +1,6 @@
 import { useState, type MouseEvent } from "react";
 import type { StageFrameOut } from "../../api/types";
-import { formatFixed, formatPercentOne, formatRatio } from "../../lib/format";
+import { formatFixed, formatPercentOne, formatRatio, kn } from "../../lib/format";
 import { profileAt, type StageView } from "../../lib/stage";
 import {
   depthY,
@@ -10,6 +10,7 @@ import {
   strainTicks,
   stressTicks,
 } from "../../lib/stageLayout";
+import { blockToFibre, forceArrows, forceCardLines, readFibre } from "../../lib/stageForces";
 import type { StageSection } from "../../lib/stageSection";
 import type { PlateRoleKey } from "../../lib/sectionTemplates";
 import { StageSectionDrawing } from "../SectionSketch";
@@ -32,6 +33,7 @@ export function StageDrawing({
   whatIf,
   limitRatio,
   stressTop,
+  forces = false,
 }: {
   view: StageView;
   frame: StageFrameOut;
@@ -46,9 +48,14 @@ export function StageDrawing({
   /** the largest strain ratio and stress the slider reaches, which fix the scales of the panels */
   limitRatio: number;
   stressTop: number;
+  /** the Forces choice: the resultants of the stress block, as the engine returned them (textbook) */
+  forces?: boolean;
 }) {
   const [pointerY, setPointerY] = useState<number | null>(null);
-  const L = stageLayout(section, limitRatio, stressTop, fy);
+  const [overForce, setOverForce] = useState<ForceSide | null>(null);
+  const resultants = forces ? (frame.resultants ?? null) : null;
+  const axial = forces && view.uniform && frame.axial_force != null ? frame.axial_force : null;
+  const L = stageLayout(section, limitRatio, stressTop, fy, resultants !== null || axial !== null);
   const shapes = frameShapes(L, frame.depth, frame.strain_profile, frame.stress_profile, fy);
   const sign = view.uniform ? (view.press ? 1 : -1) : 1;
   const hard = frame.stress_over_yield !== null;
@@ -78,7 +85,17 @@ export function StageDrawing({
   });
 
   // The fibre under the pointer: a guide across the panels, and its values read from the engine's profiles.
-  const probe = pointerY === null ? null : probeAt(L, frame, fy, section ? section.height : null, pointerY);
+  const probe = pointerY === null || overForce !== null ? null : probeAt(L, frame, fy, section ? section.height : null, pointerY);
+  // with Forces on, the fibre also says what force reaches it from the nearer edge, and how wide the section is there
+  const fibre =
+    probe && forces && !view.uniform
+      ? readFibre(
+          view.frames.fibre_depth ?? [],
+          view.frames.fibre_width ?? [],
+          frame.fibre_force,
+          hogging ? -probe.depth : probe.depth,
+        )
+      : null;
   const track = (event: MouseEvent<SVGSVGElement>) => {
     const svg = event.currentTarget;
     const matrix = svg.getScreenCTM?.();
@@ -278,13 +295,26 @@ export function StageDrawing({
             );
           })()
         : null}
-      {probe ? <StageProbeCard L={L} probe={probe} /> : null}
+      {resultants && section ? <ForcesColumn L={L} frame={frame} halfMm={section.height / 2} hogging={hogging} over={overForce} onOver={setOverForce} /> : null}
+      {axial !== null ? <AxialForce L={L} force={axial} /> : null}
+      {probe && fibre ? <FibreBlock L={L} frame={frame} depth={probe.depth} /> : null}
+      {probe ? <StageProbeCard L={L} probe={probe} fibre={fibre} fy={fy} /> : null}
     </svg>
   );
 }
 
 /** The guide, the two dots on the diagrams, and a small card with the fibre's values. */
-function StageProbeCard({ L, probe }: { L: ReturnType<typeof stageLayout>; probe: NonNullable<ReturnType<typeof probeAt>> }) {
+function StageProbeCard({
+  L,
+  probe,
+  fibre = null,
+  fy,
+}: {
+  L: ReturnType<typeof stageLayout>;
+  probe: NonNullable<ReturnType<typeof probeAt>>;
+  fibre?: ReturnType<typeof readFibre>;
+  fy: number;
+}) {
   const above = probe.depth > 0;
   const strainX = L.ex + probe.strainRatio * L.eu;
   const stressX = L.sx + probe.stress * L.su;
@@ -296,7 +326,16 @@ function StageProbeCard({ L, probe }: { L: ReturnType<typeof stageLayout>; probe
     `ε = ${formatRatio(Math.abs(probe.strainRatio))} ε_y, ${side}`,
     `σ = ${formatFixed(Math.abs(probe.stress), 1)} N/mm² = ${formatFixed(Math.abs(probe.stressOverYield), 2)} f_y`,
   ];
-  const width = 218;
+  if (fibre) {
+    const compressive = probe.depth > 0;
+    const yielded = Math.abs(probe.stress) >= fy * (1 - 1e-9);
+    lines.push(
+      `section width here = ${formatFixed(fibre.width, 1)} mm`,
+      `force from the ${compressive ? "compression" : "tension"} edge = ${formatFixed(fibre.force / 1000, 1)} kN`,
+      probe.strainRatio === 0 ? "at the neutral axis" : yielded ? "yielded: f_y, plus hardening above it" : "still elastic here",
+    );
+  }
+  const width = fibre ? 340 : 218;
   const height = 18 * lines.length + 10;
   // the card sits in the gap between the strain and the stress diagrams, clear of the pointer's guide line
   const x = (L.ex + L.sx) / 2 - width / 2;
@@ -309,6 +348,138 @@ function StageProbeCard({ L, probe }: { L: ReturnType<typeof stageLayout>; probe
       <rect className="st-probe-card" x={x} y={y} width={width} height={height} rx={6} />
       {lines.map((line, i) => (
         <text key={line} x={x + 10} y={y + 20 + i * 18} className="st-probe-text">
+          {svgSymbols(line)}
+        </text>
+      ))}
+    </g>
+  );
+}
+
+/**
+ * The two resultants of the stress block (Gere Fig. 10-4): C presses on the axis line from the right,
+ * T pulls away from it on the left, each at its own distance from the neutral axis, with the lever arm
+ * between them. The arrows are all one length; the numbers say how big. Hogging has C below the axis.
+ */
+function ForcesColumn({
+  L,
+  frame,
+  halfMm,
+  hogging,
+  over,
+  onOver,
+}: {
+  L: ReturnType<typeof stageLayout>;
+  frame: StageFrameOut;
+  halfMm: number;
+  hogging: boolean;
+  /** the force under the pointer, so the fibre's own card can step aside */
+  over: ForceSide | null;
+  onOver: (side: ForceSide | null) => void;
+}) {
+  const r = frame.resultants;
+  const arrows = r ? forceArrows(L, r, halfMm, hogging) : null;
+  if (!r || !arrows || r.force_compression === 0) return null;
+  const head = 8;
+  const { fx } = L;
+  const { compressionY: yc, tensionY: yt, length } = arrows;
+  const dimX = fx + length + 18;
+  const compressionLabelY = hogging ? yc + 22 : yc - 9;
+  const tensionLabelY = hogging ? yt - 9 : yt + 22;
+  return (
+    <g className="st-forces" aria-label="The resultant forces of the stress block">
+      <text x={fx} y={22} className="st-head" textAnchor="middle">
+        Forces (kN)
+      </text>
+      <path className="st-guide" d={`M${L.gx} ${yc.toFixed(1)}H${fx + length}M${L.gx} ${yt.toFixed(1)}H${fx - length}`} />
+      <path className="st-axis" d={`M${fx} ${L.top - 10}V${L.bot + 12}`} />
+      {/* C: tail on the right, head on the axis line (presses) */}
+      <path className="st-force-line" d={`M${fx + length} ${yc.toFixed(1)}H${fx + head}`} />
+      <path className="st-force-head" d={`M${fx + 1} ${yc.toFixed(1)}l${head} -4.5v9Z`} />
+      <text x={fx + 6} y={compressionLabelY} className="st-value">
+        {svgSymbols(`F_c = ${formatFixed(kn(r.force_compression), 1)}`)}
+      </text>
+      {/* T: tail on the axis line, head away from it (pulls) */}
+      <path className="st-force-line" d={`M${fx} ${yt.toFixed(1)}H${fx - length + head}`} />
+      <path className="st-force-head" d={`M${fx - length} ${yt.toFixed(1)}l${head} -4.5v9Z`} />
+      <text x={fx - 6} y={tensionLabelY} className="st-value" textAnchor="end">
+        {svgSymbols(`F_t = ${formatFixed(kn(r.force_tension), 1)}`)}
+      </text>
+      {/* hover: what each force is made of */}
+      {(["compression", "tension"] as const).map((side) => {
+        const y = side === "compression" ? yc : yt;
+        return (
+          <rect
+            key={side}
+            className="st-force-hit"
+            x={side === "compression" ? fx : fx - length}
+            y={y - 16}
+            width={length}
+            height={32}
+            onMouseEnter={() => onOver(side)}
+            onMouseLeave={() => onOver(null)}
+          />
+        );
+      })}
+      {over ? <ForceCard L={L} lines={forceCardLines(r, over)} y={over === "compression" ? yc : yt} /> : null}
+      {/* the lever arm between them */}
+      <path className="st-dim" d={`M${dimX} ${yc.toFixed(1)}V${yt.toFixed(1)}M${dimX - 4} ${yc.toFixed(1)}h8M${dimX - 4} ${yt.toFixed(1)}h8`} />
+      <text x={dimX + 8} y={L.mid - 2} className="st-small">
+        lever arm
+      </text>
+      <text x={dimX + 8} y={L.mid + 13} className="st-value">
+        {formatFixed(r.lever_arm, 1)} mm
+      </text>
+    </g>
+  );
+}
+
+/** Tension and compression: one force, at the centroid, σ A (the term of B.12, B.15 and B.16). */
+function AxialForce({ L, force }: { L: ReturnType<typeof stageLayout>; force: number }) {
+  const press = force > 0;
+  const length = 62;
+  const head = 8;
+  const { fx } = L;
+  const y = L.mid;
+  const tail = press ? fx + length : fx - 2;
+  const tip = press ? fx + 1 : fx - length;
+  return (
+    <g className="st-forces" aria-label="The resultant force of the uniform stress">
+      <text x={fx} y={22} className="st-head" textAnchor="middle">
+        Force (kN)
+      </text>
+      <path className="st-axis" d={`M${fx} ${L.top - 10}V${L.bot + 12}`} />
+      <path className="st-force-line" d={`M${tail} ${y}H${tip + head}`} />
+      <path className="st-force-head" d={`M${tip} ${y}l${head} -4.5v9Z`} />
+      <text x={press ? fx + 6 : fx - 6} y={y - 11} className="st-value" textAnchor={press ? "start" : "end"}>
+        {svgSymbols(`${press ? "F_c" : "F_t"} = ${formatFixed(kn(Math.abs(force)), 1)}`)}
+      </text>
+      <text x={press ? fx + 6 : fx - 6} y={y + 22} className="st-small" textAnchor={press ? "start" : "end"}>
+        {svgSymbols("σ A at the centroid")}
+      </text>
+    </g>
+  );
+}
+
+/** The part of the stress block that the hovered fibre's force is the force of: the edge down to the fibre. */
+function FibreBlock({ L, frame, depth }: { L: ReturnType<typeof stageLayout>; frame: StageFrameOut; depth: number }) {
+  const points = blockToFibre(frame.depth, depth, (d) => profileAt(frame.depth, frame.stress_profile, d));
+  if (points.length === 0) return null;
+  const d = points.map(([value, u]) => `${(L.sx + value * L.su).toFixed(1)} ${depthY(L, u).toFixed(1)}`).join("L");
+  return <path className="st-fibre-block" d={`M${d}Z`} aria-hidden="true" pointerEvents="none" />;
+}
+
+type ForceSide = "compression" | "tension";
+
+function ForceCard({ L, lines, y }: { L: ReturnType<typeof stageLayout>; lines: string[]; y: number }) {
+  const width = 300;
+  const height = 18 * lines.length + 10;
+  const x = L.fx - 24 - width;
+  const top = Math.min(Math.max(y - height / 2, 4), L.viewH - height - 4);
+  return (
+    <g className="st-probe" aria-hidden="true" pointerEvents="none">
+      <rect className="st-probe-card" x={x} y={top} width={width} height={height} rx={6} />
+      {lines.map((line, i) => (
+        <text key={line} x={x + 10} y={top + 20 + i * 18} className="st-probe-text">
           {svgSymbols(line)}
         </text>
       ))}

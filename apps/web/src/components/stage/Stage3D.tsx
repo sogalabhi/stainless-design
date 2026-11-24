@@ -17,13 +17,15 @@ import {
   MeshBasicMaterial,
   MeshLambertMaterial,
   OrthographicCamera,
+  Raycaster,
   Scene,
+  Vector2,
   Vector3,
   WebGLRenderer,
 } from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import type { StageFrameOut } from "../../api/types";
-import { formatFixed } from "../../lib/format";
+import { formatFixed, kn } from "../../lib/format";
 import { type StageView } from "../../lib/stage";
 import {
   LENGTH_NOTE,
@@ -40,11 +42,19 @@ import {
   stressTone,
   type StageBody,
 } from "../../lib/stage3d";
+import {
+  clipSolidsToBand,
+  fibreLines,
+  partForce,
+  partRange,
+  resultantArrows,
+  stageParts,
+} from "../../lib/stage3dForces";
 import type { StageSection } from "../../lib/stageSection";
 import { VIEW_DIRECTION, VIEW_LABEL, boundingRadius, fitHalfHeight } from "../viewer3d/camera";
 import { capGeometry, memberGeometry, oriented, resampled } from "../viewer3d/extrude";
 import { ndcToPixels, placeLabels } from "../viewer3d/labels";
-import type { Vec3, ViewName } from "../viewer3d/types";
+import type { Solid, Vec3, ViewName } from "../viewer3d/types";
 
 export const STAGE_WEBGL_MISSING =
   "The 3D cut needs WebGL, which this browser does not offer. The drawing holds the same values.";
@@ -60,6 +70,7 @@ type Rig = {
   controls: OrbitControls;
   scene: Scene;
   content: Group | null;
+  face: Mesh | null;
   labels: LabelSpec[];
   fitted: string;
   frame: number | null;
@@ -95,21 +106,28 @@ function palette(): Palette {
   };
 }
 
-/** The envelope of the stress block: the section raised to the stress at each fibre, with walls. */
-function envelopeGeometry(body: StageBody, height: (y: number) => number): BufferGeometry {
-  const maxSegment = body.height / 40;
-  const top = capGeometry(body.solids, (x, y) => [x, y, height(y)], undefined, maxSegment);
+/**
+ * The volume of the stress block over `solids`: from `base(y)` up to `height(y)` along z, with walls.
+ * The whole section for the faint envelope, or one band of it for a part of the block.
+ */
+function envelopeGeometry(
+  solids: Solid[],
+  maxSegment: number,
+  height: (y: number) => number,
+  base: (y: number) => number = () => 0,
+): BufferGeometry {
+  const top = capGeometry(solids, (x, y) => [x, y, height(y)], undefined, maxSegment);
   const positions = Array.from(top.getAttribute("position").array);
   const indices = Array.from(top.getIndex()?.array ?? []);
-  for (const solid of body.solids) {
+  for (const solid of solids) {
     const loops = [oriented(resampled(solid.outer, maxSegment), true), ...(solid.holes ?? []).map((h) => oriented(resampled(h, maxSegment), false))];
     for (const loop of loops) {
       for (let i = 0; i < loop.length; i += 1) {
         const [ax, ay] = loop[i];
         const [bx, by] = loop[(i + 1) % loop.length];
-        const base = positions.length / 3;
-        positions.push(ax, ay, 0, bx, by, 0, bx, by, height(by), ax, ay, height(ay));
-        indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
+        const at = positions.length / 3;
+        positions.push(ax, ay, base(ay), bx, by, base(by), bx, by, height(by), ax, ay, height(ay));
+        indices.push(at, at + 1, at + 2, at, at + 2, at + 3);
       }
     }
   }
@@ -118,6 +136,105 @@ function envelopeGeometry(body: StageBody, height: (y: number) => number): Buffe
   geometry.setIndex(indices);
   geometry.computeVertexNormals();
   return geometry;
+}
+
+
+type Colours = ReturnType<typeof palette>;
+
+/** The resultant forces (Gere Fig. 10-4): C pressing and T pulling at their heights, and the lever arm. */
+function addResultants(
+  view: StageView,
+  frame: StageFrameOut,
+  body: StageBody,
+  pose: ReturnType<typeof memberPose>,
+  colours: Colours,
+  forceTop: number,
+  face: Group,
+  labels: LabelSpec[],
+  geometries: BufferGeometry[],
+  materials: Material[],
+) {
+  if (!(forceTop > 0)) return;
+  const ink = new MeshBasicMaterial({ color: colours.ink });
+  materials.push(ink);
+  const longest = Math.max(body.width, body.height);
+  const head = longest * 0.1;
+  const z0 = 0.4;
+  if (view.uniform) {
+    if (frame.axial_force == null || frame.axial_force === 0) return;
+    const length = (0.55 * longest * Math.abs(frame.axial_force)) / forceTop;
+    const press = frame.axial_force > 0;
+    face.add(...(press ? arrowMeshes(0, 0, z0 + length, z0, head, ink, geometries) : arrowMeshes(0, 0, z0, z0 + length, head, ink, geometries)));
+    labels.push({ id: "force", text: `${press ? "F_c" : "F_t"} = σ A = ${formatFixed(kn(Math.abs(frame.axial_force)), 1)} kN, at the centroid`, at: faceToWorld(pose, [0, 14, z0 + length + 6]) });
+    return;
+  }
+  const r = frame.resultants;
+  const arrows = r ? resultantArrows(body, r, forceTop, Boolean(body.hogging)) : null;
+  if (!r || !arrows) return;
+  const { compression, tension } = arrows;
+  face.add(...arrowMeshes(0, compression.y, z0 + compression.length, z0, head, ink, geometries));
+  face.add(...arrowMeshes(0, tension.y, z0, z0 + tension.length, head, ink, geometries));
+  labels.push({ id: "Fc", text: `F_c = ${formatFixed(kn(compression.force), 1)} kN`, at: faceToWorld(pose, [0, compression.y + 12, z0 + compression.length + 6]) });
+  labels.push({ id: "Ft", text: `F_t = ${formatFixed(kn(tension.force), 1)} kN`, at: faceToWorld(pose, [0, tension.y - 12, z0 + tension.length + 6]) });
+  // the lever arm, as a dimension beside the section
+  const x = body.width / 2 + 18;
+  const yc = compression.y;
+  const yt = tension.y;
+  const line = [x, yc, z0, x, yt, z0, x - 6, yc, z0, x + 6, yc, z0, x - 6, yt, z0, x + 6, yt, z0];
+  const dim = new BufferGeometry();
+  dim.setAttribute("position", new Float32BufferAttribute(line, 3));
+  const dimMaterial = new LineBasicMaterial({ color: colours.ink });
+  geometries.push(dim);
+  materials.push(dimMaterial);
+  face.add(new LineSegments(dim, dimMaterial));
+  labels.push({ id: "lever", text: `lever arm ${formatFixed(arrows.leverArm, 1)} mm`, at: faceToWorld(pose, [x + 10, (yc + yt) / 2, z0]) });
+}
+
+/** The stress volume pulled apart: the elastic core, the yielded zone at f_y and the hardening above it. */
+function addParts(
+  frame: StageFrameOut,
+  body: StageBody,
+  pose: ReturnType<typeof memberPose>,
+  colours: Colours,
+  fy: number,
+  scale: number,
+  face: Group,
+  labels: LabelSpec[],
+  geometries: BufferGeometry[],
+  materials: Material[],
+) {
+  const r = frame.resultants;
+  if (!r) return;
+  const z0 = 0.4;
+  const gap = Math.max(body.width, body.height) * 0.12;
+  const ink = new LineBasicMaterial({ color: colours.ink, transparent: true, opacity: 0.6 });
+  materials.push(ink);
+  stageParts(body, frame).forEach((part, index) => {
+    const solids = clipSolidsToBand(body.solids, part.band[0], part.band[1]);
+    if (solids.length === 0) return;
+    const range = (y: number) => partRange(part.layer, Math.abs(stressAtHeight(body, frame, y)), fy);
+    const lift = part.layer === "hardening" ? gap : 0;
+    const top = (y: number) => z0 + lift + range(y)[1] * scale;
+    const base = (y: number) => z0 + lift + range(y)[0] * scale;
+    const mid = (part.band[0] + part.band[1]) / 2;
+    if (top(mid) - base(mid) < 0.5 && top(part.band[1]) - base(part.band[1]) < 0.5) return;
+    const set = part.side === "compression" ? colours.comp : colours.tens;
+    const tone = part.layer === "core" ? set.soft : part.layer === "yielded" ? set.strong : set.deep;
+    const geometry = envelopeGeometry(solids, body.height / 40, top, base);
+    const material = new MeshLambertMaterial({ color: tone, transparent: true, opacity: 0.72, side: DoubleSide, depthWrite: false });
+    const edges = new EdgesGeometry(geometry, 28);
+    geometries.push(geometry, edges);
+    materials.push(material);
+    face.add(new Mesh(geometry, material), new LineSegments(edges, ink));
+    const force = partForce(r, part);
+    if (force !== null) {
+      labels.push({
+        id: `part-${index}`,
+        text: `${part.name}, ${part.side}: ${formatFixed(kn(force), 1)} kN`,
+        at: faceToWorld(pose, [body.width / 2 + 8, mid, Math.max(top(mid), base(mid)) + 4]),
+      });
+    }
+  });
 }
 
 /** One arrow along z, from the tail to the head, with a head sized from the section. */
@@ -152,14 +269,19 @@ function arrowMeshes(
   return meshes;
 }
 
-type Content = { group: Group; labels: LabelSpec[]; dispose: () => void };
+type Content = { group: Group; face: Mesh; labels: LabelSpec[]; dispose: () => void };
 
-function buildContent(
+/** What the Forces choice shows on the 3D face, when it is on. */
+export type ForceView = "resultants" | "parts" | "field";
+
+export function buildContent(
   view: StageView,
   frame: StageFrameOut,
   body: StageBody,
   fy: number,
   stressTop: number,
+  forceView: ForceView | null,
+  forceTop: number,
 ): Content {
   const colours = palette();
   const geometries: BufferGeometry[] = [];
@@ -204,39 +326,52 @@ function buildContent(
   const faceMaterial = new MeshBasicMaterial({ vertexColors: true, side: DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
   geometries.push(faceGeometry);
   materials.push(faceMaterial);
-  face.add(new Mesh(faceGeometry, faceMaterial));
+  const faceMesh = new Mesh(faceGeometry, faceMaterial);
+  face.add(faceMesh);
 
   const labels: LabelSpec[] = [];
   const scale = lengthPerStress(body, stressTop);
   const heightAt = (y: number) => Math.abs(stressAtHeight(body, frame, y)) * scale;
+  const showField = forceView === null || forceView === "field";
   if (frame.ratio > 0 && scale > 0) {
-    // a faint envelope of the stress block, and the arrows: their length is the stress at that fibre
-    const envelope = envelopeGeometry(body, heightAt);
-    const envelopeMaterial = new MeshLambertMaterial({ color: view.press ? colours.comp.soft : colours.tens.soft, transparent: true, opacity: 0.32, side: DoubleSide, depthWrite: false });
-    const envelopeEdges = new EdgesGeometry(envelope, 28);
-    const envelopeInk = new LineBasicMaterial({ color: colours.ink, transparent: true, opacity: 0.55 });
-    geometries.push(envelope, envelopeEdges);
-    materials.push(envelopeMaterial, envelopeInk);
-    face.add(new Mesh(envelope, envelopeMaterial), new LineSegments(envelopeEdges, envelopeInk));
-
-    const press = new MeshBasicMaterial({ color: colours.comp.deep });
-    const pull = new MeshBasicMaterial({ color: colours.tens.deep });
-    materials.push(press, pull);
-    const head = Math.max(body.width, body.height) * 0.07;
-    for (const arrow of faceArrows(body, frame, scale)) {
-      // compression presses: the head touches the face; tension pulls: the head is away from it
-      const parts = arrow.press
-        ? arrowMeshes(arrow.x, arrow.y, 0.4 + arrow.length, 0.4, head, press, geometries)
-        : arrowMeshes(arrow.x, arrow.y, 0.4, 0.4 + arrow.length, head, pull, geometries);
-      face.add(...parts);
+    if (forceView !== "parts") {
+      // a faint envelope of the stress block
+      const envelope = envelopeGeometry(body.solids, body.height / 40, heightAt);
+      const envelopeMaterial = new MeshLambertMaterial({ color: view.press ? colours.comp.soft : colours.tens.soft, transparent: true, opacity: 0.32, side: DoubleSide, depthWrite: false });
+      const envelopeEdges = new EdgesGeometry(envelope, 28);
+      const envelopeInk = new LineBasicMaterial({ color: colours.ink, transparent: true, opacity: 0.55 });
+      geometries.push(envelope, envelopeEdges);
+      materials.push(envelopeMaterial, envelopeInk);
+      face.add(new Mesh(envelope, envelopeMaterial), new LineSegments(envelopeEdges, envelopeInk));
     }
-    const top = stressAtHeight(body, frame, body.halfDepth);
-    const text = (stress: number) =>
-      `${formatFixed(Math.abs(stress), 1)} N/mm² ${stress >= 0 ? "compression, pressing on the face" : "tension, pulling on the face"}`;
-    labels.push({ id: "top", text: text(view.uniform ? (view.press ? 1 : -1) * Math.abs(top) : top), at: faceToWorld(pose, [0, body.halfDepth + 14, heightAt(body.halfDepth)]) });
-    if (!view.uniform) {
-      const bottom = stressAtHeight(body, frame, -body.halfDepth);
-      labels.push({ id: "bottom", text: text(bottom), at: faceToWorld(pose, [0, -body.halfDepth - 14, heightAt(-body.halfDepth)]) });
+
+    if (showField) {
+      // the arrows: their length is the stress at that fibre
+      const press = new MeshBasicMaterial({ color: colours.comp.deep });
+      const pull = new MeshBasicMaterial({ color: colours.tens.deep });
+      materials.push(press, pull);
+      const head = Math.max(body.width, body.height) * 0.07;
+      for (const arrow of faceArrows(body, frame, scale)) {
+        // compression presses: the head touches the face; tension pulls: the head is away from it
+        const parts = arrow.press
+          ? arrowMeshes(arrow.x, arrow.y, 0.4 + arrow.length, 0.4, head, press, geometries)
+          : arrowMeshes(arrow.x, arrow.y, 0.4, 0.4 + arrow.length, head, pull, geometries);
+        face.add(...parts);
+      }
+      const top = stressAtHeight(body, frame, body.halfDepth);
+      const text = (stress: number) =>
+        `${formatFixed(Math.abs(stress), 1)} N/mm² ${stress >= 0 ? "compression, pressing on the face" : "tension, pulling on the face"}`;
+      labels.push({ id: "top", text: text(view.uniform ? (view.press ? 1 : -1) * Math.abs(top) : top), at: faceToWorld(pose, [0, body.halfDepth + 14, heightAt(body.halfDepth)]) });
+      if (!view.uniform) {
+        const bottom = stressAtHeight(body, frame, -body.halfDepth);
+        labels.push({ id: "bottom", text: text(bottom), at: faceToWorld(pose, [0, -body.halfDepth - 14, heightAt(-body.halfDepth)]) });
+      }
+    }
+
+    if (forceView === "resultants") {
+      addResultants(view, frame, body, pose, colours, forceTop, face, labels, geometries, materials);
+    } else if (forceView === "parts" && !view.uniform && frame.resultants) {
+      addParts(frame, body, pose, colours, fy, scale, face, labels, geometries, materials);
     }
   }
   group.add(face);
@@ -261,6 +396,7 @@ function buildContent(
 
   return {
     group,
+    face: faceMesh,
     labels,
     dispose: () => {
       for (const g of geometries) g.dispose();
@@ -282,6 +418,7 @@ export default function Stage3D({
   fy,
   stressTop,
   dark,
+  forces = false,
 }: {
   view: StageView;
   frame: StageFrameOut;
@@ -289,6 +426,8 @@ export default function Stage3D({
   fy: number;
   stressTop: number;
   dark: boolean;
+  /** the Forces choice: the resultants and the parts of the stress block, as the engine returned them (textbook) */
+  forces?: boolean;
 }) {
   const host = useRef<HTMLDivElement>(null);
   const rig = useRef<Rig | null>(null);
@@ -296,10 +435,21 @@ export default function Stage3D({
   const [failed, setFailed] = useState(false);
   const [preset, setPreset] = useState<ViewName | null>("iso");
   const [labels, setLabels] = useState<LabelSpec[]>([]);
+  const [forceChoice, setForceChoice] = useState<ForceView>("resultants");
+  const [hover, setHover] = useState<{ x: number; y: number; lines: string[] } | null>(null);
   const body = useMemo(() => stageBody(section), [section]);
   const frames = view.frames.frames;
+  const hasForces = forces && (view.uniform ? frames.some((f) => f.axial_force != null) : frames.some((f) => f.resultants != null));
+  const forceView: ForceView | null = hasForces ? (view.uniform && forceChoice === "parts" ? "resultants" : forceChoice) : null;
+  // one scale for the arrows over the whole slider: the largest force it reaches
+  const forceTop = useMemo(
+    () => Math.max(0, ...frames.map((f) => (view.uniform ? Math.abs(f.axial_force ?? 0) : (f.resultants?.force_compression ?? 0)))),
+    [frames, view.uniform],
+  );
+  const latest = useRef({ view, frame, body, fy, forceView });
+  latest.current = { view, frame, body, fy, forceView };
   const limitStrain = frames[frames.length - 1].strain;
-  const fitKey = `${view.key}|${section.shape}|${section.width}x${section.height}|${section.turned}|${limitStrain}`;
+  const fitKey = `${view.key}|${section.shape}|${section.width}x${section.height}|${section.turned}|${limitStrain}|${hasForces}`;
 
   // the renderer, camera and controls, once
   useEffect(() => {
@@ -336,6 +486,7 @@ export default function Stage3D({
       controls,
       scene,
       content: null,
+      face: null,
       labels: [],
       fitted: "",
       frame: null,
@@ -401,14 +552,15 @@ export default function Stage3D({
     if (!state) return;
     if (state.content) state.scene.remove(state.content);
     state.disposeContent?.();
-    const built = buildContent(view, frame, body, fy, stressTop);
+    const built = buildContent(view, frame, body, fy, stressTop, forceView, forceTop);
     state.disposeContent = built.dispose;
     state.content = built.group;
+    state.face = built.face;
     state.scene.add(built.group);
     state.labels = built.labels;
     setLabels(built.labels);
     state.request();
-  }, [view, frame, body, fy, stressTop, dark]);
+  }, [view, frame, body, fy, stressTop, dark, forceView, forceTop]);
 
   // the camera: fitted once per section and case, and on a preset button; turning by hand is kept
   useEffect(() => {
@@ -416,7 +568,8 @@ export default function Stage3D({
     if (!state) return;
     const pose = memberPose(view.key, limitStrain, body);
     const longest = (stressTop * lengthPerStress(body, stressTop)) || 0;
-    const points = stageCorners(body, pose, longest);
+    const room = hasForces ? 0.15 * Math.max(body.width, body.height) : 0; // the parts are pulled apart
+    const points = stageCorners(body, pose, longest + room);
     const centre = new Vector3(0, 0, 0);
     for (const p of points) centre.add(new Vector3(...p));
     centre.divideScalar(points.length);
@@ -435,12 +588,30 @@ export default function Stage3D({
     state.camera.lookAt(centre);
     state.controls.update();
     state.request();
-  }, [fitKey, preset, view.key, body, limitStrain, stressTop]);
+  }, [fitKey, preset, view.key, body, limitStrain, stressTop, hasForces]);
 
   // the labels exist in the page now: place them
   useEffect(() => {
     rig.current?.request();
   }, [labels]);
+
+  // with Forces on, the fibre under the pointer: where it is, its stress and the force that reaches it
+  const raycaster = useRef(new Raycaster());
+  const onMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    const state = rig.current;
+    const now = latest.current;
+    if (!state || !state.face || now.forceView === null || now.view.uniform) return;
+    const canvas = state.renderer.domElement;
+    const box = canvas.getBoundingClientRect();
+    if (box.width < 1 || box.height < 1) return;
+    const ndc = new Vector2(((event.clientX - box.left) / box.width) * 2 - 1, -((event.clientY - box.top) / box.height) * 2 + 1);
+    raycaster.current.setFromCamera(ndc, state.camera);
+    const hit = raycaster.current.intersectObject(state.face)[0];
+    if (!hit) return setHover(null);
+    const local = state.face.parent ? state.face.parent.worldToLocal(hit.point.clone()) : hit.point;
+    const lines = fibreLines(now.view.frames, now.frame, now.body.halfDepth, Boolean(now.body.hogging), local.y, now.fy);
+    setHover(lines ? { x: event.clientX - box.left, y: event.clientY - box.top, lines } : null);
+  };
 
   if (failed) {
     return (
@@ -451,7 +622,7 @@ export default function Stage3D({
   }
   return (
     <div className="stage3d">
-      <div ref={host} className="stage3d-host" role="img" aria-label="3D view of the member cut at the section, with the stress at every fibre on the cut face. Drag to turn.">
+      <div ref={host} className="stage3d-host" onPointerMove={onMove} onPointerLeave={() => setHover(null)} role="img" aria-label="3D view of the member cut at the section, with the stress at every fibre on the cut face. Drag to turn.">
         <div className="stage3d-tools" role="group" aria-label="Camera">
           {VIEWS.map((name) => (
             <button key={name} type="button" className="v3d-button" aria-pressed={preset === name} onClick={() => setPreset(name)}>
@@ -459,6 +630,22 @@ export default function Stage3D({
             </button>
           ))}
         </div>
+        {hasForces ? (
+          <div className="stage3d-tools stage3d-forces" role="group" aria-label="What the Forces choice shows on the face">
+            {(view.uniform ? (["resultants", "field"] as const) : (["resultants", "parts", "field"] as const)).map((name) => (
+              <button key={name} type="button" className="v3d-button" aria-pressed={forceView === name} onClick={() => setForceChoice(name)}>
+                {name === "resultants" ? (view.uniform ? "The force" : "Two forces") : name === "parts" ? "Parts" : "Field of arrows"}
+              </button>
+            ))}
+          </div>
+        ) : null}
+        {hover ? (
+          <div className="stage3d-hover" style={{ left: hover.x + 14, top: hover.y + 14 }} role="status">
+            {hover.lines.map((line) => (
+              <div key={line}>{line}</div>
+            ))}
+          </div>
+        ) : null}
         <span className="v3d-badge v3d-badge-illustrative stage3d-badge" title={`${MAGNIFICATION_RULE} ${LENGTH_NOTE}`}>
           Illustrative: the drawn length and the ×{STAGE_MAGNIFICATION} scale
         </span>
@@ -482,7 +669,7 @@ export default function Stage3D({
             ? "Every fibre shortens by the same amount, so the cut face moves in from the unloaded outline."
             : "Every fibre lengthens by the same amount, so the cut face moves out past the unloaded outline."
           : "The top fibres shorten and the bottom fibres lengthen, so the cut face turns about the neutral axis and the member curves."}{" "}
-        {MAGNIFICATION_RULE} {LENGTH_NOTE} The far end is held. Arrow length is the stress at that fibre.
+        {MAGNIFICATION_RULE} {LENGTH_NOTE} The far end is held. {forceView === "resultants" ? (view.uniform ? "The arrow is the one force, σ A at the centroid; its length is its size against the largest of the slider." : "The two arrows are the compression and tension forces of the stress block, each at the centroid of its half (Gere eq. 10-8), one scale for the whole slider.") : forceView === "parts" ? "The stress volume is pulled apart: the elastic core, the yielded zone held at f_y, and the hardening above it, each with its force." : "Arrow length is the stress at that fibre."}
       </p>
     </div>
   );
