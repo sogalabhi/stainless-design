@@ -34,6 +34,9 @@ pre-filled.
 
 - The elastic and plastic stress blocks as separate labelled pictures: elastic at first yield, fully
   plastic at M_pl, and the semi-plastic state between.
+- The forces of the stress block for a custom section and for an unsymmetric one (built for templates
+  symmetric about the bending axis; see `plan.md` section 4i). Needs the request to carry the nodes and
+  links, and the neutral axis from the equilibrium ∫σ dA = 0.
 - Depth of the plastic zone and of the elastic core, and the shape factor M_pl / M_el (Gere 10.3, as a
   textbook reference).
 - Strain and stress on a vertical slice at any position across the section (web slice beside flange

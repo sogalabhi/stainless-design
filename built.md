@@ -41,3 +41,11 @@ Strength Method) unless noted.
     with signed moment and curvature κ.
 15. **Sign convention guide.** Axes, internal and external moments, sagging and hogging, curvature, and
     how the Eurocode axis names y-y and z-z map to the right-hand system.
+16. **Forces of the stress block.** A "Forces" choice on the Section Stage, off until you turn it on. For
+    bending it shows the compression and tension forces of the stress block, where each acts, the lever arm
+    and the moment of the drawn block beside M_csm,c,Rd, with the block split into its elastic core, yielded
+    zone and hardening part. For tension and compression it shows the one force σA. Hovering a fibre gives
+    its stress, the width of the section there and the force that reaches it from the nearer edge; hovering
+    an arrow gives its parts. The 3D cut shows the two forces, or the stress volume pulled apart into its
+    parts. Textbook (Gere eqs. 10-3, 10-4, 10-8), integrated exactly by the engine, never used for a
+    resistance. Available for a section template symmetric about the bending axis.

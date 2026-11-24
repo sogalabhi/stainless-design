@@ -194,6 +194,16 @@ generated from it (`python -m stainless_csm.symbols`) and a test keeps the two i
 | M_el | Elastic moment: W_el f_y / γ_M0, the moment at first yield; a reference line, equal to Formula B.19 at ε_csm/ε_y = 1.0. | N mm | B.6.3.2 |
 | M_pl | Plastic moment: W_pl f_y / γ_M0, the factor in front of the bracket of Formula B.20; a reference line. | N mm | B.6.3.2 |
 | M_csm,c,Rd | CSM bending resistance: Design value of the CSM bending moment resistance of the cross-section about an axis of symmetry. | N mm | B.6.3.2 |
+
+**Stress block forces (textbook)**
+
+| Symbol | Meaning | Unit | Clause |
+|---|---|---|---|
+| F_c | Compression force of the stress block: The resultant of the compressive stress over the section, ∫σ dA on the compression side. | N | Gere eq. (10-3) |
+| F_t | Tension force of the stress block: The resultant of the tensile stress over the section, a magnitude; equal to F_c in pure bending. | N | Gere eq. (10-3) |
+| d_c | Distance of F_c from the neutral axis: Where the compression force acts: ∫σ y dA over the compression side divided by F_c. | mm | Gere eq. (10-8) |
+| d_t | Distance of F_t from the neutral axis: Where the tension force acts, measured from the neutral axis as a distance. | mm | Gere eq. (10-8) |
+| M_block | Moment of the drawn stress block: ∫σ y dA over the section: the moment the drawn stress block carries, equal to F_c times the lever arm z_c + z_t. | N mm | Gere eq. (10-4) |
 <!-- symbols:end -->
 
 ## Layout

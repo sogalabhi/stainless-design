@@ -138,6 +138,7 @@ README row marked done. A contract test (service against API) covers every new e
 | 1d | "?" help on every input, DONE 2026-10-09 | `data/input_help.json` keyed by field key, served at `GET /api/v1/input-help`; a test that every dock field has an entry | a "?" button beside every input label opening a short panel. Spec in section 4e |
 | 2 | B.6.3.2 bending, Table B.2, DONE 2026-10-09 | `data/bending_parameters.json`, a lookup by type, axis and h/b; `csm/bending.py`: B.19, B.20, with the λ_LT gate of B.6.3.1(1). Channel minor axis, T-section major axis and all angles, and 0.2 < λ_LT <= 0.4, answer "arrives in phase 3" (`NotBuiltYetError`, not a refusal); λ_LT > 0.4 is refused | step "Bending (B.6.3)"; the Bending group and tab; moment against ε_csm/ε_y; strain and stress blocks across the depth |
 | 2b | B.5.2(2) numerical σ_cr,cs by finite strip | starts with a spike. `buckling/`: pyCUFSM (pinned 0.2.0) behind one module; the strip model of the five plate templates; the signature curve, the cFSM mode shares and the mode shapes; σ_cr,cs from the first local minimum; a `finite_strip` route for B.5, B.6.2 and B.6.3; `POST /api/v1/buckling` | "Finite strip analysis" under Slenderness from; the signature curve coloured by mode; pick a point to see the cross-section mode in 2D, the G, D, L, O shares and the member in 3D; Help topic "Buckling modes". Spec in section 4g |
+| 2c | resultant forces of the stress block (textbook, not a clause), DONE 2026-11-24 for templates symmetric about the bending axis | the compression and tension forces, their lines of action, the lever arm and the moment of the drawn stress block at every Stage frame, by exact integration of the frame's stress over the section outline (Gere eqs. 10-3 and 10-4); never used for a resistance | a "Forces" choice on the Stage for bending: the two resultants and the lever arm in the 2D drawing and the 3D cut, the block split into its parts, the block's moment beside M_csm,c,Rd. Spec in section 4i |
 | 3 | B.6.3.1 and B.6.3.3 | B.6.3.3(1) for channel minor axis, T-section major axis and angles (B.19 or B.20 with ε_csm,max, the first-yield fibre); B.18 (needs λ_LT and M_c,Rd as inputs); ε_csm,max and ε_csm,t from the linear strain assumption. ε_csm,t first uses the elastic neutral axis; if ε_csm,max > ε_y, it is recalculated at the midway point between the elastic and plastic axes (the approximation printed in B.6.3.3(3)), with both axis positions typed in. B.6.3.3(3) also allows the design axis from cross-section equilibrium; the code gives no procedure for it, so it uses the cited method of section 9 and is the user's choice beside the midway approximation | interpolation chart; neutral-axis shift diagram for angles, channels, T-sections |
 | 4 | B.6.4.1 RHS | `csm/combined.py`: B.21 to B.24 for RHS. Refuses bending with tension, and channels, T-sections and angles (outside B.6.4, B.3(2)). I-sections and CHS show "not built yet (phase 5)", which is not a refusal | interaction curve; biaxial surface |
 | 5 | B.6.4.2 and B.6.4.3 | B.25 to B.27, I-section values for B.23, B.28 and B.29. Refuses channels, T-sections and angles, which fall under EN 1993-1-1 8.2.9 (outside the Annex) | I-section and CHS interaction curves |
@@ -148,7 +149,26 @@ README row marked done. A contract test (service against API) covers every new e
 Reasoning for the order: phase 0 comes first because compression is the first page that needs inputs another tab already owns (A and γ_M0 from tension); building the dock later means moving every new page over afterwards. Compression gives f_csm and N_csm,Rd, which the bending interaction needs
 (n_csm = N_Ed / N_csm,Rd). Bending gives M_csm,Rd, which every combined-loading formula needs.
 
+**Effort estimate (2026-11-17).** A rough guide read from the pace of the earlier phases, not a promise.
+The coding is not what limits it: the open decisions of section 9, the weekly usage limit and the user's
+browser checks are.
+
+| Work | Rough effort | Built by | Reviewed by |
+|---|---|---|---|
+| B.18 interpolation (phase 3, first part) | a few hours | Sonnet | Opus |
+| B.6.3.3 unsymmetric sections (phase 3) | 1 to 2 days | Sonnet, from a spec by Opus | Opus |
+| B.6.4.1 combined loading, rectangular hollow sections (phase 4) | about 1 day | Sonnet | Opus |
+| B.6.4.2 and B.6.4.3, I-sections and circular hollow sections (phase 5) | about 1 day | Sonnet | Opus |
+| B.1 to B.3 checks and the summary page (phase 6) | half a day to 1 day | Sonnet | Opus |
+| Finite strip, B.5.2(2) (phase 2b) | 2 to 3 days; the spike can fail | Sonnet | Opus |
+
+About one to two weeks of focused sessions without the finite strip, two to three with it. The charts of
+section 5, the resultant forces (4i) and the new layout (4j) are extra. Fable is not needed for any clause.
+
 ## 4b. Website layout (phase 0)
+
+**The tabs of this section are to be replaced by section 4j (tabs by load case), once the user approves
+its prototype. The dock stays as described here.**
 
 One input dock on the left holding every input; results on the right, one tab per clause. Every input
 lives in one place, so no two tabs can hold different values of A or γ_M0, and the inputs stay
@@ -805,6 +825,193 @@ To do:
 - the equilibrium neutral axis of B.6.3.3(3), from the Gere chapter named in section 9;
 - the serviceability deflection of 9.2 (Formulae 9.1 and 9.2, Table 9.1), if displacements are wanted.
 
+## 4i. Phase 2c spec: resultant forces of the stress block (Gere eqs. 10-3, 10-4)
+
+Asked for by the user on 2026-11-17: "show the forces as shown in the textbook, by integrating the stress
+distribution". **Built 2026-11-24** for a section template symmetric about the bending axis (see the build notes at the end of this section). This is a picture and a readout, not a resistance: M_csm,c,Rd stays the value of
+B.19 and B.20.
+
+**What it shows**, at every frame of the Stage slider, for bending:
+- the compression force and the tension force (Gere's C and T, Fig. 10-4b, p. 518), each as one arrow at
+  the centroid of its part of the stress block;
+- the distance of each force from the neutral axis, and the lever arm between them;
+- the moment of the drawn stress block, force times lever arm;
+- the block split into its parts, each with its own force and distance: the elastic core, the yielded zone
+  at f_y (Gere Fig. 10-7 and eq. (b), p. 521), and the part above f_y that the B.4 hardening adds.
+
+**Source (section 4h): Derived.** Every step cites one of:
+- Textbook: Gere & Timoshenko, Mechanics of Materials, 2nd ed., eq. (10-3), p. 516 (the force, ∫σ dA) and
+  eq. (10-4), p. 517 (the moment, ∫σ y dA); Fig. 10-4 and eq. (10-8), pp. 518 to 519 (T and C at the
+  centroids of the two areas); Fig. 10-7 and eq. (b), p. 521 (plastic zone and elastic core).
+- Code: EN 1993-1-4:2025, B.4, for the stress at each strain (as the frames already do).
+- Geometry: the section outline from the typed dimensions (`sections/properties.py`), reference only.
+
+**Scope.**
+- Bending about an axis of symmetry (the B.6.3.2 scope of phase 2): the neutral axis is at mid-depth, as
+  the frames assume today.
+- Unsymmetric sections come with phase 3. The same routine then finds the neutral axis from ∫σ dA = 0
+  (eq. 10-3), which is the equilibrium route of B.6.3.3(3) that section 9 already assigns to this chapter.
+- It needs the outline. Offered for a section template, and for a custom section once the request carries
+  its nodes and links (`custom_loops`). With plates typed one by one, or a typed σ_cr,cs with no section,
+  there is no outline: the view says so and shows no forces.
+- Tension and compression: every fibre has the same stress, so there is one resultant at the centroid,
+  σ times the typed A. No integration; it is the term of B.12, B.15 and B.16 before γ_M0.
+
+**Engine** (`csm/stress_resultants.py`, called where `bending_frames` is called).
+- The frame's stress is a straight line between its corner depths (-1, -1/r, 0, 1/r, 1, with
+  r = ε/ε_y). Cut the outline by lines parallel to the bending axis at those depths: at most four bands.
+- In one band σ = a + b z, with z measured from the neutral axis. With the band's area A_k, first moment
+  S_k and second moment I_k about the neutral axis (Green's theorem on the clipped polygon, as `_clip` and
+  `_moments` do today):
+  - force of the band: F_k = a A_k + b S_k
+  - moment of the band about the neutral axis: M_k = a S_k + b I_k
+- F_c is the sum over the bands on the compression side and F_t over the tension side; the distance of
+  each force from the neutral axis is its moment over its force; the lever arm is the sum of the two
+  distances; the moment of the block is the sum of the M_k.
+- This is exact for the polygon: no numerical quadrature and no step size. Fillets and circles are
+  already polygons of many sides in `properties.py`.
+- The parts: inside a yielded band the stress is split into f_y (constant) and σ - f_y (linear from
+  zero), so the yielded zone and the hardening part each get a force and a distance.
+- Minor-axis bending cuts by lines in the other direction; write the routine with the `normal` vector, as
+  `_side` does. `_clip` and `_moments` are private to `properties.py` today: share them, do not copy them.
+- Symbols: Gere's C and T are written F_c and F_t, because C₁, C₂ and C₃ are the Table B.1 coefficients.
+- Each frame gains `resultants` (None when there is no outline): F_c, F_t, z_c, z_t, the lever arm, the
+  moment of the block, and the parts. A CalcStep for the limit frame shows the working with its sources.
+- Check carried in the result: F_c = F_t for these sections (relative difference under 1e-9).
+
+**Why the block's moment is not M_csm,c,Rd.** The view shows both, labelled "moment of the drawn stress
+block (Gere eq. 10-4)" and "M_csm,c,Rd (B.19 or B.20)", with the three reasons:
+1. γ_M0 divides the code value and not the block.
+2. B.20 is a fitted formula. It equals the integral exactly for a rectangle without hardening
+   (tests/test_gere_checks.py, eq. 10-17); for other shapes and with hardening it lies within about 1 %,
+   on either side (see the values below).
+3. W_el and W_pl are typed for B.19 and B.20; the block is integrated over the drawn outline. A table
+   value typed for W differs slightly from the geometry.
+
+**Website.**
+- Stage, bending case: a "Forces" choice, off at the start. Turning it on is the user's click, as section
+  4h asks for a route from outside the code. A "Textbook" badge with the citation sits on the view.
+- 2D drawing: the two arrows beside the stress block at z_c and z_t, the lever arm as a dimension, and the
+  readout lines F_c, F_t, lever arm and moment, in kN, mm and kN m.
+- 3D cut: a switch between the field of arrows (today) and the two resultants standing at the centroids of
+  the stress volume; a "parts" view that pulls the block apart into the elastic core, the yielded zone and
+  the hardening part, each with its force.
+- The browser integrates nothing: it draws the engine's values of the current frame.
+- Help: one paragraph and a sketch after Gere Fig. 10-4 in "Buckling and bending"; symbols F_c, F_t, z_c,
+  z_t and the lever arm.
+
+**Build notes (2026-11-24).** Engine: `csm/stress_resultants.py` (`neutral_axis`, `stress_resultants`,
+`fibre_table`, `fibre_forces`) on the new public `band_moments` of `sections/properties.py`; `csm/stage.py`
+adds `resultants`, `fibre_force` and `axial_force` to each frame and `resultants_working`, `fibre_depth`
+and `fibre_width` to the frames, through `with_resultants` and `with_axial_force`, called from
+`services.run_bending`, `run_tension` and `run_compression`. Where it differs from the spec above:
+- The distances are called d_c and d_t, not z_c and z_t, because z_c is already the vertical centroid in the
+  glossary. The glossary group is "Stress block forces (textbook)".
+- The working of the forces (four cited lines) travels with the frames and is shown under the Forces
+  readout; it is not in the main calculation trace, so a textbook step never enters the code's working
+  unasked.
+- Hover: the engine also returns, per frame, the force from the nearer edge to each of 81 fibres, and once
+  the width of the section at each fibre, so the browser reads them and integrates nothing.
+- Website: the Forces switch on the Stage (2D drawing and 3D cut), the readout and parts table
+  (`ForcesPanel`), the force column and hover cards of the drawing, and in the 3D cut the choice of two
+  forces, parts pulled apart, or the field of arrows. Help: "The forces in the stress block".
+- Not built: a custom section (the request carries no nodes and links) and an unsymmetric section (the
+  neutral axis is not at mid-depth); both show no forces. The 3D cut was checked as scene data in tests, not
+  yet looked at in a browser.
+
+**Values for the tests** (computed 2026-11-17 with the engine's own outline by the method above; the
+implementer repeats each by hand before using it).
+
+Gere Prob. 10.3-7 (p. 543): h 320, b 160, t_f 15, t_w 8, sharp corners, σ_y 250, E_sh = 0, major axis.
+A = 7 120 mm², S = 799 870.8 mm³, Z = 900 200 mm³.
+
+| ε/ε_y | F_c = F_t (N) | lever arm (mm) | moment of the block (N mm) | hand check |
+|---|---|---|---|---|
+| 1 | 703 281.25 | 284.335 | 199 967 708 | σ_y S; F = σ_y (Z/2)/(h/2) |
+| 2 | 810 000 | 272.572 | 220 783 333 | flange 600 000 + web at f_y 130 000 + elastic core 80 000 |
+| very large | 890 000 | 252.865 | 225 050 000 | σ_y A/2; arm = Z/(A/2); σ_y Z (eq. 10-9) |
+
+The example I-section (rolled 200 x 100 x 5.6 x 8.5, r 12; f_y 230, E 200 000, E_sh 3 417.79, α 2.0),
+major axis, with W_el 194 317.7 and W_pl 220 639.6 from the same outline and no γ_M0:
+
+| ε/ε_y | F_c = F_t (N) | lever arm (mm) | moment of the block (N mm) | B.19 or B.20 (N mm) | B against block |
+|---|---|---|---|---|---|
+| 0.8 | 202 988 | 176.140 | 35 754 455 | 35 754 455 | equal |
+| 1.0 | 253 736 | 176.140 | 44 693 068 | 44 693 068 | equal |
+| 3.0 | 313 879 | 164.720 | 51 702 289 | 51 601 960 | -0.19 % |
+| 6.0 | 337 437 | 161.053 | 54 345 226 | 54 397 737 | +0.10 % |
+
+For the Gere section with E_sh = 0 at ε/ε_y = 2, B.20 gives 218 779 427 against 220 783 333: -0.91 %.
+
+Tests: every row above; below first yield the block's moment equals (ε/ε_y) W_el f_y to 1e-9; F_c = F_t;
+with E_sh = 0 the moment tends to f_y W_pl; a rectangle with hardening equals the formula of Gere
+Prob. 10.7-7 (p. 548) to 1e-9; no outline gives `resultants = None`; the contract test.
+
+**Who does what.** Sonnet: the engine, the tests, the API and the 2D drawing. Opus: review of the engine
+and of the sources. Haiku: symbols, Help, types. Fable: only the 3D resultants and the parts view.
+
+**To confirm with the user before building:** the "Forces" choice off at the start; showing the difference
+between the block's moment and M_csm,c,Rd as a percentage with the three reasons.
+
+## 4j. Website layout 2: tabs by load case (proposed 2026-11-17, not approved)
+
+Proposed to the user on 2026-11-17, who asked for it to be written here. Nothing is built. The next step is
+a prototype for the user to look at, as was done for the Section Stage (`docs/prototypes/`).
+
+**The problem.** Two ways of dividing the results compete:
+- the Stage divides by load case, with a switch inside it (tension, compression, bending);
+- the other tabs divide by clause number (B.4, B.5, B.6.1, B.6.2, B.6.3) and show the same numbers again.
+
+Material and Deformation are not results: they are steps on the way to every resistance, and the Stage
+already shows them as its cards 1 and 2. With combined loading, the summary and the buckling view still to
+come, tabs by clause would pass ten.
+
+**The proposal: divide by load case only.** Keep the Stage; retire the clause tabs (the Stage hand-off in
+section 4b lists "the clause tabs are not retired" among what is left; they were kept until the user
+accepts the Stage).
+
+```
+Today:     Stage | Material | Deformation | Tension | Compression | Bending | Explore | Help
+Proposed:  Summary | Tension | Compression | Bending | Combined | Compare | Help
+```
+
+- **Each load case is a Stage page.** The case switch becomes the tabs, and the name "Stage" disappears.
+  Each tab keeps its status icon (waiting, done, not applicable, error).
+- **One page, four depths**, from beginner to expert:
+  1. the answer: the headline resistance and what it gains over yield;
+  2. the picture: the drawing and the 3D cut with the slider;
+  3. the three step cards: how far can it strain, what stress is that, what does it resist;
+  4. the full working and every chart of that clause, when a card is opened.
+- **Material (B.4) and Deformation (B.5) become steps.** Their charts, tables and working move inside cards
+  2 and 1. B.5 belongs to the load case anyway: the k_σ of bending differ from those of compression.
+- **Summary** is the phase 6 page (B.1 to B.3): every resistance in one place, the applicability checks and
+  the flow diagram. It is the first tab.
+- **Combined** (phases 4 and 5) is a fourth load case; its picture is the interaction curve or surface with
+  the design point.
+- **Compare** is today's Explore (stocky against slender), and later the generic sweep and the comparison
+  of grades.
+- **Clause numbers stay** as a badge on every card, and a small "jump to clause" menu opens the card that
+  holds a clause, for a reader who thinks in clause numbers.
+- **Buckling** (phase 2b) sits inside step 1 as a route, as section 4g already has it.
+- **Teaching pieces** that are not Annex B (the plastic hinge, if approved) go under Help.
+- **The dock does not change**: it stays the only place inputs are typed.
+
+**Before a clause tab is deleted**, everything it shows that the cards lack moves into the opened card.
+Known today: the metric cards of each tab, the plates table and the base curve at full size (Deformation),
+the capacity curve and the compression point on the material curve (Compression), the tension chart
+(Tension), Table B.2 and the two bending charts at full size (Bending), the material chart with its
+plain-English explainer (Material). Make the full list from the six pages before starting.
+
+**Work.**
+1. Fable: a single-file prototype of the shell, with one load case filled in and a card opened, for the
+   user to approve or correct.
+2. Sonnet: the port, one load case at a time, the clause tab deleted only when its content has moved; the
+   tests that name tabs (`App.*.test.tsx`) updated in the same step.
+3. Help and the README screenshots follow the new names.
+
+**To decide with the user:** the tab names; whether Summary is the first tab or the last; whether Material
+also keeps a page of its own; the name of Compare.
+
 ## 4a. Who does what (model split and hand-off)
 
 Each phase is split by model tier. Use one chat per task, not one chat switched between models, so each
@@ -882,6 +1089,7 @@ the gain surface, the 3D stub column and the stocky-against-slender view with re
 - B.18 interpolation line: M_csm,int,Rd against λ_LT between 0.2 and 0.4, with M_csm,c,Rd and M_c,Rd as its ends.
 - B.6.3.3 neutral-axis shift diagram: the elastic axis, the plastic axis, the design axis (midway, or by equilibrium when chosen), and ε_csm,t against ε_csm.
 - Continuity marker: B.19 meets B.20 at ε_csm/ε_y = 1 (both equal W_el f_y / γ_M0).
+- Resultant forces of the stress block (phase 2c, section 4i): the compression and tension forces at the centroids of their parts of the block, the lever arm, and the block's moment beside M_csm,c,Rd, in the 2D drawing and the 3D cut of the Stage. Textbook (Gere eqs. 10-3 and 10-4), computed by the engine.
 - 3D beam, illustrative: a deflected shape coloured by strain, with local wrinkling on the compression flange from the live slenderness. The span and load are typed inputs that only draw the shape. No displacement value is calculated or shown. Annex B has no displacement rule; EN 1993-1-4:2025, 9.2 estimates deflections with the secant modulus E_s,ser = (E_s,1 + E_s,2)/2 (Formula 9.1), with E_s,i from Formula 9.2 and the exponent n from Table 9.1 (ferritic 14, austenitic 7, duplex 8); 9.2(9) allows the finite element methods of FprEN 1993-1-14:2025 instead. The tool does not use 9.2 yet, so the drawing is illustrative and carries no displacement value. Using 9.2 would be a code-sourced addition (section 4h).
   **Amendment 2026-11-11 (user request, Section Stage):** the beam of the Stage's 3D cut curves, the top fibres shortening and the bottom fibres lengthening, the cut face turning about the neutral axis: the Stage's 3D cut now draws the member deforming by the engine's strain of the current frame (the strain of the slider frame, `StageFrame.strain`), under ONE rule for every load case: every strain is drawn 10 times larger (`STAGE_MAGNIFICATION` in `lib/stage3d.ts`), the cut face moves by strain x drawn length x 10 (the drawn length is 2 x the larger side of the section, illustrative). The view states the factor and says the length is illustrative; no displacement value is calculated or shown, so the 9.2 deflection method stays unused. 
 
