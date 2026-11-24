@@ -130,6 +130,7 @@ def stage_frames_out(frames: StageFrames) -> s.StageFramesOut:
         load_case=s.LoadCaseKey(frames.load_case.value),
         yield_strain=frames.yield_strain,
         yield_stress=frames.yield_stress,
+        ultimate_stress=frames.ultimate_stress,
         frames=[
             s.StageFrameOut(
                 ratio=f.ratio,

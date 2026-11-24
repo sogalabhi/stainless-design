@@ -1453,6 +1453,11 @@ export interface components {
              */
             yield_stress: number;
             /**
+             * Ultimate Stress
+             * @description f_u [N/mm2]
+             */
+            ultimate_stress: number;
+            /**
              * Frames
              * @description Ascending strain; the first is unloaded, the last is the strain limit
              */

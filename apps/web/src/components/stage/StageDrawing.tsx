@@ -19,8 +19,8 @@ import { svgSymbols } from "./svgText";
 /**
  * The 2D stage: the section to scale, the strain diagram and the stress diagram, all on one depth axis.
  * Every polygon is drawn from the engine's profiles of the frame; the arrows read the stress along the
- * engine's own polyline. An arrow pointing at the axis line presses (compression); one pointing away
- * pulls (tension).
+ * engine's own polyline. An arrow pointing left presses (compression), one pointing right pulls
+ * (tension): the two forces on the cut face are opposite, as the resultants F_c and F_t are.
  */
 export function StageDrawing({
   view,
@@ -80,18 +80,21 @@ export function StageDrawing({
     if (length < 18) return null;
     const press = value > 0;
     const head = 7;
-    const tip = press ? L.sx + 2 : L.sx - length + 1;
-    const tail = press ? L.sx + length - 1 : L.sx - 2;
+    // the force on the cut face: compression points left, pressing in; tension points right, pulling out.
+    // The arrow sits in its own block, from the stress value to the axis line.
+    const tip = press ? L.sx + 2 : L.sx - 2;
+    const tail = press ? L.sx + length - 1 : L.sx - length + 1;
+    const lean = press ? head : -head;
     return (
       <g key={i} className="st-arrow" aria-hidden="true">
-        <path d={`M${tail.toFixed(1)} ${y.toFixed(1)}H${(tip + head).toFixed(1)}`} />
-        <path className="st-arrow-head" d={`M${tip.toFixed(1)} ${y.toFixed(1)}l${head} -3.6v7.2Z`} />
+        <path d={`M${tail.toFixed(1)} ${y.toFixed(1)}H${(tip + lean).toFixed(1)}`} />
+        <path className="st-arrow-head" d={`M${tip.toFixed(1)} ${y.toFixed(1)}l${lean} -3.6v7.2Z`} />
       </g>
     );
   });
 
   // The fibre under the pointer: a guide across the panels, and its values read from the engine's profiles.
-  const probe = pointerY === null || overForce !== null ? null : probeAt(L, frame, fy, section ? section.height : null, pointerY);
+  const probe = pointerY === null || overForce !== null ? null : probeAt(L, frame, fy, section ? section.height : null, pointerY, view.frames.ultimate_stress ?? 0);
   // with Forces on, the fibre also says what force reaches it from the nearer edge, and how wide the section is there
   const fibre =
     probe && forces && !view.uniform
@@ -352,8 +355,13 @@ function StageProbeCard({
       ? `fibre ${formatFixed(probe.depth, 2)} of the half depth`
       : `z = ${probe.z > 0 ? "+" : ""}${formatFixed(probe.z, 1)} mm from the axis`,
     `ε = ${formatRatio(Math.abs(probe.strainRatio))} ε_y, ${side}`,
-    `σ = ${formatFixed(Math.abs(probe.stress), 1)} N/mm² = ${formatFixed(Math.abs(probe.stressOverYield), 2)} f_y`,
+    `σ = ${formatFixed(Math.abs(probe.stress), 1)} N/mm² = ${formatFixed(Math.abs(probe.stressOverYield), 2)} f_y` +
+      (probe.stressOverUltimate === null ? "" : ` = ${formatFixed(Math.abs(probe.stressOverUltimate), 2)} f_u`),
   ];
+  // how many times the flat-yield stress it is at this strain: the gain the strain hardening gives
+  if (probe.stressOverClassic !== null) {
+    lines.push(`= ${formatFixed(probe.stressOverClassic, 2)} × the flat-yield stress at this strain`);
+  }
   if (fibre) {
     const compressive = probe.depth > 0;
     const yielded = Math.abs(probe.stress) >= fy * (1 - 1e-9);
@@ -363,7 +371,7 @@ function StageProbeCard({
       probe.strainRatio === 0 ? "at the neutral axis" : yielded ? "yielded: f_y, plus hardening above it" : "still elastic here",
     );
   }
-  const width = fibre ? 340 : 218;
+  const width = fibre ? 360 : 300;
   const height = 18 * lines.length + 10;
   // the card sits in the gap between the strain and the stress diagrams, clear of the pointer's guide line
   const x = (L.ex + L.sx) / 2 - width / 2;
@@ -421,7 +429,7 @@ function ForcesColumn({
       <text x={fx} y={22} className="st-head" textAnchor="middle">
         Forces (kN)
       </text>
-      <path className="st-guide" d={`M${L.gx} ${yc.toFixed(1)}H${fx + length}M${L.gx} ${yt.toFixed(1)}H${fx - length}`} />
+      <path className="st-guide" d={`M${L.gx} ${yc.toFixed(1)}H${fx + length}M${L.gx} ${yt.toFixed(1)}H${fx + length}`} />
       <path className="st-axis" d={`M${fx} ${L.top - 10}V${L.bot + 12}`} />
       {/* C: tail on the right, head on the axis line (presses) */}
       <path className="st-force-line" d={`M${fx + length} ${yc.toFixed(1)}H${fx + head}`} />
@@ -429,10 +437,11 @@ function ForcesColumn({
       <text x={fx + 6} y={compressionLabelY} className="st-value">
         {svgSymbols(`F_c = ${formatFixed(kn(r.force_compression), 1)}`)}
       </text>
-      {/* T: tail on the axis line, head away from it (pulls) */}
-      <path className="st-force-line" d={`M${fx} ${yt.toFixed(1)}H${fx - length + head}`} />
-      <path className="st-force-head" d={`M${fx - length} ${yt.toFixed(1)}l${head} -4.5v9Z`} />
-      <text x={fx - 6} y={tensionLabelY} className="st-value" textAnchor="end">
+      {/* T: tail on the axis line, head away from it (pulls). Both forces are drawn on the same side of
+          the cut, as in the textbook: C points at the face and T points away from it, so they are opposite */}
+      <path className="st-force-line" d={`M${fx} ${yt.toFixed(1)}H${fx + length - head}`} />
+      <path className="st-force-head" d={`M${fx + length} ${yt.toFixed(1)}l${-head} -4.5v9Z`} />
+      <text x={fx + 6} y={tensionLabelY} className="st-value">
         {svgSymbols(`F_t = ${formatFixed(kn(r.force_tension), 1)}`)}
       </text>
       {/* hover: what each force is made of */}
@@ -442,7 +451,7 @@ function ForcesColumn({
           <rect
             key={side}
             className="st-force-hit"
-            x={side === "compression" ? fx : fx - length}
+            x={fx}
             y={y - 16}
             width={length}
             height={32}
@@ -471,20 +480,21 @@ function AxialForce({ L, force }: { L: ReturnType<typeof stageLayout>; force: nu
   const head = 8;
   const { fx } = L;
   const y = L.mid;
-  const tail = press ? fx + length : fx - 2;
-  const tip = press ? fx + 1 : fx - length;
+  // both on the right of the cut: the compression force points at the face, the tension force away from it
+  const tail = press ? fx + length : fx + 2;
+  const tip = press ? fx + 1 : fx + length;
   return (
     <g className="st-forces" aria-label="The resultant force of the uniform stress">
       <text x={fx} y={22} className="st-head" textAnchor="middle">
         Force (kN)
       </text>
       <path className="st-axis" d={`M${fx} ${L.top - 10}V${L.bot + 12}`} />
-      <path className="st-force-line" d={`M${tail} ${y}H${tip + head}`} />
-      <path className="st-force-head" d={`M${tip} ${y}l${head} -4.5v9Z`} />
-      <text x={press ? fx + 6 : fx - 6} y={y - 11} className="st-value" textAnchor={press ? "start" : "end"}>
+      <path className="st-force-line" d={`M${tail} ${y}H${press ? tip + head : tip - head}`} />
+      <path className="st-force-head" d={press ? `M${tip} ${y}l${head} -4.5v9Z` : `M${tip} ${y}l${-head} -4.5v9Z`} />
+      <text x={fx + 6} y={y - 11} className="st-value">
         {svgSymbols(`${press ? "F_c" : "F_t"} = ${formatFixed(kn(Math.abs(force)), 1)}`)}
       </text>
-      <text x={press ? fx + 6 : fx - 6} y={y + 22} className="st-small" textAnchor={press ? "start" : "end"}>
+      <text x={fx + 6} y={y + 22} className="st-small">
         {svgSymbols("σ A at the centroid")}
       </text>
     </g>

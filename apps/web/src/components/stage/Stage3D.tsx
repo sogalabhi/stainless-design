@@ -615,7 +615,7 @@ export default function Stage3D({
     const hit = raycaster.current.intersectObject(state.face)[0];
     if (!hit) return setHover(null);
     const local = state.face.parent ? state.face.parent.worldToLocal(hit.point.clone()) : hit.point;
-    const lines = fibreLines(now.view.frames, now.frame, now.body.halfDepth, Boolean(now.body.hogging), local.y, now.fy);
+    const lines = fibreLines(now.view.frames, now.frame, now.body.halfDepth, Boolean(now.body.hogging), local.y, now.fy, now.view.frames.ultimate_stress ?? 0);
     setHover(lines ? { x: event.clientX - box.left, y: event.clientY - box.top, lines } : null);
   };
 

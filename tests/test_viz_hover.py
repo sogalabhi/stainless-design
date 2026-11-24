@@ -71,6 +71,7 @@ def _all_figures() -> dict[str, dict[str, Any]]:
 
 
 FIGURES = _all_figures()
+FU_1_4307 = 500.0  # f_u of grade 1.4307 in Table 5.1 (the figures' material)
 
 
 @pytest.mark.parametrize("name", sorted(FIGURES))
@@ -151,9 +152,16 @@ def test_stress_strain_hover_says_how_many_f_y_and_eps_y_each_value_is() -> None
     fy, eps_y = axes["y"]["ratio"]["factor"], axes["x"]["ratio"]["factor"]
     assert axes["y"]["ratio"]["label"] == "f<sub>y</sub>"
     assert "customdata[3]" in curve["hovertemplate"] and "f<sub>y</sub>" in curve["hovertemplate"]
-    for strain, stress, strain_ratio, stress_ratio in curve["customdata"]:
+    fu = FU_1_4307
+    for strain, stress, strain_ratio, stress_ratio, ultimate_ratio, classic_ratio in curve[
+        "customdata"
+    ]:
         assert strain_ratio == pytest.approx(strain / eps_y)
         assert stress_ratio == pytest.approx(stress / fy)
+        assert ultimate_ratio == pytest.approx(stress / fu)
+        # how many times the classic (flat-yield) stress at the same strain
+        classic = min(strain / eps_y, 1.0) * fy
+        assert classic_ratio == pytest.approx(stress / classic if classic else 1.0)
     # true scale: the strain multiple is on the value tag; schematic: on every hover
     assert "ε<sub>y</sub>" not in curve["hovertemplate"]
     schematic = _named(FIGURES["material schematic"], "CSM bilinear (B.4)")
@@ -183,3 +191,33 @@ def test_the_bending_hover_gives_the_moment_as_a_multiple_of_m_el_and_m_pl() -> 
     assert "M<sub>pl</sub>" in branch["hovertemplate"]
     (yours,) = [t for t in moment["data"] if t.get("name") == "Your section"]
     assert "M<sub>el</sub>" in yours["hovertemplate"] and "M<sub>pl</sub>" in yours["hovertemplate"]
+
+
+# --- one stress as a multiple of the others: f_y, f_u and the classic stress ---------------------
+
+
+def test_the_curve_hovers_give_the_stress_as_a_multiple_of_f_y_and_of_f_u() -> None:
+    figure = FIGURES["material true_scale"]
+    curve = _named(figure, "CSM bilinear (B.4)")
+    classic = _named(figure, "Elastic-perfectly plastic (classic)")
+    for trace in (curve, classic):
+        assert "customdata[3]" in trace["hovertemplate"]  # f_y
+        assert "customdata[4]" in trace["hovertemplate"]  # f_u
+    # and on the CSM curve, how many times the classic stress it is at that strain
+    assert "× the classic stress at this strain" in curve["hovertemplate"]
+    assert "customdata[5]" in curve["hovertemplate"]
+
+
+def test_every_marked_stress_is_given_against_f_y_and_f_u() -> None:
+    figure = FIGURES["material true_scale"]
+    (c1,) = [
+        t for t in figure["data"] if "C<sub>1</sub>ε<sub>u</sub> =" in t.get("hovertemplate", "")
+    ]
+    assert re.search(r"\d f<sub>y</sub> = [\d.]+ f<sub>u</sub>", c1["hovertemplate"])
+    for key in ("compression point true_scale", "tension", "comparison stress"):
+        marks = [t for t in FIGURES[key]["data"] if "N/mm²" in str(t.get("hovertemplate", ""))]
+        assert marks, key
+        for mark in marks:
+            hover = str(mark["hovertemplate"])
+            if "σ =" in hover or "f<sub>csm" in hover:
+                assert "f<sub>u</sub>" in hover, (key, hover)

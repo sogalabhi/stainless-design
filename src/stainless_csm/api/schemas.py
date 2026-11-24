@@ -228,6 +228,7 @@ class StageFramesOut(BaseModel):
     load_case: LoadCaseKey
     yield_strain: float = Field(description="eps_y")
     yield_stress: float = Field(description="f_y [N/mm2]")
+    ultimate_stress: float = Field(description="f_u [N/mm2]")
     frames: list[StageFrameOut] = Field(
         description="Ascending strain; the first is unloaded, the last is the strain limit"
     )

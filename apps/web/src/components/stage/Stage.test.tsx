@@ -314,4 +314,52 @@ describe("the 2D stage for a section not symmetric about the axis", () => {
     expect(d.match(/M/g)).toHaveLength(last.depth.length - 2);
     expect(container.querySelector(".st-forces")).not.toBeNull();
   });
+
+  it("draws C pointing at the cut and T pointing away from it, on the same side, so the two are opposite", () => {
+    const f = bendingView(bendingForces as unknown as BendingResponse);
+    const last = f.frames.frames[f.frames.frames.length - 1];
+    const sec = stageSection(
+      { ...defaultDeformationForm, kind: "template", shape: "I-section", fabrication: "rolled", h: 200, b: 100, tw: 5.6, tf: 8.5, r: 12 },
+      "bending",
+      "major",
+    )!;
+    const { container } = render(
+      <StageDrawing view={f} frame={last} section={sec} cValues={null} lit={null} fy={f.frames.yield_stress} whatIf={null} limitRatio={last.ratio} stressTop={Math.abs(last.stress)} forces />,
+    );
+    const L = stageLayout(sec, last.ratio, Math.abs(last.stress), f.frames.yield_stress, true);
+    const heads = [...container.querySelectorAll(".st-force-head")].map((p) => p.getAttribute("d")!);
+    const tips = heads.map((d) => Number(d.match(/^M([\d.]+)/)![1]));
+    const leans = heads.map((d) => Number(d.match(/l(-?[\d.]+)/)![1])); // the head leans back from its tip
+    // C: the tip is at the axis line and the head leans to the right of it, so the arrow points left
+    expect(tips[0]).toBeCloseTo(L.fx + 1);
+    expect(leans[0]).toBeGreaterThan(0);
+    // T: the tip is away from the axis line, to its right, and the head leans back left: it points right
+    expect(tips[1]).toBeGreaterThan(L.fx + 40);
+    expect(leans[1]).toBeLessThan(0);
+  });
+
+  it("points the stress arrows opposite ways: compression left, tension right", () => {
+    const f = bendingView(bendingForces as unknown as BendingResponse);
+    const last = f.frames.frames[f.frames.frames.length - 1];
+    const sec = stageSection(
+      { ...defaultDeformationForm, kind: "template", shape: "I-section", fabrication: "rolled", h: 200, b: 100, tw: 5.6, tf: 8.5, r: 12 },
+      "bending",
+      "major",
+    )!;
+    const { container } = render(
+      <StageDrawing view={f} frame={last} section={sec} cValues={null} lit={null} fy={f.frames.yield_stress} whatIf={null} limitRatio={last.ratio} stressTop={Math.abs(last.stress)} />,
+    );
+    const arrows = [...container.querySelectorAll(".st-arrow")];
+    expect(arrows.length).toBeGreaterThan(2);
+    const direction = (g: Element) => {
+      const line = g.querySelector("path:not(.st-arrow-head)")!.getAttribute("d")!;
+      const [tail, end] = [...line.matchAll(/(-?[\d.]+) /g)].map((m) => Number(m[1])).concat([Number(line.match(/H(-?[\d.]+)/)![1])]).filter((_, i, a) => i === 0 || i === a.length - 1);
+      return Math.sign(end - tail); // +1 points right, -1 points left
+    };
+    const dirs = arrows.map(direction);
+    expect(dirs).toContain(-1); // compression, in the upper half
+    expect(dirs).toContain(1); // tension, in the lower half
+    expect(dirs.slice(0, 2).every((d) => d === -1)).toBe(true);
+    expect(dirs.slice(-2).every((d) => d === 1)).toBe(true);
+  });
 });

@@ -173,6 +173,9 @@ export type StageProbe = {
   stress: number;
   /** σ / f_y */
   stressOverYield: number;
+  /** σ / f_u, and σ over the flat-yield (classic) stress at this strain; null where there is none to divide by */
+  stressOverUltimate: number | null;
+  stressOverClassic: number | null;
 };
 
 /**
@@ -185,16 +188,23 @@ export function probeAt(
   fy: number,
   sectionHeight: number | null,
   y: number,
+  /** f_u, so the stress can be read as a multiple of it too (0 or left out: not given) */
+  fu = 0,
 ): StageProbe | null {
   if (!(layout.halfDepth > 0) || y < layout.top || y > layout.bot) return null;
   const depth = (layout.mid - y) / layout.halfDepth;
   const stress = profileAt(frame.depth, frame.stress_profile, depth);
+  const strainRatio = profileAt(frame.depth, frame.strain_profile, depth);
+  // the classic stress at the same strain: elastic up to f_y, then flat
+  const classic = Math.min(Math.abs(strainRatio), 1) * fy;
   return {
     y,
     depth,
     z: sectionHeight !== null && sectionHeight > 0 ? (depth - (frame.neutral_depth ?? 0)) * (sectionHeight / 2) : null,
-    strainRatio: profileAt(frame.depth, frame.strain_profile, depth),
+    strainRatio,
     stress,
     stressOverYield: fy > 0 ? stress / fy : 0,
+    stressOverUltimate: fu > 0 ? stress / fu : null,
+    stressOverClassic: classic > 0 ? Math.abs(stress) / classic : null,
   };
 }

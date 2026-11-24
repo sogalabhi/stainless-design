@@ -166,6 +166,13 @@ export function Readout({
                 ? `first yield: f_y = ${formatFixed(fy, 0)}`
                 : `elastic, below f_y = ${formatFixed(fy, 0)}`}
         </span>
+        {view.frames.ultimate_stress ? (
+          <span className="readout-s">
+            {renderSymbols(
+              `= ${formatFixed(Math.abs(frame.stress) / fy, 2)} f_y = ${formatFixed(Math.abs(frame.stress) / view.frames.ultimate_stress, 2)} f_u`,
+            )}
+          </span>
+        ) : null}
       </div>
       <div>
         {whatIf ? (
@@ -260,7 +267,7 @@ export function Legend({ view, withPlate }: { view: StageView; withPlate: boolea
         <path className="st-arrow-head" d="M1 6l7 -3.6v7.2Z" />
       </svg>
     ),
-    text: "Stress on the cut face: an arrow pointing at the axis line presses, one pointing away pulls",
+    text: "Stress on the cut face: an arrow pointing left presses (compression), one pointing right pulls (tension)",
   });
   if (withPlate) items.push({ key: "plate", icon: swatch("st-lit"), text: "Plate that sets the strain limit" });
   return (

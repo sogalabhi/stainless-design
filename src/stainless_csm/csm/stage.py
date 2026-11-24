@@ -89,6 +89,7 @@ class StageFrames:
     load_case: LoadCase
     yield_strain: float  # ε_y
     yield_stress: float  # f_y
+    ultimate_stress: float  # f_u, so a stress can be read as a multiple of it too
     frames: tuple[StageFrame, ...]  # ascending ratio; the first is unloaded, the last is the limit
     source: Source
     # the working of the forces at the limit frame (textbook, plan.md 4i); empty without them
@@ -190,7 +191,13 @@ def _frames(
             )
         )
     return StageFrames(
-        case, eps_y, model.material.fy, tuple(out), source, equilibrium=state_of is not None
+        case,
+        eps_y,
+        model.material.fy,
+        model.material.fu,
+        tuple(out),
+        source,
+        equilibrium=state_of is not None,
     )
 
 

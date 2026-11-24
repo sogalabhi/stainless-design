@@ -154,6 +154,8 @@ export function fibreLines(
   hogging: boolean,
   y: number,
   fy: number,
+  /** f_u, so the stress can be read as a multiple of it too (0 or left out: not given) */
+  fu = 0,
 ): string[] | null {
   if (!(halfDepth > 0) || Math.abs(y) > halfDepth) return null;
   const u = y / halfDepth;
@@ -164,8 +166,10 @@ export function fibreLines(
   const lines = [
     `z = ${y - axis > 0 ? "+" : ""}${(y - axis).toFixed(1)} mm from the axis`,
     `ε = ${Math.abs(strain).toFixed(2)} ε_y, ${side}`,
-    `σ = ${Math.abs(stress).toFixed(1)} N/mm² = ${(Math.abs(stress) / fy).toFixed(2)} f_y`,
+    `σ = ${Math.abs(stress).toFixed(1)} N/mm² = ${(Math.abs(stress) / fy).toFixed(2)} f_y${fu > 0 ? ` = ${(Math.abs(stress) / fu).toFixed(2)} f_u` : ""}`,
   ];
+  const classic = Math.min(Math.abs(strain), 1) * fy;
+  if (classic > 0) lines.push(`= ${(Math.abs(stress) / classic).toFixed(2)} × the flat-yield stress at this strain`);
   const fibre = readFibre(frames.fibre_depth ?? [], frames.fibre_width ?? [], frame.fibre_force, hogging ? -u : u);
   if (fibre) {
     lines.push(

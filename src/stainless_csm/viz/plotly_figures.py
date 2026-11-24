@@ -159,6 +159,12 @@ def _times_fy(stress: float, fy: float) -> str:
     return _times(stress, fy, "f<sub>y</sub>")
 
 
+def _times_stress(stress: float, fy: float, fu: float) -> str:
+    """One stress as a multiple of each reference stress of the B.4 curve: 1.05 f<sub>y</sub> =
+    0.45 f<sub>u</sub>. The two ratios are numbers of the engine, never made in the browser."""
+    return f"{_times_fy(stress, fy)} = {_times(stress, fu, 'f<sub>u</sub>')}"
+
+
 def _readout(title: str, axes: dict[str, Any], tables: list[dict[str, Any]]) -> dict[str, Any]:
     """The top-level `readout` key of a figure: its short title, what each axis shows (keyed by
     the Plotly axis id: x, y, x2, ...), and the numbers of every series."""
@@ -289,9 +295,10 @@ def stress_strain_figure(
     # Each curve says its stress and how many f_y that is; the strain and its ε_y multiple are
     # given once in true scale (the unified header carries ε, the value tag the multiple) and on
     # every hover in the schematic view, where each point is read alone.
-    curve_hover = f"σ = %{{customdata[1]:.1f}} {STRESS} (%{{customdata[3]:.3g}} f<sub>y</sub>)" + (
-        "<br>ε = %{customdata[0]:.5f} (%{customdata[2]:.3g} ε<sub>y</sub>)" if schematic else ""
-    )
+    curve_hover = (
+        f"σ = %{{customdata[1]:.1f}} {STRESS} "
+        "(%{customdata[3]:.3g} f<sub>y</sub> = %{customdata[4]:.3g} f<sub>u</sub>)"
+    ) + ("<br>ε = %{customdata[0]:.5f} (%{customdata[2]:.3g} ε<sub>y</sub>)" if schematic else "")
 
     if tension is not None:
         end_strain, end_stress = tension.strain, tension.design_stress
@@ -339,6 +346,7 @@ def stress_strain_figure(
                 classic_stresses,
                 [e / eps_y for e in strains],
                 [v / fy for v in classic_stresses],
+                [v / fu for v in classic_stresses],
             ),
             hovertemplate=curve_hover + "<extra>Classic (EN 1993-1-1:2022, Fig. 7.9)</extra>",
             meta=meta("Elastic-perfectly plastic (classic)", classic_source, strains),
@@ -362,9 +370,16 @@ def stress_strain_figure(
             line={"color": BLUE, "width": 2.5},
             name="CSM bilinear (B.4)",
             customdata=_rows(
-                strains, stresses, [e / eps_y for e in strains], [v / fy for v in stresses]
+                strains,
+                stresses,
+                [e / eps_y for e in strains],
+                [v / fy for v in stresses],
+                [v / fu for v in stresses],
+                [v / c if c else 1.0 for v, c in zip(stresses, classic_stresses, strict=True)],
             ),
-            hovertemplate=curve_hover + "<extra>CSM (B.4)</extra>",
+            hovertemplate=curve_hover
+            + "<br>= %{customdata[5]:.3g} × the classic stress at this strain"
+            + "<extra>CSM (B.4)</extra>",
             meta=meta("CSM bilinear (B.4)", csm_source, strains),
         )
     )
@@ -390,7 +405,8 @@ def stress_strain_figure(
             "C₁ε_u",
             "bottom right",
             f"C<sub>1</sub>ε<sub>u</sub> = {eps_c1:.5f} ({_times_eps(eps_c1, eps_y)})<br>"
-            f"σ = {stress_c1:.1f} {STRESS} ({_times_fy(stress_c1, fy)})<br>(B.4, Table B.1)",
+            f"σ = {stress_c1:.1f} {STRESS} ({_times_stress(stress_c1, fy, fu)})<br>"
+            "(B.4, Table B.1)",
             "C₁ε_u",
             f"{CODE}, B.4, B.5, Table B.1",
         ),
@@ -615,7 +631,8 @@ def _add_tension_marks(
                 f"ε<sub>csm,t</sub> = {tension.strain:.5f} "
                 f"({_times_eps(tension.strain, model.yield_strain)}, B.14)<br>"
                 f"f<sub>csm,t</sub> = {tension.design_stress:.1f} {STRESS} "
-                f"({_times_fy(tension.design_stress, model.material.fy)}, B.13)<extra></extra>"
+                f"({_times_stress(tension.design_stress, model.material.fy, model.material.fu)}, "
+                "B.13)<extra></extra>"
             ),
             meta=_meta(
                 "Tension limit ε_csm,t",
@@ -709,10 +726,11 @@ def _add_compression_mark(
             f"({_times_eps(strain, model.yield_strain)}, B.5.1)<br>"
             + (
                 f"f<sub>csm</sub> = {stress:.1f} {STRESS} "
-                f"({_times_fy(stress, model.material.fy)}, B.17)"
+                f"({_times_stress(stress, model.material.fy, model.material.fu)}, B.17)"
                 if hardened
                 else f"E ε<sub>csm</sub> = {stress:.1f} {STRESS} "
-                f"({_times_fy(stress, model.material.fy)}, B.15 range: B.17 not used)"
+                f"({_times_stress(stress, model.material.fy, model.material.fu)}, "
+                "B.15 range: B.17 not used)"
             )
             + "<extra></extra>",
             meta=meta(series, source, [strain], role="point", y=y_col),
@@ -1110,10 +1128,11 @@ def comparison_stress_figure(model: CSMBilinearModel, comparison: Comparison) ->
                 None,
                 "Reference sections",
                 f"ε<sub>csm</sub> = %{{x:.5f}} (%{{customdata[1]:.3g}} ε<sub>y</sub>)<br>"
-                f"σ = %{{y:.1f}} {STRESS} (%{{customdata[2]:.3g}} f<sub>y</sub>) (B.4)",
+                f"σ = %{{y:.1f}} {STRESS} (%{{customdata[2]:.3g}} f<sub>y</sub> = "
+                "%{customdata[3]:.3g} f<sub>u</sub>) (B.4)",
                 _meta("Reference sections", source, strain_col, stress_col, "point"),
                 [
-                    [x / model.yield_strain, y / model.material.fy]
+                    [x / model.yield_strain, y / model.material.fy, y / model.material.fu]
                     for x, y in zip(xs, ys, strict=True)
                 ],
             )
@@ -1140,7 +1159,8 @@ def comparison_stress_figure(model: CSMBilinearModel, comparison: Comparison) ->
                 "text": ["your section"],
                 "hovertemplate": "your section<br>"
                 f"ε<sub>csm</sub> = %{{x:.5f}} ({_times_eps(x_yours, model.yield_strain)})<br>"
-                f"σ = %{{y:.1f}} {STRESS} ({_times_fy(y_yours, model.material.fy)}) (B.4)"
+                f"σ = %{{y:.1f}} {STRESS} "
+                f"({_times_stress(y_yours, model.material.fy, model.material.fu)}) (B.4)"
                 "<extra></extra>",
                 "mode": "markers",
                 "name": "Your section",
@@ -1751,7 +1771,8 @@ def bending_blocks_figure(model: CSMBilinearModel, result: BendingResult) -> dic
             stresses,
             BLUE,
             "Stress",
-            f"σ = %{{x:.4g}} {STRESS} (%{{customdata:.3g}} f<sub>y</sub>)"
+            f"σ = %{{x:.4g}} {STRESS} (%{{customdata[0]:.3g}} f<sub>y</sub> = "
+            "%{customdata[1]:.3g} f<sub>u</sub>)"
             "<br>(read from the B.4 curve)",
             stress_col,
             stress_source,
@@ -1767,7 +1788,7 @@ def bending_blocks_figure(model: CSMBilinearModel, result: BendingResult) -> dic
                 hoveron="points",
                 line={"color": color, "width": 2.5},
                 fillcolor="rgba(235, 104, 52, 0.18)" if col == 1 else BLUE_FILL,
-                customdata=[v / fy for v in xs] if col == 2 else None,
+                customdata=[[v / fy, v / model.material.fu] for v in xs] if col == 2 else None,
                 name=name,
                 hovertemplate="depth = %{y:.2f} (−1 tension edge, +1 compression edge)<br>"
                 + hover

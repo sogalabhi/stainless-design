@@ -2899,6 +2899,11 @@
             "title": "Yield Stress",
             "description": "f_y [N/mm2]"
           },
+          "ultimate_stress": {
+            "type": "number",
+            "title": "Ultimate Stress",
+            "description": "f_u [N/mm2]"
+          },
           "frames": {
             "items": {
               "$ref": "#/components/schemas/StageFrameOut"
@@ -2941,6 +2946,7 @@
           "load_case",
           "yield_strain",
           "yield_stress",
+          "ultimate_stress",
           "frames",
           "source"
         ],
