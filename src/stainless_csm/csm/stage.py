@@ -13,11 +13,23 @@ tension or compression every fibre carries the same strain, so both profiles are
 """
 
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import Enum
 
-from stainless_csm.core.trace import EN_1993_1_4, Source, SourceKind
+from stainless_csm.core import units
+from stainless_csm.core.trace import EN_1993_1_4, CalcStep, Source, SourceKind
+from stainless_csm.csm.stress_resultants import (
+    SOURCE as RESULTANTS_SOURCE,
+)
+from stainless_csm.csm.stress_resultants import (
+    Resultants,
+    fibre_forces,
+    fibre_table,
+    neutral_axis,
+    stress_resultants,
+)
 from stainless_csm.material_models.csm_bilinear import CSMBilinearModel
+from stainless_csm.sections.properties import Loop, Point
 
 # Equal steps from zero to the limit; the exact frames below are added to them.
 FRAME_STEPS = 120
@@ -56,6 +68,13 @@ class StageFrame:
     stress_profile: tuple[float, ...]  # σ at each depth, N/mm², compression positive
     resistance: float | None  # bending only: what B.19 / B.20 give if the limit were here, N mm
     marks: tuple[FrameMark, ...]
+    # Textbook, never a resistance (plan.md 4i). Bending: the forces of the stress block over the
+    # section outline; None when there is no outline. Tension and compression: axial_force, the
+    # one resultant σ A in N, compression positive; None when no area is given.
+    resultants: Resultants | None = None
+    axial_force: float | None = None
+    # bending: ∫σ dA from the nearer edge to each of the fibres of `StageFrames.fibre_depth`, N
+    fibre_force: tuple[float, ...] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -65,6 +84,11 @@ class StageFrames:
     yield_stress: float  # f_y
     frames: tuple[StageFrame, ...]  # ascending ratio; the first is unloaded, the last is the limit
     source: Source
+    # the working of the forces at the limit frame (textbook, plan.md 4i); empty without them
+    resultants_working: tuple[CalcStep, ...] = ()
+    # the fibres the hover reads (normalised depth) and the section's width at each, mm
+    fibre_depth: tuple[float, ...] = ()
+    fibre_width: tuple[float, ...] = ()
 
 
 def _ratios(limit: float, specials: list[float]) -> list[float]:
@@ -205,3 +229,115 @@ def bending_frames(
     )
     passes = passes_plastic_moment(moment, limit, plastic_moment)
     return _frames(model, LoadCase.BENDING, limit, None, source, moment, passes)
+
+
+def with_resultants(frames: StageFrames, loops: list[Loop], normal: Point) -> StageFrames:
+    """The frames with the forces of each stress block over the outline (Gere eqs. 10-3, 10-4).
+
+    `normal` points from the tension edge to the compression edge. Raises ValueError for a section
+    that is not symmetric about the bending axis.
+    """
+    axis = neutral_axis(loops, normal)
+    table = fibre_table(loops, normal, axis)
+    out = tuple(
+        replace(
+            f,
+            resultants=stress_resultants(
+                loops, normal, f.depth, f.stress_profile, frames.yield_stress, axis
+            ),
+            fibre_force=fibre_forces(table, loops, normal, f.depth, f.stress_profile),
+        )
+        for f in frames.frames
+    )
+    source = Source(
+        SourceKind.DERIVED,
+        f"{frames.source.citation}; forces of the drawn stress block: {RESULTANTS_SOURCE}",
+    )
+    return replace(
+        frames,
+        frames=out,
+        source=source,
+        resultants_working=_working(out[-1].resultants),
+        fibre_depth=table.depth,
+        fibre_width=table.width,
+    )
+
+
+def _working(r: Resultants | None) -> tuple[CalcStep, ...]:
+    """The lines of working for the forces at the limit frame, each citing Gere."""
+    if r is None:
+        return ()
+    gere = "Gere & Timoshenko, Mechanics of Materials, 2nd ed."
+
+    def step(
+        symbol: str,
+        text: str,
+        clause: str,
+        formula: str,
+        substituted: str,
+        value: float,
+        unit: str,
+        page: str,
+    ) -> CalcStep:
+        return CalcStep(
+            symbol,
+            text,
+            clause,
+            formula,
+            substituted,
+            value,
+            unit,
+            source=Source(SourceKind.TEXTBOOK, f"{gere}, {clause}, {page}"),
+        )
+
+    # In a band σ = a + b z; A, S and I are its area and its first and second moments about the
+    # neutral axis, so a band gives F = a A + b S and M = a S + b I.
+    bands = "Σ (a A + b S) over the bands"
+    return (
+        step(
+            "F_c",
+            "Compression force of the stress block",
+            "eq. (10-3)",
+            "∫σ dA, compression side",
+            bands,
+            r.force_compression,
+            units.FORCE,
+            "p. 516",
+        ),
+        step(
+            "F_t",
+            "Tension force of the stress block",
+            "eq. (10-3)",
+            "∫σ dA, tension side",
+            bands,
+            r.force_tension,
+            units.FORCE,
+            "p. 516",
+        ),
+        step(
+            "d_c + d_t",
+            "Lever arm between the two forces",
+            "Fig. 10-4, eq. (10-8)",
+            "∫σ y dA / ∫σ dA on each side, added",
+            f"{r.distance_compression:.6g} + {r.distance_tension:.6g}",
+            r.lever_arm,
+            units.LENGTH,
+            "pp. 518-519",
+        ),
+        step(
+            "M_block",
+            "Moment of the drawn stress block",
+            "eq. (10-4)",
+            "∫σ y dA",
+            "Σ (a S + b I) over the bands",
+            r.moment,
+            units.MOMENT,
+            "p. 517",
+        ),
+    )
+
+
+def with_axial_force(frames: StageFrames, area: float) -> StageFrames:
+    """The frames with the one resultant of a uniform stress, σ A (the term of B.12, B.15, B.16)."""
+    out = tuple(replace(f, axial_force=f.stress_profile[0] * area) for f in frames.frames)
+    return replace(frames, frames=out)

@@ -5,7 +5,7 @@ display only.
 """
 
 from enum import StrEnum
-from typing import Any, Self
+from typing import Any, Literal, Self
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -153,6 +153,30 @@ class FrameMarkKey(StrEnum):
     LIMIT = "limit"
 
 
+class ForcePartOut(BaseModel):
+    """One part of the stress block: the elastic core, the yielded zone or the hardening."""
+
+    name: str
+    side: Literal["compression", "tension"]
+    force: float = Field(description="Force of the part [N], a magnitude")
+    distance: float = Field(description="Distance of that force from the neutral axis [mm]")
+    moment: float = Field(description="Moment of the part about the neutral axis [N mm]")
+
+
+class ResultantsOut(BaseModel):
+    """The forces of a frame's stress block over the section outline. Textbook (Gere eqs. 10-3,
+    10-4), a picture and a readout: never the resistance."""
+
+    force_compression: float = Field(description="F_c [N]")
+    force_tension: float = Field(description="F_t [N], a magnitude")
+    distance_compression: float = Field(description="z_c from the neutral axis [mm]")
+    distance_tension: float = Field(description="z_t from the neutral axis [mm]")
+    lever_arm: float = Field(description="z_c + z_t [mm]")
+    moment: float = Field(description="Moment of the drawn stress block [N mm]")
+    balance: float = Field(description="|F_c - F_t| / max(F_c, F_t); about zero")
+    parts: list[ForcePartOut]
+
+
 class StageFrameOut(BaseModel):
     """One state of the section on its way to the strain limit. The browser shows it as it is."""
 
@@ -178,6 +202,19 @@ class StageFrameOut(BaseModel):
         "frame [N mm]"
     )
     marks: list[FrameMarkKey]
+    resultants: ResultantsOut | None = Field(
+        default=None,
+        description="Bending only: the forces of the stress block; null without a section outline",
+    )
+    fibre_force: list[float] | None = Field(
+        default=None,
+        description="Bending with an outline: the force from the nearer edge to each fibre of "
+        "fibre_depth [N], a magnitude (the integral of sigma dA over that part of the section)",
+    )
+    axial_force: float | None = Field(
+        default=None,
+        description="Tension and compression: the one resultant sigma A [N], compression positive",
+    )
 
 
 class StageFramesOut(BaseModel):
@@ -190,6 +227,17 @@ class StageFramesOut(BaseModel):
         description="Ascending strain; the first is unloaded, the last is the strain limit"
     )
     source: SourceOut = Field(description="Where the frames come from (plan.md, section 4h)")
+    fibre_depth: list[float] = Field(
+        default_factory=list,
+        description="The fibres the hover reads: normalised depth, -1 tension to +1 compression",
+    )
+    fibre_width: list[float] = Field(
+        default_factory=list, description="The section's width at each fibre of fibre_depth [mm]"
+    )
+    resultants_working: list[TraceStepOut] = Field(
+        default_factory=list,
+        description="Working of the stress-block forces at the limit frame, each step cited",
+    )
 
 
 class TensionResponse(BaseModel):

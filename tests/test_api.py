@@ -1202,3 +1202,63 @@ def test_frames_have_no_emoji_and_no_verdict() -> None:
         assert not EMOJI.search(text)
         out = json.loads(text)
         assert not {"utilisation", "passes", "verdict", "gain"} & set(out)
+
+
+# --- the forces of the stress block (plan.md 4i, textbook) ----------------------------------
+
+
+def template_bending_body(**changes: object) -> dict[str, object]:
+    return bending_body(
+        "1.4301",
+        geometry={**i_template(), "k_sigma": {"web": 23.9, "flange": 0.43}},
+        w_el=194_317.7,
+        w_pl=220_639.6,
+        gamma_m0=1.0,
+        **changes,
+    )
+
+
+def test_bending_template_frames_carry_the_forces_of_the_stress_block() -> None:
+    api = client.post(f"{V1}/bending", json=template_bending_body()).json()
+    listed = api_frames(api["frames"])
+    assert all(f["resultants"] is not None for f in listed)
+    last = listed[-1]["resultants"]
+    assert last["force_compression"] == pytest.approx(last["force_tension"], rel=1e-9)
+    assert last["moment"] == pytest.approx(last["force_compression"] * last["lever_arm"], rel=1e-9)
+    assert last["balance"] < 1e-9
+    assert listed[0]["resultants"]["force_compression"] == 0.0
+    assert "Gere & Timoshenko" in api["frames"]["source"]["citation"]
+    working = api["frames"]["resultants_working"]
+    assert [step["symbol"] for step in working] == ["F_c", "F_t", "d_c + d_t", "M_block"]
+    assert all(step["source"]["kind"] == "textbook" for step in working)
+    assert working[0]["value"] == last["force_compression"]
+
+
+def test_bending_forces_of_the_block_at_first_yield_are_the_elastic_ones() -> None:
+    """At ε/ε_y = 1 the block is the elastic one: moment = f_y W_el (Gere eq. 10-5)."""
+    api = client.post(f"{V1}/bending", json=template_bending_body()).json()
+    first = next(f for f in api_frames(api["frames"]) if "first_yield" in f["marks"])
+    fy = api["frames"]["yield_stress"]
+    assert first["resultants"]["moment"] == pytest.approx(fy * 194_317.7, rel=1e-4)
+
+
+def test_bending_without_an_outline_has_no_forces() -> None:
+    api = client.post(f"{V1}/bending", json=bending_body()).json()
+    assert all(f["resultants"] is None for f in api_frames(api["frames"]))
+    assert api["frames"]["resultants_working"] == []
+
+
+def test_bending_minor_axis_of_a_template_has_forces_too() -> None:
+    api = client.post(f"{V1}/bending", json=template_bending_body(axis="minor")).json()
+    last = api_frames(api["frames"])[-1]["resultants"]
+    assert last is not None
+    assert last["force_compression"] == pytest.approx(last["force_tension"], rel=1e-9)
+
+
+def test_tension_and_compression_frames_carry_one_force_sigma_a() -> None:
+    tension = client.post(f"{V1}/tension", json=tension_body()).json()
+    for f in api_frames(tension["frames"]):
+        assert f["axial_force"] == pytest.approx(-f["stress"] * 1000, rel=1e-12)
+    compression = client.post(f"{V1}/compression", json=compression_body()).json()
+    for f in api_frames(compression["frames"]):
+        assert f["axial_force"] == pytest.approx(f["stress"] * 1000, rel=1e-12)

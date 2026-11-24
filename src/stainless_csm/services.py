@@ -33,6 +33,7 @@ from stainless_csm.csm.slenderness import (
     direct_slenderness,
     plates_slenderness,
 )
+from stainless_csm.csm.stage import StageFrames, with_axial_force, with_resultants
 from stainless_csm.csm.tension import CSMTension, TensionInput, TensionResult
 from stainless_csm.data.repository import GradeRepository, csm_coefficients_for
 from stainless_csm.material_models.csm_bilinear import CSMBilinearModel
@@ -42,6 +43,7 @@ from stainless_csm.sections.properties import (
     CustomNode,
     SectionProperties,
     custom_section_properties,
+    outline,
     section_properties,
 )
 from stainless_csm.sections.templates import (
@@ -144,7 +146,8 @@ def run_tension(model: CSMBilinearModel, form: TensionForm) -> TensionResult:
         has_holes=form.has_holes,
         gamma_m0=form.gamma_m0,
     )
-    return CSMTension(data).calculate()
+    result = CSMTension(data).calculate()
+    return replace(result, frames=with_axial_force(result.frames, form.area))
 
 
 # --- B.5: cross-section deformation capacity ---------------------------------------------
@@ -374,6 +377,7 @@ def run_compression(model: CSMBilinearModel, form: CompressionForm) -> Compressi
         model=model, deformation=outcome.capacity, area=form.area, gamma_m0=form.gamma_m0
     )
     result = CSMCompression(data).calculate()
+    result = replace(result, frames=with_axial_force(result.frames, form.area))
     trace = CalcTrace(model.trace.steps)
     for step in outcome.trace:
         trace.add(step)
@@ -405,6 +409,20 @@ class BendingOutcome:
     deformation: DeformationOutcome  # B.5 for the section in bending
     result: BendingResult
     trace: CalcTrace  # B.4, then the B.5 steps the result depends on, then B.6.3
+
+
+def _with_forces(frames: StageFrames, geometry: GeometryForm, form: BendingForm) -> StageFrames:
+    """The forces of the stress block, where the section has an outline (a template) and is
+    symmetric about the bending axis; otherwise the frames as they are."""
+    if geometry.kind is not GeometryKind.TEMPLATE:
+        return frames
+    # the outline has y to the right and z up: bending about y-y has its depth along z
+    normal = (1.0, 0.0) if form.axis is BendingAxis.MINOR else (0.0, 1.0)
+    try:
+        loops = outline(build_template(geometry, for_plates=False))
+        return with_resultants(frames, loops, normal)
+    except (ValueError, InvalidSectionError):
+        return frames
 
 
 def run_bending(model: CSMBilinearModel, form: BendingForm) -> BendingOutcome:
@@ -443,6 +461,7 @@ def run_bending(model: CSMBilinearModel, form: BendingForm) -> BendingOutcome:
         legs_equal=legs_equal,
     )
     result = CSMBending(data).calculate()
+    result = replace(result, frames=_with_forces(result.frames, geometry, form))
     trace = CalcTrace(model.trace.steps)
     for step in outcome.trace:
         trace.add(step)

@@ -1089,6 +1089,76 @@
       ],
       "detail": "Formula B.19 for ε_csm/ε_y below 1.0, Formula B.20 from 1.0. Both start from the strain limit ε_csm of B.5.1, found for the section in bending, and divide by γ_M0. This is the cross-section resistance only: lateral-torsional buckling and the member are outside Annex B, and comparing it with an applied moment is left to you.",
       "diagram": "bending"
+    },
+    {
+      "group": "Stress block forces (textbook)",
+      "symbol": "F_c",
+      "latex": "F_c",
+      "name": "Compression force of the stress block",
+      "meaning": "The resultant of the compressive stress over the section, ∫σ dA on the compression side.",
+      "unit": "N",
+      "clause": "Gere eq. (10-3)",
+      "topics": [
+        "bending"
+      ],
+      "detail": "Gere & Timoshenko, Mechanics of Materials, 2nd ed., eq. (10-3), p. 516, with the stress of the frame read from the B.4 curve. The engine integrates it exactly over the section outline. A picture and a readout from the Forces choice of the Section Stage, never the resistance: M_csm,c,Rd stays the value of B.19 and B.20. Gere's C and T are written F_c and F_t because C₁, C₂ and C₃ are the Table B.1 coefficients.",
+      "diagram": "bending"
+    },
+    {
+      "group": "Stress block forces (textbook)",
+      "symbol": "F_t",
+      "latex": "F_t",
+      "name": "Tension force of the stress block",
+      "meaning": "The resultant of the tensile stress over the section, a magnitude; equal to F_c in pure bending.",
+      "unit": "N",
+      "clause": "Gere eq. (10-3)",
+      "topics": [
+        "bending"
+      ],
+      "detail": "Gere & Timoshenko, eq. (10-3), p. 516. In pure bending the section is in equilibrium, so F_t equals F_c; the result carries the check. A picture and a readout from the Forces choice of the Section Stage, never the resistance: M_csm,c,Rd stays the value of B.19 and B.20. Gere's C and T are written F_c and F_t because C₁, C₂ and C₃ are the Table B.1 coefficients.",
+      "diagram": "bending"
+    },
+    {
+      "group": "Stress block forces (textbook)",
+      "symbol": "d_c",
+      "latex": "d_c",
+      "name": "Distance of F_c from the neutral axis",
+      "meaning": "Where the compression force acts: ∫σ y dA over the compression side divided by F_c.",
+      "unit": "mm",
+      "clause": "Gere eq. (10-8)",
+      "topics": [
+        "bending"
+      ],
+      "detail": "Gere & Timoshenko, Fig. 10-4 and eq. (10-8), pp. 518-519: the force acts at the centroid of its part of the stress block. A picture and a readout from the Forces choice of the Section Stage, never the resistance: M_csm,c,Rd stays the value of B.19 and B.20. Gere's C and T are written F_c and F_t because C₁, C₂ and C₃ are the Table B.1 coefficients.",
+      "diagram": "bending"
+    },
+    {
+      "group": "Stress block forces (textbook)",
+      "symbol": "d_t",
+      "latex": "d_t",
+      "name": "Distance of F_t from the neutral axis",
+      "meaning": "Where the tension force acts, measured from the neutral axis as a distance.",
+      "unit": "mm",
+      "clause": "Gere eq. (10-8)",
+      "topics": [
+        "bending"
+      ],
+      "detail": "Gere & Timoshenko, Fig. 10-4 and eq. (10-8), pp. 518-519. A picture and a readout from the Forces choice of the Section Stage, never the resistance: M_csm,c,Rd stays the value of B.19 and B.20. Gere's C and T are written F_c and F_t because C₁, C₂ and C₃ are the Table B.1 coefficients.",
+      "diagram": "bending"
+    },
+    {
+      "group": "Stress block forces (textbook)",
+      "symbol": "M_block",
+      "latex": "M_{block}",
+      "name": "Moment of the drawn stress block",
+      "meaning": "∫σ y dA over the section: the moment the drawn stress block carries, equal to F_c times the lever arm z_c + z_t.",
+      "unit": "N mm",
+      "clause": "Gere eq. (10-4)",
+      "topics": [
+        "bending"
+      ],
+      "detail": "Gere & Timoshenko, eq. (10-4), p. 517. It differs a little from M_csm,c,Rd: γ_M0 divides the code value and not the block, B.20 is a fitted formula, and W_el and W_pl are typed while the block is integrated over the drawn outline. A picture and a readout from the Forces choice of the Section Stage, never the resistance: M_csm,c,Rd stays the value of B.19 and B.20. Gere's C and T are written F_c and F_t because C₁, C₂ and C₃ are the Table B.1 coefficients.",
+      "diagram": "bending"
     }
   ]
 }

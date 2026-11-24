@@ -297,6 +297,44 @@ def _side(loops: list[Loop], normal: Point, offset: float) -> tuple[float, float
     return m.area, normal[0] * m.sy + normal[1] * m.sz - offset * m.area
 
 
+@dataclass(frozen=True, slots=True)
+class BandMoments:
+    """Area, first moment and second moment of a strip of the section about a line.
+
+    The line is normal · p = centre; z = normal · p - centre is the distance from it, positive on
+    the side the normal points to. The strip is the part with low <= z <= high.
+    area = ∫dA, first = ∫z dA, second = ∫z² dA.
+    """
+
+    area: float
+    first: float
+    second: float
+
+
+def band_moments(
+    loops: list[Loop], normal: Point, centre: float, low: float, high: float
+) -> BandMoments:
+    """Moments of the strip low <= z <= high about the line normal · p = centre (exact polygon).
+
+    Geometry, not a rule of EN 1993-1-4. It cuts each loop by two half-planes (`_clip`) and takes
+    Green's theorem sums (`_moments`), the same two steps the plastic modulus uses.
+    """
+    ny, nz = normal
+    strip = [
+        _clip(_clip(loop, normal, centre + low), (-ny, -nz), -(centre + high))
+        for loop in loops
+        if loop
+    ]
+    m = _moments([c for c in strip if c])
+    along = ny * m.sy + nz * m.sz  # ∫ (normal · p) dA
+    along_sq = ny * ny * m.iyy + nz * nz * m.izz + 2 * ny * nz * m.iyz  # ∫ (normal · p)² dA
+    return BandMoments(
+        m.area,
+        along - centre * m.area,
+        along_sq - 2 * centre * along + centre * centre * m.area,
+    )
+
+
 def _plastic_axis(loops: list[Loop], total: float, normal: Point) -> tuple[float, float]:
     """(offset of the equal-area line normal · p = offset, plastic modulus about it)."""
     values = [normal[0] * y + normal[1] * z for loop in loops for y, z in loop]

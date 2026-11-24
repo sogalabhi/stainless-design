@@ -9,6 +9,7 @@ from stainless_csm.csm.bending import BendingAxis, BendingResult, table_b2_rows
 from stainless_csm.csm.deformation_capacity import LIMITS, DeformationResult, SectionFamily
 from stainless_csm.csm.slenderness import SlendernessResult
 from stainless_csm.csm.stage import StageFrames
+from stainless_csm.csm.stress_resultants import Resultants
 from stainless_csm.data.repository import GradeRepository, csm_coefficients_for
 from stainless_csm.material_models.csm_bilinear import CSMBilinearModel
 from stainless_csm.materials.material import Material
@@ -106,6 +107,24 @@ def trace_steps(trace: CalcTrace) -> list[s.TraceStepOut]:
     ]
 
 
+def resultants_out(r: Resultants) -> s.ResultantsOut:
+    return s.ResultantsOut(
+        force_compression=r.force_compression,
+        force_tension=r.force_tension,
+        distance_compression=r.distance_compression,
+        distance_tension=r.distance_tension,
+        lever_arm=r.lever_arm,
+        moment=r.moment,
+        balance=r.balance,
+        parts=[
+            s.ForcePartOut(
+                name=p.name, side=p.side, force=p.force, distance=p.distance, moment=p.moment
+            )
+            for p in r.parts
+        ],
+    )
+
+
 def stage_frames_out(frames: StageFrames) -> s.StageFramesOut:
     return s.StageFramesOut(
         load_case=s.LoadCaseKey(frames.load_case.value),
@@ -122,10 +141,16 @@ def stage_frames_out(frames: StageFrames) -> s.StageFramesOut:
                 stress_profile=list(f.stress_profile),
                 resistance=f.resistance,
                 marks=[s.FrameMarkKey(m.value) for m in f.marks],
+                resultants=None if f.resultants is None else resultants_out(f.resultants),
+                axial_force=f.axial_force,
+                fibre_force=None if f.fibre_force is None else [round(v, 1) for v in f.fibre_force],
             )
             for f in frames.frames
         ],
         source=s.SourceOut(kind=frames.source.kind, citation=frames.source.citation),
+        fibre_depth=list(frames.fibre_depth),
+        fibre_width=[round(v, 3) for v in frames.fibre_width],
+        resultants_working=trace_steps(CalcTrace(frames.resultants_working)),
     )
 
 
