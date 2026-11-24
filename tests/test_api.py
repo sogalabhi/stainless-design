@@ -1262,3 +1262,86 @@ def test_tension_and_compression_frames_carry_one_force_sigma_a() -> None:
     compression = client.post(f"{V1}/compression", json=compression_body()).json()
     for f in api_frames(compression["frames"]):
         assert f["axial_force"] == pytest.approx(f["stress"] * 1000, rel=1e-12)
+
+
+# --- unsymmetric and custom sections: the neutral axis from equilibrium ----------------------
+
+
+CUSTOM_NODES = [
+    {"id": 1, "x": 0, "y": 0},
+    {"id": 2, "x": 0, "y": 280},
+    {"id": 3, "x": -47, "y": 280},
+    {"id": 4, "x": 47, "y": 280},
+    {"id": 5, "x": -97, "y": 0},
+    {"id": 6, "x": 97, "y": 0},
+]
+CUSTOM_LINKS = [
+    {"from_node": 1, "to_node": 2, "thickness": 6},
+    {"from_node": 3, "to_node": 2, "thickness": 10},
+    {"from_node": 2, "to_node": 4, "thickness": 10},
+    {"from_node": 5, "to_node": 1, "thickness": 10},
+    {"from_node": 1, "to_node": 6, "thickness": 10},
+]
+
+
+def custom_bending_body(**changes: object) -> dict[str, object]:
+    """The unequal-flange example: the plates carry B.5, the nodes and links carry the outline."""
+    body = bending_body(
+        "1.4301",
+        geometry={
+            "kind": "plates",
+            "plates": [plate_input("web", 280, 6, 23.9), plate_input("flange", 37, 10, 0.43)],
+        },
+        w_el=181_000,
+        w_pl=222_000,
+    )
+    return {**body, "custom_section": {"nodes": CUSTOM_NODES, "links": CUSTOM_LINKS}, **changes}
+
+
+def test_custom_section_frames_find_the_neutral_axis_and_the_forces_balance() -> None:
+    r = client.post(f"{V1}/bending", json=custom_bending_body())
+    assert r.status_code == 200
+    api = r.json()
+    listed = api_frames(api["frames"])
+    assert "∫σ dA = 0" in api["frames"]["source"]["citation"]
+    # the axis starts at the centroid, not at mid-depth, and the stress profile has no symmetry
+    assert all(f["neutral_depth"] != 0.0 for f in listed[1:])
+    last = listed[-1]
+    assert last["resultants"] is not None
+    assert last["resultants"]["balance"] < 1e-8
+    assert last["strain_profile"][-1] == pytest.approx(last["ratio"])
+    assert abs(last["strain_profile"][0]) != pytest.approx(
+        last["ratio"]
+    )  # the tension edge differs
+    assert last["fibre_force"] is not None
+    assert api["frames"]["resultants_working"]
+
+
+def test_custom_section_hogging_turns_the_section_over() -> None:
+    sagging = client.post(f"{V1}/bending", json=custom_bending_body()).json()
+    hogging = client.post(f"{V1}/bending", json=custom_bending_body(hogging=True)).json()
+    a, b = api_frames(sagging["frames"])[-1], api_frames(hogging["frames"])[-1]
+    # a different edge is compressed, so the strain at the other edge and the axis are different
+    assert a["neutral_depth"] != pytest.approx(b["neutral_depth"], abs=1e-6)
+    assert a["strain_profile"][0] != pytest.approx(b["strain_profile"][0])
+    assert b["resultants"]["balance"] < 1e-8
+    # the resistance is the typed W and B.19/B.20: the same either way
+    assert sagging["resistance"] == hogging["resistance"]
+
+
+def test_custom_section_with_a_broken_table_is_still_a_bending_result_without_forces() -> None:
+    body = custom_bending_body(
+        custom_section={
+            "nodes": CUSTOM_NODES,
+            "links": [{"from_node": 1, "to_node": 99, "thickness": 6}],
+        }
+    )
+    api = client.post(f"{V1}/bending", json=body).json()
+    assert all(f["resultants"] is None for f in api_frames(api["frames"]))
+
+
+def test_a_symmetric_template_frames_are_unchanged_by_the_equilibrium() -> None:
+    api = client.post(f"{V1}/bending", json=template_bending_body()).json()
+    assert all(f["neutral_depth"] == 0.0 for f in api_frames(api["frames"]))
+    last = api_frames(api["frames"])[-1]
+    assert last["strain_profile"][0] == pytest.approx(-last["strain_profile"][-1])

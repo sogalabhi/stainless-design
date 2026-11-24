@@ -206,6 +206,11 @@ class StageFrameOut(BaseModel):
         default=None,
         description="Bending only: the forces of the stress block; null without a section outline",
     )
+    neutral_depth: float = Field(
+        default=0.0,
+        description="Where the neutral axis lies on the same scale as depth: 0 is mid-depth. It "
+        "moves for a section that is not symmetric about the axis of bending",
+    )
     fibre_force: list[float] | None = Field(
         default=None,
         description="Bending with an outline: the force from the nearer edge to each fibre of "
@@ -564,6 +569,25 @@ class BendingFormulaKey(StrEnum):
     B20 = "b20"
 
 
+class CustomNodeIn(BaseModel):
+    id: int = Field(description="The number the links refer to")
+    x: float = Field(description="mm, to the right")
+    y: float = Field(description="mm, upwards")
+
+
+class CustomLinkIn(BaseModel):
+    from_node: int = Field(description="Node id at one end of the plate")
+    to_node: int = Field(description="Node id at the other end")
+    thickness: float = Field(description="Plate thickness t [mm]")
+
+
+class CustomPropertiesRequest(BaseModel):
+    """A custom section: the nodes (x, y) and the flat plates between them."""
+
+    nodes: list[CustomNodeIn]
+    links: list[CustomLinkIn]
+
+
 class BendingRequest(BaseModel):
     """The section in bending (B.6.3.1(1), B.6.3.2): every value outside Annex B is an input.
 
@@ -586,6 +610,17 @@ class BendingRequest(BaseModel):
     w_pl: float = Field(description="Plastic section modulus W_pl about the axis [mm3], an input")
     gamma_m0: float = Field(description="Partial factor gamma_M0, an input")
     lambda_lt: float = Field(description="Relative slenderness for lateral-torsional buckling")
+    custom_section: CustomPropertiesRequest | None = Field(
+        default=None,
+        description="The nodes and links of a custom section. Only draws the stress through the "
+        "depth and the forces of the stress block (the neutral axis from equilibrium); the "
+        "resistance does not use it",
+    )
+    hogging: bool = Field(
+        default=False,
+        description="Compression at the bottom edge of the drawing (hogging): the section is "
+        "turned over, which matters for a section that is not symmetric about the axis",
+    )
 
 
 class BendingParameterRowOut(BaseModel):
@@ -653,25 +688,6 @@ class SectionPropertiesRequest(BaseModel):
     r_o: float | None = Field(
         default=None, description="Outer corner radius r_o [mm] of a rectangular hollow section"
     )
-
-
-class CustomNodeIn(BaseModel):
-    id: int = Field(description="The number the links refer to")
-    x: float = Field(description="mm, to the right")
-    y: float = Field(description="mm, upwards")
-
-
-class CustomLinkIn(BaseModel):
-    from_node: int = Field(description="Node id at one end of the plate")
-    to_node: int = Field(description="Node id at the other end")
-    thickness: float = Field(description="Plate thickness t [mm]")
-
-
-class CustomPropertiesRequest(BaseModel):
-    """A custom section: the nodes (x, y) and the flat plates between them."""
-
-    nodes: list[CustomNodeIn]
-    links: list[CustomLinkIn]
 
 
 class PointOut(BaseModel):

@@ -41,7 +41,10 @@ from stainless_csm.materials.material import Material
 from stainless_csm.sections.properties import (
     CustomLink,
     CustomNode,
+    Loop,
     SectionProperties,
+    WidthProfile,
+    custom_loops,
     custom_section_properties,
     outline,
     section_properties,
@@ -402,6 +405,12 @@ class BendingForm:
     w_pl: float  # mm³
     gamma_m0: float
     lambda_lt: float
+    # the outline of a custom section, for the stress through the depth and the forces (never a
+    # resistance); a template gives its own
+    custom_nodes: tuple[CustomNode, ...] = ()
+    custom_links: tuple[CustomLink, ...] = ()
+    # compression at the bottom edge of the drawing: the section is turned over
+    hogging: bool = False
 
 
 @dataclass(frozen=True)
@@ -411,17 +420,39 @@ class BendingOutcome:
     trace: CalcTrace  # B.4, then the B.5 steps the result depends on, then B.6.3
 
 
-def _with_forces(frames: StageFrames, geometry: GeometryForm, form: BendingForm) -> StageFrames:
-    """The forces of the stress block, where the section has an outline (a template) and is
-    symmetric about the bending axis; otherwise the frames as they are."""
-    if geometry.kind is not GeometryKind.TEMPLATE:
-        return frames
-    # the outline has y to the right and z up: bending about y-y has its depth along z
-    normal = (1.0, 0.0) if form.axis is BendingAxis.MINOR else (0.0, 1.0)
+def _outline(geometry: GeometryForm, form: BendingForm) -> list[Loop] | None:
+    """The section's outline where there is one: a template, or the nodes and links of a custom
+    section. With plates typed one by one, or a typed σ_cr,cs, there is none. Never an input to a
+    resistance: it only draws the stress through the depth and the forces of the stress block."""
     try:
-        loops = outline(build_template(geometry, for_plates=False))
-        return with_resultants(frames, loops, normal)
-    except (ValueError, InvalidSectionError):
+        if form.custom_links:
+            return custom_loops(list(form.custom_nodes), list(form.custom_links))
+        if geometry.kind is GeometryKind.TEMPLATE:
+            return outline(build_template(geometry, for_plates=False))
+    except InvalidSectionError:
+        return None
+    return None
+
+
+def _depth_normal(form: BendingForm) -> tuple[float, float]:
+    """The unit vector from the tension edge to the compression edge, in the outline's axes.
+
+    The outline has y to the right and z up. The Stage draws bending about the major axis with the
+    depth along z, and about the minor axis turned a quarter, so its depth runs along -y (the
+    drawing turns (x, y) to (y, -x)). Hogging has the compression at the other edge.
+    """
+    sign = -1.0 if form.hogging else 1.0
+    return (-sign, 0.0) if form.axis is BendingAxis.MINOR else (0.0, sign)
+
+
+def _with_forces(frames: StageFrames, loops: list[Loop] | None, form: BendingForm) -> StageFrames:
+    """The forces of the stress block over the outline; the frames as they are where there is no
+    outline, or the section is unsymmetric and the frames could not find its neutral axis."""
+    if loops is None:
+        return frames
+    try:
+        return with_resultants(frames, loops, _depth_normal(form))
+    except ValueError:
         return frames
 
 
@@ -438,6 +469,7 @@ def run_bending(model: CSMBilinearModel, form: BendingForm) -> BendingOutcome:
             "The section template and the section type of the bending check are different shapes."
         )
     outcome = run_deformation_capacity(model, form.deformation)
+    loops = _outline(geometry, form)
     circular = outcome.family is SectionFamily.CIRCULAR_HOLLOW
     if circular is not (form.section_type is SectionType.CHS):
         raise InvalidSectionError(
@@ -459,9 +491,10 @@ def run_bending(model: CSMBilinearModel, form: BendingForm) -> BendingOutcome:
         lambda_lt=form.lambda_lt,
         h_over_b=h_over_b,
         legs_equal=legs_equal,
+        profile=None if loops is None else WidthProfile(loops, _depth_normal(form)),
     )
     result = CSMBending(data).calculate()
-    result = replace(result, frames=_with_forces(result.frames, geometry, form))
+    result = replace(result, frames=_with_forces(result.frames, loops, form))
     trace = CalcTrace(model.trace.steps)
     for step in outcome.trace:
         trace.add(step)

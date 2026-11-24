@@ -76,7 +76,7 @@ def test_below_yield_moment_is_ratio_times_elastic_moment(ratio: float) -> None:
 
 
 def test_fully_plastic_moment_is_sigma_y_times_z() -> None:
-    """Gere eq. (10-9), p. 519: M_p = σ_y Z; the arm is Z/(A/2) (eq. 10-8, Fig. 10-4)."""
+    """Gere eq. (10-9): M_p = σ_y Z; the arm is Z/(A/2) (eq. 10-8, Fig. 10-4)."""
     r = gere(1e6)
     assert r.moment == pytest.approx(FY_GERE * Z_GERE, rel=1e-6)
     assert r.lever_arm == pytest.approx(Z_GERE / (A_GERE / 2), rel=1e-6)

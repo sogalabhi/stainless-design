@@ -17,7 +17,10 @@ from dataclasses import dataclass, replace
 from enum import Enum
 
 from stainless_csm.core import units
+from stainless_csm.core.errors import OutOfRangeError
 from stainless_csm.core.trace import EN_1993_1_4, CalcStep, Source, SourceKind
+from stainless_csm.csm.equilibrium import SOURCE as EQUILIBRIUM_SOURCE
+from stainless_csm.csm.equilibrium import DepthState, equilibrium_state
 from stainless_csm.csm.stress_resultants import (
     SOURCE as RESULTANTS_SOURCE,
 )
@@ -25,11 +28,12 @@ from stainless_csm.csm.stress_resultants import (
     Resultants,
     fibre_forces,
     fibre_table,
+    mid_depth,
     neutral_axis,
     stress_resultants,
 )
 from stainless_csm.material_models.csm_bilinear import CSMBilinearModel
-from stainless_csm.sections.properties import Loop, Point
+from stainless_csm.sections.properties import Loop, Point, WidthProfile
 
 # Equal steps from zero to the limit; the exact frames below are added to them.
 FRAME_STEPS = 120
@@ -73,6 +77,9 @@ class StageFrame:
     # one resultant σ A in N, compression positive; None when no area is given.
     resultants: Resultants | None = None
     axial_force: float | None = None
+    # where the neutral axis lies on the normalised depth scale (0 is mid-depth); it moves for a
+    # section that is not symmetric about the axis of bending, as the material yields
+    neutral_depth: float = 0.0
     # bending: ∫σ dA from the nearer edge to each of the fibres of `StageFrames.fibre_depth`, N
     fibre_force: tuple[float, ...] | None = None
 
@@ -89,6 +96,10 @@ class StageFrames:
     # the fibres the hover reads (normalised depth) and the section's width at each, mm
     fibre_depth: tuple[float, ...] = ()
     fibre_width: tuple[float, ...] = ()
+    # the frames come from equilibrium over the section's outline (the neutral axis is found, not
+    # assumed at mid-depth); `fallback` says why they do not, where the outline could not give them
+    equilibrium: bool = False
+    fallback: str | None = None
 
 
 def _ratios(limit: float, specials: list[float]) -> list[float]:
@@ -131,6 +142,7 @@ def _frames(
     source: Source,
     moment: Callable[[float], float] | None = None,
     passes_mpl: float | None = None,
+    state_of: Callable[[float], DepthState] | None = None,
 ) -> StageFrames:
     """`uniform_sign` +1 compression, -1 tension (every fibre alike); None for bending."""
     eps_y = model.yield_strain
@@ -141,7 +153,16 @@ def _frames(
         depth: tuple[float, ...]
         strain_profile: tuple[float, ...]
         stress_profile: tuple[float, ...]
-        if uniform_sign is not None:
+        neutral_depth = 0.0
+        if state_of is not None:
+            state = state_of(ratio)
+            depth, strain_profile, stress_profile = (
+                state.depth,
+                state.strain_profile,
+                state.stress_profile,
+            )
+            neutral_depth = state.neutral_depth
+        elif uniform_sign is not None:
             depth = (-1.0, 1.0)
             strain_profile = (uniform_sign * ratio,) * 2
             stress_profile = (uniform_sign * stress,) * 2
@@ -165,9 +186,12 @@ def _frames(
                 stress_profile=stress_profile,
                 resistance=None if moment is None else moment(ratio),
                 marks=_marks(ratio, limit, passes_mpl),
+                neutral_depth=neutral_depth,
             )
         )
-    return StageFrames(case, eps_y, model.material.fy, tuple(out), source)
+    return StageFrames(
+        case, eps_y, model.material.fy, tuple(out), source, equilibrium=state_of is not None
+    )
 
 
 _CURVE = f"{EN_1993_1_4}, B.4 (stress read from the CSM curve at each strain)"
@@ -215,20 +239,63 @@ def bending_frames(
     limit: float,
     moment: Callable[[float], float],
     plastic_moment: float,
+    profile: WidthProfile | None = None,
 ) -> StageFrames:
-    """Bending of a section symmetric about its neutral axis, up to ε_csm / ε_y = `limit`.
+    """Bending up to ε_csm / ε_y = `limit` at the extreme compression fibre.
+
+    Without `profile` the section is taken symmetric about the axis of bending, the neutral axis at
+    mid-depth. With the section's width profile the neutral axis is found from ∫σ dA = 0 at every
+    frame (`equilibrium_state`), so an unsymmetric section is drawn as it is; if the extreme tension
+    fibre would pass the end of the B.4 curve, the frames fall back to mid-depth and say why.
 
     `moment(ratio)` is the engine's ``moment_at`` (Formula B.19 below 1.0, B.20 from 1.0) with the
     inputs of this section; each frame carries what it gives if the limit were at that frame. An
     extra frame sits where the resistance reaches M_pl.
     """
-    source = Source(
-        SourceKind.DERIVED,
-        f"strain: {STRAIN_SOURCE}; stress: {_CURVE}; resistance: {EN_1993_1_4}, B.6.3.2(1), "
-        "Formulae (B.19) and (B.20); illustrative symmetric section",
-    )
     passes = passes_plastic_moment(moment, limit, plastic_moment)
-    return _frames(model, LoadCase.BENDING, limit, None, source, moment, passes)
+
+    def source_for(section: str, strain: str = STRAIN_SOURCE) -> Source:
+        return Source(
+            SourceKind.DERIVED,
+            f"strain: {strain}; stress: {_CURVE}; resistance: {EN_1993_1_4}, B.6.3.2(1), "
+            f"Formulae (B.19) and (B.20); {section}",
+        )
+
+    if profile is not None:
+        try:
+            return _frames(
+                model,
+                LoadCase.BENDING,
+                limit,
+                None,
+                source_for("neutral axis from equilibrium", EQUILIBRIUM_SOURCE),
+                moment,
+                passes,
+                lambda ratio: equilibrium_state(model, profile, ratio),
+            )
+        except OutOfRangeError as error:
+            frames = _frames(
+                model,
+                LoadCase.BENDING,
+                limit,
+                None,
+                source_for("illustrative symmetric section"),
+                moment,
+                passes,
+            )
+            return replace(
+                frames,
+                fallback=f"{error} The stage shows the neutral axis at mid-depth instead.",
+            )
+    return _frames(
+        model,
+        LoadCase.BENDING,
+        limit,
+        None,
+        source_for("illustrative symmetric section"),
+        moment,
+        passes,
+    )
 
 
 def with_resultants(frames: StageFrames, loops: list[Loop], normal: Point) -> StageFrames:
@@ -237,15 +304,17 @@ def with_resultants(frames: StageFrames, loops: list[Loop], normal: Point) -> St
     `normal` points from the tension edge to the compression edge. Raises ValueError for a section
     that is not symmetric about the bending axis.
     """
-    axis = neutral_axis(loops, normal)
+    axis = mid_depth(loops, normal) if frames.equilibrium else neutral_axis(loops, normal)
     table = fibre_table(loops, normal, axis)
     out = tuple(
         replace(
             f,
             resultants=stress_resultants(
-                loops, normal, f.depth, f.stress_profile, frames.yield_stress, axis
+                loops, normal, f.depth, f.stress_profile, frames.yield_stress, axis, f.neutral_depth
             ),
-            fibre_force=fibre_forces(table, loops, normal, f.depth, f.stress_profile),
+            fibre_force=fibre_forces(
+                table, loops, normal, f.depth, f.stress_profile, f.neutral_depth
+            ),
         )
         for f in frames.frames
     )

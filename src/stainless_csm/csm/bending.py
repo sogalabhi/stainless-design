@@ -32,6 +32,7 @@ from stainless_csm.csm.deformation_capacity import DeformationResult
 from stainless_csm.csm.stage import StageFrames, bending_frames
 from stainless_csm.data.repository import BendingParameterRow, bending_parameter_rows
 from stainless_csm.material_models.csm_bilinear import CSMBilinearModel
+from stainless_csm.sections.properties import WidthProfile
 
 _CLAUSE = "B.6.3.2"
 _GATE_CLAUSE = "B.6.3.1"
@@ -248,6 +249,9 @@ class BendingInput:
     lambda_lt: float  # λ_LT, an input (member design, outside Annex B)
     h_over_b: float | None = None  # the aspect ratio, where Table B.2 asks for it
     legs_equal: bool | None = None  # angles only
+    # the section's width along the bending depth, for the neutral axis of the Stage's frames; the
+    # resistance does not use it
+    profile: WidthProfile | None = None
 
     def __post_init__(self) -> None:
         for name, value in (("W_el", self.w_el), ("W_pl", self.w_pl), ("γM0", self.gamma_m0)):
@@ -482,7 +486,10 @@ class CSMBending:
             ratio,
             lambda r: moment_at(model, r, data.w_el, data.w_pl, row.alpha, data.gamma_m0),
             plastic_moment,
+            data.profile,
         )
+        if frames.fallback:
+            notes.append(frames.fallback)
         return BendingResult(
             strain_ratio=ratio,
             formula=formula,

@@ -21,6 +21,8 @@ h standing on the left and its shorter leg b lying at the bottom.
 The shear centre is a thin-walled approximation, not an exact value.
 """
 
+import bisect
+import itertools
 import math
 from dataclasses import dataclass
 
@@ -333,6 +335,122 @@ def band_moments(
         along - centre * m.area,
         along_sq - 2 * centre * along + centre * centre * m.area,
     )
+
+
+# --- the width of the section at each depth: exact integrals along an axis ------------------------
+
+
+@dataclass(frozen=True, slots=True)
+class DepthMoments:
+    """∫ dA, ∫ z dA and ∫ z² dA of the part of the section below depth z, about z = 0."""
+
+    area: float
+    first: float
+    second: float
+
+
+def _signed_area2(points: list[Point]) -> float:
+    """Twice the signed area of a loop (positive counter-clockwise)."""
+    n = len(points)
+    return sum(
+        points[i][0] * points[(i + 1) % n][1] - points[(i + 1) % n][0] * points[i][1]
+        for i in range(n)
+    )
+
+
+class WidthProfile:
+    """The width w(z) of a section along `normal` (z = normal · p), exact for polygons.
+
+    Between two neighbouring vertex depths the width is a straight line, so ∫ w dz, ∫ z w dz and
+    ∫ z² w dz up to any depth are closed-form polynomials. Prefix sums over the pieces make the
+    moments of any strip a difference of two lookups, which is what a search for a neutral axis
+    needs: it asks for the force of a few strips thousands of times. A hole (a clockwise loop)
+    takes width away; the loops of a custom section are summed one by one, as `_moments` sums them.
+    """
+
+    def __init__(self, loops: list[Loop], normal: Point) -> None:
+        ny, nz = normal
+        along = [[(ny * y + nz * z) for y, z in loop] for loop in loops if len(loop) >= 3]
+        across = [[(-nz * y + ny * z) for y, z in loop] for loop in loops if len(loop) >= 3]
+        signs = [
+            1.0 if _signed_area2(list(zip(a, b, strict=True))) > 0 else -1.0
+            for a, b in zip(along, across, strict=True)
+        ]
+        self._along, self._across, self._signs = along, across, signs
+        levels = sorted({round(v, 9) for loop in along for v in loop})
+        self.low, self.high = levels[0], levels[-1]
+        self._knots = levels
+        starts: list[float] = []
+        ends: list[float] = []
+        for lo, hi in itertools.pairwise(levels):
+            quarter, three = lo + (hi - lo) / 4, lo + 3 * (hi - lo) / 4
+            wq, w3 = self._width(quarter), self._width(three)
+            slope = (w3 - wq) / (three - quarter)
+            starts.append(wq - slope * (quarter - lo))
+            ends.append(wq + slope * (hi - quarter))
+        self._starts, self._ends = starts, ends
+        self._prefix: list[DepthMoments] = [DepthMoments(0.0, 0.0, 0.0)]
+        for k in range(len(starts)):
+            piece = self._piece(k, levels[k], levels[k + 1])
+            before = self._prefix[-1]
+            self._prefix.append(
+                DepthMoments(
+                    before.area + piece.area,
+                    before.first + piece.first,
+                    before.second + piece.second,
+                )
+            )
+
+    def _width(self, z: float) -> float:
+        total = 0.0
+        for along, across, sign in zip(self._along, self._across, self._signs, strict=True):
+            xs: list[float] = []
+            n = len(along)
+            for i in range(n):
+                z1, z2 = along[i], along[(i + 1) % n]
+                if (z1 <= z) != (z2 <= z):
+                    x1, x2 = across[i], across[(i + 1) % n]
+                    xs.append(x1 + (z - z1) * (x2 - x1) / (z2 - z1))
+            xs.sort()
+            total += sign * sum(xs[i + 1] - xs[i] for i in range(0, len(xs) - 1, 2))
+        return total
+
+    def _piece(self, k: int, p: float, q: float) -> DepthMoments:
+        """∫ w, ∫ z w and ∫ z² w over [p, q] inside piece k, where w = c + d z."""
+        lo, hi = self._knots[k], self._knots[k + 1]
+        d = (self._ends[k] - self._starts[k]) / (hi - lo)
+        c = self._starts[k] - d * lo
+        return DepthMoments(
+            c * (q - p) + d * (q**2 - p**2) / 2,
+            c * (q**2 - p**2) / 2 + d * (q**3 - p**3) / 3,
+            c * (q**3 - p**3) / 3 + d * (q**4 - p**4) / 4,
+        )
+
+    def below(self, z: float) -> DepthMoments:
+        """The moments of the part of the section at depths up to z."""
+        if z <= self.low:
+            return self._prefix[0]
+        if z >= self.high:
+            return self._prefix[-1]
+        k = bisect.bisect_right(self._knots, z) - 1
+        piece = self._piece(k, self._knots[k], z)
+        before = self._prefix[k]
+        return DepthMoments(
+            before.area + piece.area, before.first + piece.first, before.second + piece.second
+        )
+
+    def band(self, low: float, high: float, about: float = 0.0) -> BandMoments:
+        """The area, first and second moments of the strip low <= z <= high about z = `about`.
+
+        The same quantities as `band_moments`, which cuts the polygon; this reads the width.
+        """
+        a, b = self.below(low), self.below(high)
+        area, first, second = b.area - a.area, b.first - a.first, b.second - a.second
+        return BandMoments(
+            area,
+            first - about * area,
+            second - 2 * about * first + about * about * area,
+        )
 
 
 def _plastic_axis(loops: list[Loop], total: float, normal: Point) -> tuple[float, float]:

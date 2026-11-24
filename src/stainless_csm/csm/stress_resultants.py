@@ -85,19 +85,24 @@ def _bands(
     stress: tuple[float, ...],
     half: float,
     yield_stress: float,
+    neutral_depth: float = 0.0,
 ) -> list[_Band]:
-    """The frame's polyline cut at the neutral axis, with the yielded and hardening parts apart."""
+    """The frame's polyline cut at the neutral axis, with the yielded and hardening parts apart.
+
+    z is measured from the neutral axis, which lies at `neutral_depth` on the normalised scale.
+    """
     n = len(depth) - 1
     out: list[_Band] = []
     for i in range(n):
         u1, u2 = depth[i], depth[i + 1]
         s1, s2 = stress[i], stress[i + 1]
-        z1, z2 = u1 * half, u2 * half
+        z1, z2 = (u1 - neutral_depth) * half, (u2 - neutral_depth) * half
         b = (s2 - s1) / (z2 - z1)
         a = s1 - b * z1
-        # a corner profile (-1, -1/r, 1/r, 1) has an elastic core in the middle and an edge band
-        # on each side; a two-point profile is all core
-        edge = n == 3 and i != 1
+        # a segment whose two ends are both at or above f_y, on one side of zero, is an edge band
+        # (held at f_y, with the strain hardening above it); every other segment is the elastic core
+        held = yield_stress * (1 - 1e-9)
+        edge = abs(s1) >= held and abs(s2) >= held and s1 * s2 > 0
         for low, high in ((z1, min(z2, 0.0)), (max(z1, 0.0), z2)):
             if high <= low:
                 continue
@@ -121,14 +126,20 @@ class NeutralAxis:
     half: float  # mm, from the neutral axis to each edge
 
 
+def mid_depth(loops: list[Loop], normal: Point) -> NeutralAxis:
+    """Mid-depth along `normal` and the half depth: the scale the frames' depth is measured on."""
+    low, high = _extent(loops, normal)
+    return NeutralAxis(normal, (low + high) / 2, (high - low) / 2)
+
+
 def neutral_axis(loops: list[Loop], normal: Point) -> NeutralAxis:
     """Mid-depth along `normal`, after checking the two halves have the same area.
 
-    Raises ValueError for a section that is not symmetric about the bending axis: the neutral
-    axis of an unsymmetric section is not built yet (it comes from ∫σ dA = 0).
+    Raises ValueError for a section that is not symmetric about the bending axis: the neutral axis
+    of such a section is not at mid-depth, and `equilibrium_state` finds it instead.
     """
-    low, high = _extent(loops, normal)
-    centre, half = (low + high) / 2, (high - low) / 2
+    axis = mid_depth(loops, normal)
+    centre, half = axis.centre, axis.half
     whole = band_moments(loops, normal, centre, -half, half)
     above = band_moments(loops, normal, centre, 0.0, half).area
     below = band_moments(loops, normal, centre, -half, 0.0).area
@@ -147,18 +158,22 @@ def stress_resultants(
     stress_profile: tuple[float, ...],
     yield_stress: float,
     axis: NeutralAxis | None = None,
+    neutral_depth: float = 0.0,
 ) -> Resultants:
     """The forces of a frame's stress block over the outline `loops`.
 
     `normal` is the unit vector from the tension edge to the compression edge (for sagging bending
     about the major axis of a section drawn z up, (0, 1)). `depth` and `stress_profile` are the
     frame's own: normalised depth from -1 to +1 and σ in N/mm², compression positive. Give `axis`
-    (from `neutral_axis`) to avoid finding it again for every frame of one section.
+    (from `neutral_axis`, or `mid_depth` with a `neutral_depth` from equilibrium) to avoid finding
+    it again for every frame of one section. `neutral_depth` is where the frame's neutral axis lies
+    on the normalised depth scale; 0 is mid-depth.
     """
     axis = axis or neutral_axis(loops, normal)
-    centre, half = axis.centre, axis.half
+    half = axis.half
+    centre = axis.centre + neutral_depth * half
     parts: list[ForcePart] = []
-    for band in _bands(depth, stress_profile, half, yield_stress):
+    for band in _bands(depth, stress_profile, half, yield_stress, neutral_depth):
         m = band_moments(loops, normal, centre, band.low, band.high)
         force = band.a * m.area + band.b * m.first
         moment = band.a * m.first + band.b * m.second
@@ -236,6 +251,7 @@ def fibre_forces(
     normal: Point,
     depth: tuple[float, ...],
     stress_profile: tuple[float, ...],
+    neutral_depth: float = 0.0,
 ) -> tuple[float, ...]:
     """The force carried from the nearer edge to each fibre, N, a magnitude: ∫σ dA over the part of
     the section between that edge and the fibre (Gere eq. 10-3 on a part of the section).
@@ -275,7 +291,7 @@ def fibre_forces(
         slab.append(total)
     out: list[float] = []
     for j in range(FIBRE_STEPS + 1):
-        if table.depth[j] >= 0:
+        if table.depth[j] >= neutral_depth:
             out.append(sum(slab[j:]))  # from the compression edge down to the fibre
         else:
             out.append(-sum(slab[:j]))  # from the tension edge up to the fibre, as a magnitude

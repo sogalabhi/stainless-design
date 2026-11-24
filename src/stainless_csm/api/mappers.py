@@ -143,6 +143,7 @@ def stage_frames_out(frames: StageFrames) -> s.StageFramesOut:
                 marks=[s.FrameMarkKey(m.value) for m in f.marks],
                 resultants=None if f.resultants is None else resultants_out(f.resultants),
                 axial_force=f.axial_force,
+                neutral_depth=f.neutral_depth,
                 fibre_force=None if f.fibre_force is None else [round(v, 1) for v in f.fibre_force],
             )
             for f in frames.frames
@@ -296,6 +297,11 @@ def compression_form(request: s.CompressionRequest) -> services.CompressionForm:
 
 def bending_form(request: s.BendingRequest) -> services.BendingForm:
     """The bending request: its geometry carries the k_sigma (or sigma_cr,cs) of bending."""
+    nodes, links = (
+        ([], [])
+        if request.custom_section is None
+        else custom_nodes_and_links(request.custom_section)
+    )
     return services.BendingForm(
         deformation=deformation_form(
             s.DeformationRequest(
@@ -311,6 +317,9 @@ def bending_form(request: s.BendingRequest) -> services.BendingForm:
         w_pl=request.w_pl,
         gamma_m0=request.gamma_m0,
         lambda_lt=request.lambda_lt,
+        custom_nodes=tuple(nodes),
+        custom_links=tuple(links),
+        hogging=request.hogging,
     )
 
 
