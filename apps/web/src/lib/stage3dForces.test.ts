@@ -98,3 +98,41 @@ describe("the card of a fibre on the 3D face", () => {
     expect(bare).toHaveLength(3);
   });
 });
+
+import bendingCustom from "../test/fixtures/bending_custom.json";
+
+describe("an unsymmetric section: the neutral axis is not at mid-depth", () => {
+  const custom = bendingView(bendingCustom as unknown as BendingResponse);
+  const f = custom.frames.frames;
+  const end = f[f.length - 1];
+  const b = { width: 194, height: 290, halfDepth: 145 };
+  const nd = end.neutral_depth ?? 0;
+
+  it("splits the volume into parts at the neutral axis, with the core up to each yield corner", () => {
+    const parts = stageParts(b, end);
+    const axis = nd * b.halfDepth;
+    expect(nd).not.toBe(0);
+    const core = parts.filter((p) => p.layer === "core");
+    expect(core).toHaveLength(2);
+    expect(core.some((p) => p.band[0] === axis || p.band[1] === axis)).toBe(true);
+    const r = end.resultants!;
+    for (const part of parts) expect(partForce(r, part)).not.toBeNull();
+    expect(parts.filter((p) => p.side === "compression").reduce((sum, p) => sum + (partForce(r, p) ?? 0), 0)).toBeCloseTo(r.force_compression, 3);
+    expect(parts.filter((p) => p.side === "tension").reduce((sum, p) => sum + (partForce(r, p) ?? 0), 0)).toBeCloseTo(r.force_tension, 3);
+  });
+
+  it("stands the forces at their distances from the moved axis", () => {
+    const r = end.resultants!;
+    const arrows = resultantArrows(b, r, r.force_compression, false, nd)!;
+    expect(arrows.compression.y).toBeCloseTo(nd * 145 + r.distance_compression);
+    expect(arrows.tension.y).toBeCloseTo(nd * 145 - r.distance_tension);
+    const turned = resultantArrows(b, r, r.force_compression, true, nd)!;
+    expect(turned.compression.y).toBeCloseTo(-arrows.compression.y);
+  });
+
+  it("measures the card's distance from the neutral axis, not from mid-depth", () => {
+    const axis = nd * 145;
+    const lines = fibreLines(custom.frames, end, 145, false, axis + 20, custom.frames.yield_stress)!;
+    expect(lines[0]).toBe("z = +20.0 mm from the axis");
+  });
+});

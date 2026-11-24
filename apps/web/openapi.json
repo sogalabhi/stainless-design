@@ -580,6 +580,23 @@
             "type": "number",
             "title": "Lambda Lt",
             "description": "Relative slenderness for lateral-torsional buckling"
+          },
+          "custom_section": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CustomPropertiesRequest"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The nodes and links of a custom section. Only draws the stress through the depth and the forces of the stress block (the neutral axis from equilibrium); the resistance does not use it"
+          },
+          "hogging": {
+            "type": "boolean",
+            "title": "Hogging",
+            "description": "Compression at the bottom edge of the drawing (hogging): the section is turned over, which matters for a section that is not symmetric about the axis",
+            "default": false
           }
         },
         "type": "object",
@@ -2817,6 +2834,12 @@
               }
             ],
             "description": "Bending only: the forces of the stress block; null without a section outline"
+          },
+          "neutral_depth": {
+            "type": "number",
+            "title": "Neutral Depth",
+            "description": "Where the neutral axis lies on the same scale as depth: 0 is mid-depth. It moves for a section that is not symmetric about the axis of bending",
+            "default": 0.0
           },
           "fibre_force": {
             "anyOf": [

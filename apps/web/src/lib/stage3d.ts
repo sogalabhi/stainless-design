@@ -81,8 +81,13 @@ export function memberPose(
   strain: number,
   body: StageBody,
   factor = STAGE_MAGNIFICATION,
+  /**
+   * bending: where the neutral axis lies, in mm from mid-depth towards the compression edge (the
+   * engine's, so before hogging turns the picture over). Zero for a section symmetric about the axis.
+   */
+  neutral = 0,
 ): Pose {
-  const pose = sagPose(key, strain, body, factor);
+  const pose = sagPose(key, strain, body, factor, neutral);
   return key === "bending" && body.hogging ? mirrorPose(pose) : pose;
 }
 
@@ -100,7 +105,7 @@ function mirrorPose(pose: Pose): Pose {
   };
 }
 
-function sagPose(key: StageCase, strain: number, body: StageBody, factor: number): Pose {
+function sagPose(key: StageCase, strain: number, body: StageBody, factor: number, neutral: number): Pose {
   const { length } = body;
   const drawn = strain * factor;
   if (key !== "bending") {
@@ -111,16 +116,20 @@ function sagPose(key: StageCase, strain: number, body: StageBody, factor: number
       face: { position: [0, 0, length * share], rotationX: 0 },
     };
   }
-  const curvature = drawn / body.halfDepth;
+  // the strain at the extreme compression fibre is the one given: it is that far from the neutral axis
+  const curvature = drawn / (body.halfDepth - neutral);
   if (curvature < 1e-12) return restPose(length);
   const turned = curvature * length;
+  const cos = Math.cos(turned);
+  const sin = Math.sin(turned);
   return {
     place: (x, y, s) => {
       const theta = curvature * length * s;
-      return [x, (1 - Math.cos(theta)) / curvature + y * Math.cos(theta), -length + Math.sin(theta) / curvature - y * Math.sin(theta)];
+      const above = y - neutral; // the distance from the neutral axis: that fibre keeps its length
+      return [x, (1 - Math.cos(theta)) / curvature + above * Math.cos(theta) + neutral, -length + Math.sin(theta) / curvature - above * Math.sin(theta)];
     },
     face: {
-      position: [0, (1 - Math.cos(turned)) / curvature, -length + Math.sin(turned) / curvature],
+      position: [0, (1 - cos) / curvature + neutral * (1 - cos), -length + sin / curvature + neutral * sin],
       rotationX: -turned,
     },
   };

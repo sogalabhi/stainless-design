@@ -127,6 +127,7 @@ export function Readout({
   whatIf,
   hogging = false,
   halfDepth = null,
+  depthMm = null,
 }: {
   view: StageView;
   frame: StageFrameOut;
@@ -137,6 +138,8 @@ export function Readout({
   hogging?: boolean;
   /** mm from the neutral axis to the extreme fibre as drawn, for the curvature */
   halfDepth?: number | null;
+  /** the drawn depth of the section, mm, for the neutral axis' distance from mid-depth */
+  depthMm?: number | null;
 }) {
   const atLimit = frame.marks.includes("limit");
   const bending = frame.resistance !== null;
@@ -198,11 +201,26 @@ export function Readout({
           <span className="readout-k">Curvature κ</span>
           <span className="readout-v">
             {hogging ? "−" : "+"}
-            {formatFixed((frame.strain / halfDepth) * 1000, 4)} <small>1/m</small>
+            {formatFixed((frame.strain / (halfDepth * (1 - (frame.neutral_depth ?? 0)))) * 1000, 4)} <small>1/m</small>
           </span>
           <span className="readout-s">
-            κ = ε / (h/2), the strain at the extreme fibre over the half depth as drawn;{" "}
+            {frame.neutral_depth
+              ? "κ = ε / (distance from the neutral axis to the extreme compression fibre);"
+              : "κ = ε / (h/2), the strain at the extreme fibre over the half depth as drawn;"}{" "}
             {hogging ? "centre of curvature below, −κ" : "centre of curvature above, +κ"}
+          </span>
+        </div>
+      ) : null}
+      {bending && !whatIf && frame.neutral_depth && halfDepth !== null && depthMm !== null ? (
+        <div>
+          <span className="readout-k">Neutral axis</span>
+          <span className="readout-v">
+            {formatFixed(Math.abs(frame.neutral_depth) * halfDepth, 1)} <small>mm</small>
+          </span>
+          <span className="readout-s">
+            {renderSymbols(
+              `from mid-depth, towards the ${frame.neutral_depth > 0 ? "compression" : "tension"} edge: the section is not symmetric about the axis, so equilibrium (∫σ dA = 0) moves it. The extreme tension fibre is at ${formatRatio(Math.abs(frame.strain_profile[0]))} ε_y.`,
+            )}
           </span>
         </div>
       ) : null}

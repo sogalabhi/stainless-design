@@ -6,6 +6,9 @@ import { stageSection } from "../../lib/stageSection";
 import { defaultDeformationForm } from "../../lib/geometry";
 import bending from "../../test/fixtures/bending_template.json";
 import bendingForces from "../../test/fixtures/bending_forces.json";
+import bendingCustom from "../../test/fixtures/bending_custom.json";
+import { linkSolids } from "../../lib/stageSection";
+import { depthY } from "../../lib/stageLayout";
 import { StageSectionDrawing } from "../SectionSketch";
 import { stageLayout } from "../../lib/stageLayout";
 import { StageDrawing } from "./StageDrawing";
@@ -253,5 +256,62 @@ describe("the 3D cut with the Forces choice (the scene as data, no WebGL needed)
     const built = buildContent(view, yielded, body, view.frames.yield_stress, top, "parts", forceTop);
     expect(built.labels.filter((l) => l.id.startsWith("part-"))).toHaveLength(2);
     built.dispose();
+  });
+});
+
+
+describe("the 2D stage for a section not symmetric about the axis", () => {
+  const view = bendingView(bendingCustom as unknown as BendingResponse);
+  const frames = view.frames.frames;
+  const last = frames[frames.length - 1];
+  const form = {
+    nodes: [[1, 0, 0], [2, 0, 280], [3, -47, 280], [4, 47, 280], [5, -97, 0], [6, 97, 0]].map(([id, x, y]) => ({ id, x, y })),
+    links: [[1, 2, 6], [3, 2, 10], [2, 4, 10], [5, 1, 10], [1, 6, 10]].map(([from, to, thickness]) => ({ from, to, thickness })),
+  } as never;
+  const raw = linkSolids(form)!;
+  const pts = raw.flatMap((s) => s.outer);
+  const xs = pts.map((p) => p[0]);
+  const ys = pts.map((p) => p[1]);
+  const cx = (Math.min(...xs) + Math.max(...xs)) / 2;
+  const cy = (Math.min(...ys) + Math.max(...ys)) / 2;
+  const sec = {
+    shape: "I-section" as const,
+    fabrication: null,
+    dims: {} as never,
+    turned: false,
+    width: Math.max(...xs) - Math.min(...xs),
+    height: Math.max(...ys) - Math.min(...ys),
+    solids: raw.map((s) => ({ outer: s.outer.map(([x, y]) => [x - cx, y - cy] as [number, number]) })),
+  };
+  const peak = (v: number[]) => Math.max(...v.map(Math.abs));
+  const top = Math.max(...frames.map((f) => Math.max(Math.abs(f.stress), peak(f.stress_profile))));
+  const lim = Math.max(...frames.map((f) => peak(f.strain_profile)));
+  const draw = () =>
+    render(<StageDrawing view={view} frame={last} section={sec} cValues={null} lit={null} fy={view.frames.yield_stress} whatIf={null} limitRatio={lim} stressTop={top} forces />);
+
+  it("draws the neutral axis where the engine found it, not at mid-depth", () => {
+    const { container } = draw();
+    const L = stageLayout(sec, lim, top, view.frames.yield_stress, true);
+    const nd = last.neutral_depth ?? 0;
+    expect(nd).not.toBe(0);
+    const guides = container.querySelector(".st-guide")!.getAttribute("d")!;
+    expect(guides).toContain(`${depthY(L, nd)}`);
+    expect(container.textContent).toContain("neutral axis");
+  });
+
+  it("labels each edge with its own strain and stress: the tension edge is not the compression edge", () => {
+    const { container } = draw();
+    const tension = Math.abs(last.strain_profile[0]);
+    expect(tension).not.toBeCloseTo(last.ratio, 0);
+    expect(container.textContent).toContain(`${tension.toFixed(2)} ε`);
+    expect(container.textContent).toContain(`${last.ratio.toFixed(1)} ε`);
+  });
+
+  it("puts the forces at their distances from the moved axis, and yield guides at both corners", () => {
+    const { container } = draw();
+    expect(container.querySelectorAll(".st-guide-strong").length).toBe(1); // one path with a line per corner
+    const d = container.querySelector(".st-guide-strong")!.getAttribute("d")!;
+    expect(d.match(/M/g)).toHaveLength(last.depth.length - 2);
+    expect(container.querySelector(".st-forces")).not.toBeNull();
   });
 });

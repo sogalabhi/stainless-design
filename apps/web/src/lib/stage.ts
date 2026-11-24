@@ -403,6 +403,7 @@ export function isTurned(shape: SectionType | null, axis: string | null, key: St
 export function mirrorFrame(frame: StageFrameOut): StageFrameOut {
   return {
     ...frame,
+    neutral_depth: frame.neutral_depth ? -frame.neutral_depth : 0,
     depth: frame.depth.map((d) => (d === 0 ? 0 : -d)).reverse(),
     strain_profile: [...frame.strain_profile].reverse(),
     stress_profile: [...frame.stress_profile].reverse(),

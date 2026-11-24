@@ -144,3 +144,46 @@ describe("the arrows on the cut face", () => {
     expect(stressTone(-256, 210, 256)).toMatchObject({ side: "tens", soft: 1, deep: 1 });
   });
 });
+
+describe("bending about a neutral axis that is not at mid-depth", () => {
+  const body = { solids: [], width: 100, height: 200, halfDepth: 100, length: 400 };
+  const arc = (pose: ReturnType<typeof memberPose>, y: number) => {
+    // the length of the fibre at height y, from the far end to the cut face
+    let total = 0;
+    let previous = pose.place(0, y, 0);
+    for (let k = 1; k <= 400; k += 1) {
+      const next = pose.place(0, y, k / 400);
+      total += Math.hypot(next[1] - previous[1], next[2] - previous[2]);
+      previous = next;
+    }
+    return total;
+  };
+
+  it("keeps the neutral fibre's length and shortens the compression edge by the drawn strain", () => {
+    const strain = 0.01;
+    const pose = memberPose("bending", strain, body, 10, -40); // the axis 40 mm below mid-depth
+    expect(arc(pose, -40)).toBeCloseTo(body.length, 1);
+    // the compression edge is 140 mm above the axis and the strain is the one given there
+    expect(arc(pose, 100)).toBeCloseTo(body.length * (1 - strain * 10), 1);
+    // the tension edge is 60 mm below the axis, so it lengthens by 60/140 of that
+    expect(arc(pose, -100)).toBeCloseTo(body.length * (1 + strain * 10 * (60 / 140)), 1);
+  });
+
+  it("is the old pose when the axis is at mid-depth", () => {
+    const a = memberPose("bending", 0.01, body, 10, 0);
+    const b = memberPose("bending", 0.01, body);
+    expect(a.face).toEqual(b.face);
+    expect(a.place(10, 30, 0.7)).toEqual(b.place(10, 30, 0.7));
+  });
+
+  it("places the cut face where the moved fibres end", () => {
+    const pose = memberPose("bending", 0.01, body, 10, -40);
+    for (const y of [-100, -40, 0, 100]) {
+      const end = pose.place(5, y, 1);
+      const viaFace = faceToWorld(pose, [5, y, 0]);
+      expect(viaFace[0]).toBeCloseTo(end[0], 6);
+      expect(viaFace[1]).toBeCloseTo(end[1], 6);
+      expect(viaFace[2]).toBeCloseTo(end[2], 6);
+    }
+  });
+});

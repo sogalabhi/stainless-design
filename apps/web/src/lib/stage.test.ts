@@ -6,6 +6,7 @@ import compressionB15 from "../test/fixtures/compression_b15.json";
 import compressionTemplate from "../test/fixtures/compression_template.json";
 import tensionFixture from "../test/fixtures/tension.json";
 import {
+  mirrorFrame,
   bendingView,
   compressionView,
   defaultCase,
@@ -187,5 +188,14 @@ describe("reading the engine's polylines", () => {
     const yieldFrame = bending.frames.frames.find((f) => f.marks.includes("first_yield"))!;
     const part = splitProfile(yieldFrame.depth, yieldFrame.stress_profile)[0];
     expect(hardenedPolygon(part, fy)).toEqual([]);
+  });
+});
+
+
+describe("hogging turns a frame over with its neutral axis", () => {
+  it("negates where the axis lies, as it does the depth", () => {
+    const frame = { ...bendingView(bendingTemplate as unknown as BendingResponse).frames.frames[5], neutral_depth: 0.3 };
+    expect(mirrorFrame(frame).neutral_depth).toBeCloseTo(-0.3);
+    expect(mirrorFrame({ ...frame, neutral_depth: 0 }).neutral_depth).toBe(0);
   });
 });

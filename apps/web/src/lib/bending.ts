@@ -4,6 +4,7 @@ import {
   deformationRequest,
   missingDeformationItems,
   type DeformationFormState,
+  customPropertiesRequest,
 } from "./geometry";
 import type { MissingItem } from "./inputs";
 import { plateRoles, type PlateRoleKey } from "./sectionTemplates";
@@ -107,6 +108,7 @@ export function bendingRequest(
     return null;
   }
   const geometry = deformationRequest(material, withBendingStress(deformation, bending));
+  const customSection = customPropertiesRequest(deformation);
   if (geometry === null || bending.wEl === null || bending.wPl === null) return null;
   if (bending.lambdaLT === null || section.gammaM0 === null) return null;
   return {
@@ -120,5 +122,9 @@ export function bendingRequest(
     w_pl: bending.wPl,
     gamma_m0: section.gammaM0,
     lambda_lt: bending.lambdaLT,
+    // the nodes and links, and the direction, only draw the stress through the depth and the forces
+    // (the neutral axis of an unsymmetric section); the resistance does not use them
+    ...(customSection ? { custom_section: customSection } : {}),
+    ...(bending.direction === "hogging" ? { hogging: true } : {}),
   };
 }

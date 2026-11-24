@@ -181,7 +181,7 @@ export type StageProbe = {
  */
 export function probeAt(
   layout: StageLayout,
-  frame: { depth: number[]; strain_profile: number[]; stress_profile: number[] },
+  frame: { depth: number[]; strain_profile: number[]; stress_profile: number[]; neutral_depth?: number },
   fy: number,
   sectionHeight: number | null,
   y: number,
@@ -192,7 +192,7 @@ export function probeAt(
   return {
     y,
     depth,
-    z: sectionHeight !== null && sectionHeight > 0 ? depth * (sectionHeight / 2) : null,
+    z: sectionHeight !== null && sectionHeight > 0 ? (depth - (frame.neutral_depth ?? 0)) * (sectionHeight / 2) : null,
     strainRatio: profileAt(frame.depth, frame.strain_profile, depth),
     stress,
     stressOverYield: fy > 0 ? stress / fy : 0,

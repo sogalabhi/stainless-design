@@ -351,6 +351,14 @@ export interface components {
              * @description Relative slenderness for lateral-torsional buckling
              */
             lambda_lt: number;
+            /** @description The nodes and links of a custom section. Only draws the stress through the depth and the forces of the stress block (the neutral axis from equilibrium); the resistance does not use it */
+            custom_section?: components["schemas"]["CustomPropertiesRequest"] | null;
+            /**
+             * Hogging
+             * @description Compression at the bottom edge of the drawing (hogging): the section is turned over, which matters for a section that is not symmetric about the axis
+             * @default false
+             */
+            hogging?: boolean;
         };
         /** BendingResponse */
         BendingResponse: {
@@ -1411,6 +1419,12 @@ export interface components {
             marks: components["schemas"]["FrameMarkKey"][];
             /** @description Bending only: the forces of the stress block; null without a section outline */
             resultants?: components["schemas"]["ResultantsOut"] | null;
+            /**
+             * Neutral Depth
+             * @description Where the neutral axis lies on the same scale as depth: 0 is mid-depth. It moves for a section that is not symmetric about the axis of bending
+             * @default 0
+             */
+            neutral_depth?: number;
             /**
              * Fibre Force
              * @description Bending with an outline: the force from the nearer edge to each fibre of fibre_depth [N], a magnitude (the integral of sigma dA over that part of the section)

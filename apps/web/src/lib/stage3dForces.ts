@@ -43,13 +43,16 @@ export function resultantArrows(
   /** the largest F_c over the frames of the slider, so the arrows share one scale */
   forceTop: number,
   hogging: boolean,
+  /** the frame's neutral axis on the engine's depth scale (0 unless the section is unsymmetric) */
+  neutralDepth = 0,
 ): ResultantArrows | null {
   if (!(forceTop > 0) || r.force_compression <= 0) return null;
   const scale = (LONGEST * Math.max(body.width, body.height)) / forceTop;
   const sign = hogging ? -1 : 1;
+  const axis = neutralDepth * body.halfDepth;
   return {
-    compression: { side: "compression", y: sign * r.distance_compression, length: r.force_compression * scale, force: r.force_compression },
-    tension: { side: "tension", y: -sign * r.distance_tension, length: r.force_tension * scale, force: r.force_tension },
+    compression: { side: "compression", y: sign * (axis + r.distance_compression), length: r.force_compression * scale, force: r.force_compression },
+    tension: { side: "tension", y: sign * (axis - r.distance_tension), length: r.force_tension * scale, force: r.force_tension },
     leverArm: r.lever_arm,
   };
 }
@@ -73,19 +76,23 @@ export type StagePart = {
  */
 export function stageParts(body: Pick<StageBody, "halfDepth">, frame: StageFrameOut): StagePart[] {
   const h = body.halfDepth;
-  const corner = frame.depth.find((d) => d > 0 && d < 1);
+  const axis = (frame.neutral_depth ?? 0) * h;
   const sideAt = (y: number): ForceSide => (profileAt(frame.depth, frame.stress_profile, y / h) >= 0 ? "compression" : "tension");
+  // the corners of the stress diagram, where the stress reaches f_y: the interior depths the engine gave
+  const corners = frame.depth.slice(1, -1).map((d) => d * h);
+  const above = corners.filter((y) => y > axis).sort((a, b) => a - b);
+  const below = corners.filter((y) => y < axis).sort((a, b) => b - a);
+  const coreTop = above[0] ?? h;
+  const coreBottom = below[0] ?? -h;
   const parts: StagePart[] = [];
-  const coreEdge = corner === undefined ? h : corner * h;
-  for (const [low, high] of [[0, coreEdge], [-coreEdge, 0]] as [number, number][]) {
-    parts.push({ name: "elastic core", layer: "core", side: sideAt((low + high) / 2), band: [low, high] });
+  for (const band of [[axis, coreTop], [coreBottom, axis]] as [number, number][]) {
+    if (band[1] - band[0] > 1e-9) parts.push({ name: "elastic core", layer: "core", side: sideAt((band[0] + band[1]) / 2), band });
   }
-  if (corner !== undefined) {
-    for (const [low, high] of [[coreEdge, h], [-h, -coreEdge]] as [number, number][]) {
-      const side = sideAt((low + high) / 2);
-      parts.push({ name: "yielded zone", layer: "yielded", side, band: [low, high] });
-      parts.push({ name: "hardening", layer: "hardening", side, band: [low, high] });
-    }
+  for (const band of [[coreTop, h], [-h, coreBottom]] as [number, number][]) {
+    if (band[1] - band[0] <= 1e-9 || (band[0] === axis && band[1] === axis)) continue;
+    const side = sideAt((band[0] + band[1]) / 2);
+    parts.push({ name: "yielded zone", layer: "yielded", side, band });
+    parts.push({ name: "hardening", layer: "hardening", side, band });
   }
   return parts;
 }
@@ -150,11 +157,12 @@ export function fibreLines(
 ): string[] | null {
   if (!(halfDepth > 0) || Math.abs(y) > halfDepth) return null;
   const u = y / halfDepth;
+  const axis = (frame.neutral_depth ?? 0) * halfDepth;
   const stress = profileAt(frame.depth, frame.stress_profile, u);
   const strain = profileAt(frame.depth, frame.strain_profile, u);
   const side = strain === 0 ? "at the neutral axis" : strain > 0 ? "compression" : "tension";
   const lines = [
-    `z = ${y > 0 ? "+" : ""}${y.toFixed(1)} mm from the axis`,
+    `z = ${y - axis > 0 ? "+" : ""}${(y - axis).toFixed(1)} mm from the axis`,
     `ε = ${Math.abs(strain).toFixed(2)} ε_y, ${side}`,
     `σ = ${Math.abs(stress).toFixed(1)} N/mm² = ${(Math.abs(stress) / fy).toFixed(2)} f_y`,
   ];

@@ -182,4 +182,31 @@ describe("the bending request", () => {
     expect(swapped.omega).toBe(15);
     expect(i.kSigma.web).toBe(4.0); // the compression form is untouched
   });
+
+  it("sends the nodes and links of a custom section, and the direction only when it is hogging", () => {
+    const custom: DeformationFormState = {
+      ...i,
+      custom: true,
+      kind: "plates",
+      nodes: [
+        { uid: 1, id: 1, x: 0, y: 0 },
+        { uid: 2, id: 2, x: 0, y: 200 },
+      ],
+      links: [{ uid: 1, label: "web", from: 1, to: 2, thickness: 6, kSigma: 4 }],
+      plates: [{ id: 1, label: "web", width: 200, thickness: 6, kSigma: 4 }],
+    };
+    const bending = { ...full, plateKSigma: { 1: 23.9 } };
+    const sagging = bendingRequest(material, "I-section", custom, bending, section);
+    expect(sagging?.custom_section).toEqual({
+      nodes: [
+        { id: 1, x: 0, y: 0 },
+        { id: 2, x: 0, y: 200 },
+      ],
+      links: [{ from_node: 1, to_node: 2, thickness: 6 }],
+    });
+    expect(sagging).not.toHaveProperty("hogging");
+    expect(bendingRequest(material, "I-section", custom, { ...bending, direction: "hogging" }, section)?.hogging).toBe(true);
+    // a template sends neither
+    expect(bendingRequest(material, "I-section", i, full, section)).not.toHaveProperty("custom_section");
+  });
 });

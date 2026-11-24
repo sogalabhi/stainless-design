@@ -76,3 +76,19 @@ describe("the force at a fibre, read from the engine's grid", () => {
     expect(lines).toEqual(["F_c = 345.4 kN", "acts 80.0 mm from the neutral axis", "elastic core: 3.9 kN at 4.4 mm"]);
   });
 });
+
+describe("forces on an unsymmetric section", () => {
+  const L2 = stageLayout(null, 15, 300, 210);
+  it("stand at their distances from the neutral axis, wherever it is", () => {
+    const r = { distance_compression: 40, distance_tension: 60 };
+    const arrows = forceArrows(L2, r, 100, false, 0.2)!;
+    expect(arrows.compressionY).toBeCloseTo(depthY(L2, 0.6));
+    expect(arrows.tensionY).toBeCloseTo(depthY(L2, -0.4));
+  });
+  it("turn over with the picture for hogging", () => {
+    const r = { distance_compression: 40, distance_tension: 60 };
+    const arrows = forceArrows(L2, r, 100, true, 0.2)!;
+    expect(arrows.compressionY).toBeCloseTo(depthY(L2, -0.6));
+    expect(arrows.tensionY).toBeCloseTo(depthY(L2, 0.4));
+  });
+});

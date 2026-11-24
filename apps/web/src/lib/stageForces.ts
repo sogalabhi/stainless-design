@@ -25,14 +25,17 @@ export function forceArrows(
   resultants: Pick<ResultantsOut, "distance_compression" | "distance_tension">,
   halfMm: number,
   hogging: boolean,
+  /** the frame's neutral axis on the depth scale (engine's): 0 unless the section is unsymmetric */
+  neutralDepth = 0,
 ): ForceArrows | null {
   if (!(halfMm > 0)) return null;
   const clamp = (u: number) => Math.min(1, Math.max(-1, u));
-  const c = clamp(resultants.distance_compression / halfMm);
-  const t = clamp(resultants.distance_tension / halfMm);
+  // the engine's depth has the compression edge at +1; hogging turns the picture over
+  const c = clamp(neutralDepth + resultants.distance_compression / halfMm);
+  const t = clamp(neutralDepth - resultants.distance_tension / halfMm);
   return {
     compressionY: depthY(layout, hogging ? -c : c),
-    tensionY: depthY(layout, hogging ? t : -t),
+    tensionY: depthY(layout, hogging ? -t : t),
     length: ARROW_LENGTH,
   };
 }

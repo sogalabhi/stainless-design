@@ -58,6 +58,12 @@ export function StageDrawing({
   const L = stageLayout(section, limitRatio, stressTop, fy, resultants !== null || axial !== null);
   const shapes = frameShapes(L, frame.depth, frame.strain_profile, frame.stress_profile, fy);
   const sign = view.uniform ? (view.press ? 1 : -1) : 1;
+  // the neutral axis: at mid-depth for a section symmetric about the axis of bending, elsewhere for the
+  // rest (the engine finds it from equilibrium); the frame is already turned over for hogging
+  const naDepth = view.uniform ? 0 : (frame.neutral_depth ?? 0);
+  const naY = depthY(L, naDepth);
+  // the strain and stress at the two edges as drawn (they differ when the axis is not at mid-depth)
+  const edges = { top: edgeValues(frame, 1), bottom: edgeValues(frame, -1) };
   const hard = frame.stress_over_yield !== null;
   const text = (x: number, y: number, parts: string, className = "", anchor?: "start" | "middle" | "end") => (
     <text x={x} y={y} className={className} textAnchor={anchor}>
@@ -143,9 +149,9 @@ export function StageDrawing({
       {/* guides through all three panels */}
       <path
         className="st-guide"
-        d={`M${L.cx + 10} ${L.top}H${L.gx}M${L.cx + 10} ${L.bot}H${L.gx}M${L.cx + 10} ${L.mid}H${L.gx}`}
+        d={`M${L.cx + 10} ${L.top}H${L.gx}M${L.cx + 10} ${L.bot}H${L.gx}M${L.cx + 10} ${naY}H${L.gx}`}
       />
-      {text(L.gx + 6, L.mid + 4, view.uniform ? "centroid" : "neutral axis", "st-small")}
+      {text(L.gx + 6, naY + 4, view.uniform ? "centroid" : "neutral axis", "st-small")}
       {text(24, 22, section ? "Section, to scale (mm)" : "Section", "st-head")}
       {text(L.ex, 22, "Strain", "st-head", "middle")}
       {text(L.sx, 22, "Stress (N/mm²)", "st-head", "middle")}
@@ -220,8 +226,16 @@ export function StageDrawing({
             )
           : (
             <>
-              {text(L.ex + frame.ratio * L.eu + 8, hogging ? L.bot + 3 : L.top + 5, `${strainText} ε_y`, "st-value")}
-              {text(L.ex - frame.ratio * L.eu - 8, hogging ? L.top + 5 : L.bot + 3, `${strainText} ε_y`, "st-value", "end")}
+              {([[edges.top, L.top + 5], [edges.bottom, L.bot + 3]] as const).map(([edge, y]) => {
+                const right = edge.strain >= 0;
+                return text(
+                  L.ex + edge.strain * L.eu + (right ? 8 : -8),
+                  y,
+                  `${formatRatio(Math.abs(edge.strain))} ε_y`,
+                  "st-value",
+                  right ? "start" : "end",
+                );
+              })}
             </>
           )
         : null}
@@ -272,35 +286,49 @@ export function StageDrawing({
           )
           : (
             <>
-              {text(L.sx + Math.abs(frame.stress) * L.su + 8, hogging ? L.bot + 3 : L.top + 5, stressText, "st-value")}
-              {text(L.sx - Math.abs(frame.stress) * L.su - 8, hogging ? L.top + 5 : L.bot + 3, stressText, "st-value", "end")}
+              {([[edges.top, L.top + 5], [edges.bottom, L.bot + 3]] as const).map(([edge, y]) => {
+                const right = edge.stress >= 0;
+                return text(
+                  L.sx + edge.stress * L.su + (right ? 8 : -8),
+                  y,
+                  formatFixed(Math.abs(edge.stress), 1),
+                  "st-value",
+                  right ? "start" : "end",
+                );
+              })}
             </>
           )
         : null}
       {!view.uniform && hard
         ? (() => {
-            // the fibres that just reach f_y are the corners the engine returned
-            const corner = frame.depth.find((d) => d > 0 && d < 1);
-            if (corner === undefined) return null;
-            const yUp = depthY(L, corner);
-            const yDown = depthY(L, -corner);
+            // the fibres that just reach f_y are the interior corners the engine returned: one on each
+            // side of the neutral axis for a symmetric section, and as many as yield for any other
+            const corners = frame.depth.slice(1, -1).map((d) => depthY(L, d));
+            if (corners.length === 0) return null;
+            const label = Math.min(...corners.filter((y) => y < naY), naY - 11);
             return (
               <g>
                 <path
                   className="st-guide st-guide-strong"
-                  d={`M${L.ex - 20} ${yUp.toFixed(1)}H${L.gx}M${L.ex - 20} ${yDown.toFixed(1)}H${L.gx}`}
+                  d={corners.map((y) => `M${L.ex - 20} ${y.toFixed(1)}H${L.gx}`).join("")}
                 />
-                {text(L.gx + 6, Math.min(yUp + 4, L.mid - 11), "yield fibres", "st-small")}
+                {text(L.gx + 6, Math.min(label + 4, naY - 11), "yield fibres", "st-small")}
               </g>
             );
           })()
         : null}
-      {resultants && section ? <ForcesColumn L={L} frame={frame} halfMm={section.height / 2} hogging={hogging} over={overForce} onOver={setOverForce} /> : null}
+      {resultants && section ? <ForcesColumn L={L} frame={frame} halfMm={section.height / 2} hogging={hogging} neutralDepth={hogging ? -(frame.neutral_depth ?? 0) : (frame.neutral_depth ?? 0)} over={overForce} onOver={setOverForce} /> : null}
       {axial !== null ? <AxialForce L={L} force={axial} /> : null}
       {probe && fibre ? <FibreBlock L={L} frame={frame} depth={probe.depth} /> : null}
       {probe ? <StageProbeCard L={L} probe={probe} fibre={fibre} fy={fy} /> : null}
     </svg>
   );
+}
+
+/** The strain (ε/ε_y) and stress (N/mm²) at the top (+1) or bottom (-1) edge of the drawn frame, signed. */
+function edgeValues(frame: StageFrameOut, side: 1 | -1): { strain: number; stress: number } {
+  const i = side > 0 ? frame.depth.length - 1 : 0;
+  return { strain: frame.strain_profile[i], stress: frame.stress_profile[i] };
 }
 
 /** The guide, the two dots on the diagrams, and a small card with the fibre's values. */
@@ -365,6 +393,7 @@ function ForcesColumn({
   frame,
   halfMm,
   hogging,
+  neutralDepth,
   over,
   onOver,
 }: {
@@ -372,12 +401,14 @@ function ForcesColumn({
   frame: StageFrameOut;
   halfMm: number;
   hogging: boolean;
+  /** the neutral axis on the engine's depth scale (before the picture is turned over for hogging) */
+  neutralDepth: number;
   /** the force under the pointer, so the fibre's own card can step aside */
   over: ForceSide | null;
   onOver: (side: ForceSide | null) => void;
 }) {
   const r = frame.resultants;
-  const arrows = r ? forceArrows(L, r, halfMm, hogging) : null;
+  const arrows = r ? forceArrows(L, r, halfMm, hogging, neutralDepth) : null;
   if (!r || !arrows || r.force_compression === 0) return null;
   const head = 8;
   const { fx } = L;

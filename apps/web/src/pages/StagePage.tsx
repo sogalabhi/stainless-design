@@ -194,8 +194,14 @@ function Loaded({
   const cValues = input.fresh && !picked ? flatWidths(view.plates) : null;
   // one scale for the panels, so a what-if is compared with the user's section on the same axes
   const yourFrames = view.frames.frames;
-  const stressTop = Math.max(...yourFrames.map((f) => Math.abs(f.stress)), ...frames.map((f) => Math.abs(f.stress)));
-  const limitRatio = Math.max(yourFrames[yourFrames.length - 1].ratio, frames[last].ratio);
+  // the edges can differ when the neutral axis is not at mid-depth, so the scales read the whole profiles
+  const peak = (values: number[]) => Math.max(...values.map(Math.abs));
+  const stressTop = Math.max(...[...yourFrames, ...frames].map((f) => Math.max(Math.abs(f.stress), peak(f.stress_profile))));
+  const limitRatio = Math.max(
+    yourFrames[yourFrames.length - 1].ratio,
+    frames[last].ratio,
+    ...[...yourFrames, ...frames].map((f) => peak(f.strain_profile)),
+  );
 
   return (
     <>
@@ -313,7 +319,7 @@ function Loaded({
             </div>
           </div>
         ) : (
-          <Readout view={shown} frame={frame} hogging={hogging} halfDepth={section ? section.height / 2 : null} limit={frames[last].ratio} fy={fy} whatIf={picked !== null} />
+          <Readout view={shown} frame={frame} hogging={hogging} halfDepth={section ? section.height / 2 : null} depthMm={section ? section.height : null} limit={frames[last].ratio} fy={fy} whatIf={picked !== null} />
         )}
         {forcesOn && !picked && !beyond ? <ForcesPanel view={view} frame={frame} hogging={hogging} /> : null}
         <Legend view={view} withPlate={lit !== null} />

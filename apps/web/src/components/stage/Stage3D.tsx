@@ -62,6 +62,12 @@ export const STAGE_WEBGL_MISSING =
 const VIEWS: ViewName[] = ["iso", "side", "front"];
 const MARGIN = 1.15;
 
+/** The neutral axis in mm from mid-depth towards the compression edge, as the engine has it (hogging un-turned). */
+function neutralMm(frame: StageFrameOut, body: StageBody): number {
+  const drawn = (frame.neutral_depth ?? 0) * body.halfDepth;
+  return body.hogging ? -drawn : drawn;
+}
+
 type LabelSpec = { id: string; text: string; at: Vec3; plain?: boolean };
 
 type Rig = {
@@ -169,7 +175,7 @@ function addResultants(
     return;
   }
   const r = frame.resultants;
-  const arrows = r ? resultantArrows(body, r, forceTop, Boolean(body.hogging)) : null;
+  const arrows = r ? resultantArrows(body, r, forceTop, Boolean(body.hogging), body.hogging ? -(frame.neutral_depth ?? 0) : (frame.neutral_depth ?? 0)) : null;
   if (!r || !arrows) return;
   const { compression, tension } = arrows;
   face.add(...arrowMeshes(0, compression.y, z0 + compression.length, z0, head, ink, geometries));
@@ -287,7 +293,7 @@ export function buildContent(
   const geometries: BufferGeometry[] = [];
   const materials: Material[] = [];
   const group = new Group();
-  const pose = memberPose(view.key, frame.strain, body);
+  const pose = memberPose(view.key, frame.strain, body, undefined, neutralMm(frame, body));
   const rest = restPose(body.length);
   const face = new Group();
   face.position.set(...pose.face.position);
@@ -566,7 +572,7 @@ export default function Stage3D({
   useEffect(() => {
     const state = rig.current;
     if (!state) return;
-    const pose = memberPose(view.key, limitStrain, body);
+    const pose = memberPose(view.key, limitStrain, body, undefined, neutralMm(frames[frames.length - 1], body));
     const longest = (stressTop * lengthPerStress(body, stressTop)) || 0;
     const room = hasForces ? 0.15 * Math.max(body.width, body.height) : 0; // the parts are pulled apart
     const points = stageCorners(body, pose, longest + room);
